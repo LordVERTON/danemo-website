@@ -13,7 +13,7 @@ const proximaNova = Proxima_Nova({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-proxima-nova",
-  weight: ["400", "600", "700"],
+  weight: ["400", "700"],
 })
 
 export const metadata: Metadata = {
