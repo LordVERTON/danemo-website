@@ -420,7 +420,7 @@ export default function InventoryPage() {
                   <TableCell>{new Date(item.dateAjout).toLocaleDateString("fr-FR")}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => setEditingItem(item)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -439,6 +439,150 @@ export default function InventoryPage() {
           </Table>
         </CardContent>
       </Card>
+      {/* Edit Dialog */}
+      <Dialog open={!!editingItem} onOpenChange={(open) => { if (!open) setEditingItem(null) }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Modifier l'article</DialogTitle>
+            <DialogDescription>
+              Mettez à jour les informations de l'article sélectionné
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-type">Type d'article</Label>
+              <Select
+                value={editingItem?.type || "colis"}
+                onValueChange={(value) =>
+                  setEditingItem((prev) => (prev ? { ...prev, type: value as any } : prev))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="colis">Colis</SelectItem>
+                  <SelectItem value="vehicule">Véhicule</SelectItem>
+                  <SelectItem value="marchandise">Marchandise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-reference">Référence</Label>
+              <Input
+                id="edit-reference"
+                value={editingItem?.reference || ""}
+                onChange={(e) =>
+                  setEditingItem((prev) => (prev ? { ...prev, reference: e.target.value } : prev))
+                }
+                placeholder="Ex: COL-2024-001"
+              />
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editingItem?.description || ""}
+                onChange={(e) =>
+                  setEditingItem((prev) => (prev ? { ...prev, description: e.target.value } : prev))
+                }
+                placeholder="Description détaillée de l'article"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-client">Client</Label>
+              <Input
+                id="edit-client"
+                value={editingItem?.client || ""}
+                onChange={(e) =>
+                  setEditingItem((prev) => (prev ? { ...prev, client: e.target.value } : prev))
+                }
+                placeholder="Nom du client"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Statut</Label>
+              <Select
+                value={editingItem?.status || "en_stock"}
+                onValueChange={(value) =>
+                  setEditingItem((prev) => (prev ? { ...prev, status: value as any } : prev))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en_stock">En stock</SelectItem>
+                  <SelectItem value="en_transit">En transit</SelectItem>
+                  <SelectItem value="livre">Livré</SelectItem>
+                  <SelectItem value="en_attente">En attente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-location">Localisation</Label>
+              <Input
+                id="edit-location"
+                value={editingItem?.location || ""}
+                onChange={(e) =>
+                  setEditingItem((prev) => (prev ? { ...prev, location: e.target.value } : prev))
+                }
+                placeholder="Ex: Entrepôt Bruxelles - Zone A"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-valeur">Valeur</Label>
+              <Input
+                id="edit-valeur"
+                value={editingItem?.valeur || ""}
+                onChange={(e) =>
+                  setEditingItem((prev) => (prev ? { ...prev, valeur: e.target.value } : prev))
+                }
+                placeholder="Ex: €1,200"
+              />
+            </div>
+            {editingItem?.type === "colis" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-poids">Poids</Label>
+                  <Input
+                    id="edit-poids"
+                    value={editingItem?.poids || ""}
+                    onChange={(e) =>
+                      setEditingItem((prev) => (prev ? { ...prev, poids: e.target.value } : prev))
+                    }
+                    placeholder="Ex: 15 kg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-dimensions">Dimensions</Label>
+                  <Input
+                    id="edit-dimensions"
+                    value={editingItem?.dimensions || ""}
+                    onChange={(e) =>
+                      setEditingItem((prev) => (prev ? { ...prev, dimensions: e.target.value } : prev))
+                    }
+                    placeholder="Ex: 40x30x20 cm"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setEditingItem(null)}>Annuler</Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700"
+              onClick={() => {
+                if (!editingItem) return
+                setInventory((prev) => prev.map((it) => (it.id === editingItem.id ? editingItem : it)))
+                setEditingItem(null)
+              }}
+            >
+              Enregistrer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   )
 }
