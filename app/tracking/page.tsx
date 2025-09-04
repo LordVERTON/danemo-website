@@ -1,295 +1,321 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, MapPin, Clock, Package, Truck, Ship, CheckCircle, AlertCircle, RefreshCw } from "lucide-react"
-import { useTrackingData, getStatusLabel, type PackageTracking } from "@/lib/tracking-data"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { 
+  Search, 
+  MapPin, 
+  Clock, 
+  Truck, 
+  Package, 
+  Ship, 
+  CheckCircle, 
+  AlertCircle,
+  Plane,
+  Car
+} from "lucide-react"
+
+interface Order {
+  id: string
+  order_number: string
+  client_name: string
+  client_email: string
+  service_type: string
+  origin: string
+  destination: string
+  weight?: number
+  value?: number
+  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  estimated_delivery?: string
+  created_at: string
+  updated_at: string
+}
+
+interface TrackingEvent {
+  id: string
+  order_id: string
+  status: string
+  location?: string
+  description?: string
+  operator?: string
+  event_date: string
+}
 
 export default function TrackingPage() {
   const [trackingNumber, setTrackingNumber] = useState("")
-  const [trackingResult, setTrackingResult] = useState<PackageTracking | null>(null)
+  const [order, setOrder] = useState<Order | null>(null)
+  const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([])
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
-  const [isRealTimeUpdate, setIsRealTimeUpdate] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
 
-  const allPackages = useTrackingData()
-
-  useEffect(() => {
-    if (trackingNumber.trim() && allPackages.length > 0) {
-      const updatedPackage = allPackages.find(
-        (pkg) => pkg.trackingNumber.toLowerCase() === trackingNumber.trim().toLowerCase(),
-      )
-
-      if (updatedPackage) {
-        const hasChanged =
-          !trackingResult ||
-          JSON.stringify(updatedPackage.events) !== JSON.stringify(trackingResult.events) ||
-          updatedPackage.currentStatus !== trackingResult.currentStatus ||
-          updatedPackage.lastUpdate !== trackingResult.lastUpdate
-
-        if (hasChanged && trackingResult) {
-          setIsRealTimeUpdate(true)
-          setTimeout(() => setIsRealTimeUpdate(false), 3000)
-          console.log("Mise à jour en temps réel détectée pour:", trackingNumber)
-        }
-
-        if (hasChanged) {
-          setTrackingResult(updatedPackage)
-          setLastUpdate(new Date())
-          setError("")
-          console.log("Données mises à jour pour:", trackingNumber, "- Événements:", updatedPackage.events.length)
-        }
-      } else if (trackingResult) {
-        console.warn(`Package ${trackingNumber} not found in updated data`)
-      }
-    }
-  }, [allPackages, trackingNumber])
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
-    setIsRealTimeUpdate(false)
+    if (!trackingNumber.trim()) return
 
-    if (!trackingNumber.trim()) {
-      setError("Veuillez entrer un numéro de suivi")
-      return
-    }
+    try {
+      setIsLoading(true)
+      setError("")
+      setHasSearched(true)
 
-    const result = allPackages.find((pkg) => pkg.trackingNumber.toLowerCase() === trackingNumber.trim().toLowerCase())
-
-    if (result) {
-      setTrackingResult(result)
-      setLastUpdate(new Date())
-      console.log("Recherche manuelle effectuée pour:", trackingNumber)
-    } else {
-      setError("Numéro de suivi introuvable. Vérifiez le numéro et réessayez.")
-      setTrackingResult(null)
+      const response = await fetch(`/api/orders/search?tracking=${trackingNumber}`)
+      const result = await response.json()
+      
+      if (result.success && result.data.length > 0) {
+        const foundOrder = result.data[0]
+        setOrder(foundOrder)
+        
+        // Récupérer les événements de suivi
+        const eventsResponse = await fetch(`/api/orders/${foundOrder.id}/tracking`)
+        const eventsResult = await eventsResponse.json()
+        
+        if (eventsResult.success) {
+          setTrackingEvents(eventsResult.data)
+        }
+      } else {
+        setOrder(null)
+        setTrackingEvents([])
+        setError("Aucune commande trouvée avec ce numéro de suivi")
+      }
+    } catch (error) {
+      setError("Erreur lors de la recherche")
+      setOrder(null)
+      setTrackingEvents([])
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      preparation: { variant: "outline" as const, className: "text-gray-600 border-gray-300" },
-      expedie: { variant: "secondary" as const, className: "text-blue-600 bg-blue-50" },
-      en_transit: { variant: "default" as const, className: "text-orange-600 bg-orange-50" },
-      arrive_port: { variant: "secondary" as const, className: "text-purple-600 bg-purple-50" },
-      dedouane: { variant: "outline" as const, className: "text-yellow-600 border-yellow-300" },
-      livre: { variant: "default" as const, className: "text-green-600 bg-green-50" },
+      pending: { label: "En attente", variant: "outline" as const, icon: Clock, color: "text-yellow-600" },
+      confirmed: { label: "Confirmée", variant: "secondary" as const, icon: CheckCircle, color: "text-blue-600" },
+      in_progress: { label: "En cours", variant: "default" as const, icon: Truck, color: "text-orange-600" },
+      completed: { label: "Terminée", variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
+      cancelled: { label: "Annulée", variant: "destructive" as const, icon: AlertCircle, color: "text-red-600" },
     }
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.preparation
+    const config = statusConfig[status as keyof typeof statusConfig]
+    const Icon = config.icon
     return (
-      <Badge variant={config.variant} className={config.className}>
-        {getStatusLabel(status)}
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {config.label}
       </Badge>
     )
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "preparation":
-        return <Package className="h-5 w-5 text-gray-600" />
-      case "expedie":
-        return <Truck className="h-5 w-5 text-blue-600" />
-      case "en_transit":
-        return <Ship className="h-5 w-5 text-orange-600" />
-      case "arrive_port":
-        return <MapPin className="h-5 w-5 text-purple-600" />
-      case "dedouane":
-        return <AlertCircle className="h-5 w-5 text-yellow-600" />
-      case "livre":
-        return <CheckCircle className="h-5 w-5 text-green-600" />
+  const getServiceTypeIcon = (type: string) => {
+    switch (type) {
+      case 'fret_maritime':
+        return <Ship className="h-5 w-5 text-blue-600" />
+      case 'fret_aerien':
+        return <Plane className="h-5 w-5 text-sky-600" />
+      case 'demenagement':
+        return <Truck className="h-5 w-5 text-orange-600" />
+      case 'dedouanement':
+        return <Car className="h-5 w-5 text-purple-600" />
       default:
-        return <Package className="h-5 w-5" />
+        return <Package className="h-5 w-5 text-gray-600" />
     }
   }
 
+  const getServiceTypeLabel = (type: string) => {
+    const types = {
+      fret_maritime: "Fret maritime",
+      fret_aerien: "Fret aérien",
+      demenagement: "Déménagement",
+      dedouanement: "Dédouanement",
+      negoce: "Négoce"
+    }
+    return types[type as keyof typeof types] || type
+  }
+
+  const getStatusLabel = (status: string) => {
+    const statusLabels = {
+      preparation: "En préparation",
+      confirmed: "Confirmée",
+      in_progress: "En cours",
+      arrive_port: "Arrivé au port",
+      dedouane: "En dédouanement",
+      completed: "Terminée",
+      cancelled: "Annulée",
+    }
+    return statusLabels[status as keyof typeof statusLabels] || status
+  }
+
   return (
-    <div className="min-h-screen">
-      <Header />
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Suivi de colis</h1>
+          <p className="text-xl text-gray-600">
+            Suivez votre expédition en temps réel avec votre numéro de suivi
+          </p>
+        </div>
 
-      <main className="py-16">
-        <div className="max-w-4xl mx-auto px-4">
-          <h1 className="text-4xl font-bold text-center mb-12 font-serif text-[#B8860B]">Suivi de Colis</h1>
-
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <form onSubmit={handleSubmit} className="flex gap-4 max-w-md mx-auto">
+        {/* Formulaire de recherche */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Rechercher votre commande
+            </CardTitle>
+            <CardDescription>
+              Entrez votre numéro de suivi pour voir l'état de votre expédition
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSearch} className="flex gap-4">
               <div className="flex-1">
-                <input
+                <Label htmlFor="tracking" className="sr-only">Numéro de suivi</Label>
+                <Input
+                  id="tracking"
                   type="text"
+                  placeholder="Ex: DN2024001234"
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="Ex: DN2024001234"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  required
+                  className="text-lg"
                 />
               </div>
-              <Button
-                type="submit"
-                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-md flex items-center gap-2"
-              >
-                <Search className="w-4 h-4" />
-                Suivre
+              <Button type="submit" disabled={isLoading || !trackingNumber.trim()}>
+                {isLoading ? "Recherche..." : "Rechercher"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
 
-            {error && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-center">
-                {error}
-              </div>
-            )}
-          </div>
+        {/* Message d'erreur */}
+        {error && hasSearched && (
+          <Alert className="mb-8">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-          {trackingResult && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className={`flex items-center gap-2 text-sm transition-colors ${
-                    isRealTimeUpdate ? "text-green-600 font-medium" : "text-gray-500"
-                  }`}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRealTimeUpdate ? "animate-spin" : ""}`} />
-                  <span>{isRealTimeUpdate ? "Mise à jour en cours..." : "Données synchronisées en temps réel"}</span>
-                </div>
-                <div className="text-sm text-gray-500">
-                  Dernière mise à jour: {lastUpdate.toLocaleTimeString("fr-FR")}
-                </div>
-              </div>
-
-              {isRealTimeUpdate && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-800">
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="font-medium">Statut mis à jour automatiquement !</span>
-                    <span className="text-sm">Les informations ont été synchronisées depuis l'administration.</span>
+        {/* Résultats */}
+        {order && (
+          <div className="space-y-6">
+            {/* Informations de la commande */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {getServiceTypeIcon(order.service_type)}
+                  Commande {order.order_number}
+                </CardTitle>
+                <CardDescription>
+                  {getServiceTypeLabel(order.service_type)} • {order.origin} → {order.destination}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Informations client</h3>
+                    <p className="text-sm text-gray-600">{order.client_name}</p>
+                    <p className="text-sm text-gray-600">{order.client_email}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Détails de l'expédition</h3>
+                    <p className="text-sm text-gray-600">
+                      <strong>Poids:</strong> {order.weight ? `${order.weight} kg` : 'Non spécifié'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <strong>Valeur:</strong> {order.value ? `€${order.value.toLocaleString()}` : 'Non spécifiée'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <strong>Livraison estimée:</strong> {order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString('fr-FR') : 'Non spécifiée'}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Statut actuel</h3>
+                    <div className="mb-2">{getStatusBadge(order.status)}</div>
+                    <p className="text-sm text-gray-600">
+                      <strong>Dernière mise à jour:</strong> {new Date(order.updated_at).toLocaleDateString('fr-FR')}
+                    </p>
                   </div>
                 </div>
-              )}
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    {getStatusIcon(trackingResult.currentStatus)}
-                    Statut actuel : {getStatusBadge(trackingResult.currentStatus)}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="font-semibold text-gray-700 mb-2">Numéro de suivi</h3>
-                      <p className="text-lg font-mono">{trackingResult.trackingNumber}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-gray-700 mb-2">Référence</h3>
-                      <p className="text-lg">{trackingResult.reference}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-gray-700 mb-2">Destination</h3>
-                      <p className="text-lg">{trackingResult.destination}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-gray-700 mb-2">Livraison estimée</h3>
-                      <p className="text-lg">
-                        {new Date(trackingResult.estimatedDelivery).toLocaleDateString("fr-FR")}
-                      </p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-gray-700 mb-2">Poids</h3>
-                      <p className="text-lg">{trackingResult.weight}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-gray-700 mb-2">Dernière mise à jour</h3>
-                      <p className="text-lg flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-500" />
-                        {new Date(trackingResult.lastUpdate).toLocaleDateString("fr-FR")}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Historique du suivi ({trackingResult.events.length} événements)</CardTitle>
-                </CardHeader>
-                <CardContent>
+            {/* Historique des événements */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Historique des événements
+                </CardTitle>
+                <CardDescription>
+                  Suivi détaillé de votre expédition
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {trackingEvents.length > 0 ? (
                   <div className="space-y-4">
-                    {trackingResult.events
-                      .slice()
-                      .reverse()
-                      .map((event, index) => (
-                        <div key={event.id} className="flex gap-4">
-                          <div className="flex flex-col items-center">
-                            <div className={`w-4 h-4 rounded-full ${index === 0 ? "bg-orange-500" : "bg-gray-300"}`} />
-                            {index < trackingResult.events.length - 1 && <div className="w-px h-12 bg-gray-200 mt-2" />}
+                    {trackingEvents.map((event, index) => (
+                      <div key={event.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                        <div className="flex-shrink-0 w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                          <span className="text-orange-600 font-semibold">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline">{getStatusLabel(event.status)}</Badge>
+                            <span className="text-sm text-gray-500">
+                              {new Date(event.event_date).toLocaleString('fr-FR')}
+                            </span>
                           </div>
-                          <div className="flex-1 pb-4">
-                            <div className="flex items-center gap-3 mb-2">
-                              {getStatusIcon(event.status)}
-                              <span className="font-semibold">
-                                {event.date} à {event.time}
-                              </span>
-                              {getStatusBadge(event.status)}
-                            </div>
-                            <div className="text-gray-600 mb-1 flex items-center gap-2">
+                          {event.location && (
+                            <div className="flex items-center gap-1 text-sm text-gray-600 mb-2">
                               <MapPin className="h-4 w-4" />
                               {event.location}
                             </div>
-                            <div className="text-gray-800">{event.description}</div>
-                            {event.operator && (
-                              <div className="text-sm text-gray-500 mt-1">Opérateur: {event.operator}</div>
-                            )}
-                          </div>
+                          )}
+                          {event.description && (
+                            <p className="text-gray-700 mb-2">{event.description}</p>
+                          )}
+                          {event.operator && (
+                            <p className="text-xs text-gray-500">
+                              Opérateur: {event.operator}
+                            </p>
+                          )}
                         </div>
-                      ))}
+                      </div>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          <div className="mt-12 bg-gray-50 rounded-lg p-8">
-            <h2 className="text-2xl font-bold text-center mb-6 text-[#B8860B] font-serif">Informations Utiles</h2>
-
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-[#B8860B] font-serif">Délais de Transit</h3>
-                <ul className="space-y-2">
-                  <li>• Transport maritime : 4-6 semaines</li>
-                  <li>• Transport aérien : 3-7 jours</li>
-                  <li>• Dédouanement : 2-5 jours ouvrables</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-[#B8860B] font-serif">Contact</h3>
-                <ul className="space-y-2">
-                  <li>• Téléphone : +32488645183</li>
-                  <li>• Email : info@danemo.be</li>
-                  <li>• Horaires : Lun-Sam 9h-18h</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Exemples de numéros de suivi :</strong> DN2024001234, DN2024001235, DN2024001236, DN2024001237
-              </p>
-            </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Aucun événement de suivi disponible pour cette commande</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </main>
+        )}
 
-      <Footer />
+        {/* Message d'aide */}
+        {!hasSearched && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Comment utiliser le suivi</h3>
+                <p className="text-gray-600 mb-4">
+                  Entrez votre numéro de suivi dans le champ ci-dessus pour voir l'état de votre expédition.
+                </p>
+                <div className="text-sm text-gray-500">
+                  <p>Votre numéro de suivi se trouve sur votre facture ou dans l'email de confirmation.</p>
+                  <p>Exemple de format: DN2024001234</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }

@@ -4,21 +4,35 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Package, Truck, BarChart3, Users, LogOut } from "lucide-react"
+import { Package, Truck, BarChart3, Users, LogOut, ShoppingCart } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [stats, setStats] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
     const session = localStorage.getItem("danemo_admin_session")
     if (session === "authenticated") {
       setIsAuthenticated(true)
+      fetchStats()
     } else {
       router.push("/admin/login")
     }
   }, [router])
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/stats')
+      const result = await response.json()
+      if (result.success) {
+        setStats(result.data)
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("danemo_admin_session")
@@ -65,8 +79,8 @@ export default function AdminDashboard() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">247</div>
-              <p className="text-xs text-muted-foreground">+12% par rapport au mois dernier</p>
+              <div className="text-2xl font-bold">{stats?.in_progress || 0}</div>
+              <p className="text-xs text-muted-foreground">Commandes en cours</p>
             </CardContent>
           </Card>
 
@@ -76,8 +90,8 @@ export default function AdminDashboard() {
               <Truck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">18</div>
-              <p className="text-xs text-muted-foreground">En attente de dédouanement</p>
+              <div className="text-2xl font-bold">{stats?.pending || 0}</div>
+              <p className="text-xs text-muted-foreground">Commandes en attente</p>
             </CardContent>
           </Card>
 
@@ -87,8 +101,8 @@ export default function AdminDashboard() {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€45,231</div>
-              <p className="text-xs text-muted-foreground">+8% par rapport au mois dernier</p>
+              <div className="text-2xl font-bold">{stats?.completed || 0}</div>
+              <p className="text-xs text-muted-foreground">Commandes terminées</p>
             </CardContent>
           </Card>
 
@@ -98,14 +112,26 @@ export default function AdminDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,234</div>
-              <p className="text-xs text-muted-foreground">+5% par rapport au mois dernier</p>
+              <div className="text-2xl font-bold">{stats?.total || 0}</div>
+              <p className="text-xs text-muted-foreground">Total des commandes</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Link href="/admin/orders">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5 text-orange-600" />
+                  Gestion des commandes
+                </CardTitle>
+                <CardDescription>Créez et gérez les commandes clients</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
           <Link href="/admin/inventory">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>

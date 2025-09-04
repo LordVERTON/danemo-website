@@ -1,260 +1,376 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import AdminLayout from "@/components/admin-layout"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { XAxis, YAxis, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
-import { Download, TrendingUp, TrendingDown, Package, Euro, Users, Calendar } from "lucide-react"
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line
+} from "recharts"
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Package, 
+  Truck, 
+  Euro, 
+  Users,
+  Calendar,
+  Download
+} from "lucide-react"
+
+interface Stats {
+  total: number
+  pending: number
+  confirmed: number
+  in_progress: number
+  completed: number
+  cancelled: number
+}
+
+interface Order {
+  id: string
+  order_number: string
+  client_name: string
+  service_type: string
+  status: string
+  value?: number
+  created_at: string
+}
 
 export default function AnalyticsPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState("month")
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [timeRange, setTimeRange] = useState("30")
+  const [error, setError] = useState("")
 
-  // Sample data for charts
-  const revenueData = [
-    { month: "Jan", revenue: 45000, packages: 120, clients: 85 },
-    { month: "Fév", revenue: 52000, packages: 145, clients: 92 },
-    { month: "Mar", revenue: 48000, packages: 135, clients: 88 },
-    { month: "Avr", revenue: 61000, packages: 165, clients: 105 },
-    { month: "Mai", revenue: 55000, packages: 150, clients: 98 },
-    { month: "Jun", revenue: 67000, packages: 180, clients: 115 },
-  ]
+  useEffect(() => {
+    fetchData()
+  }, [timeRange])
 
-  const packageTypeData = [
-    { name: "Colis", value: 65, color: "#f39c12" },
-    { name: "Véhicules", value: 20, color: "#3498db" },
-    { name: "Marchandises", value: 15, color: "#2ecc71" },
-  ]
+  const fetchData = async () => {
+    try {
+      setIsLoading(true)
+      
+      // Récupérer les statistiques
+      const statsResponse = await fetch('/api/stats')
+      const statsResult = await statsResponse.json()
+      
+      if (statsResult.success) {
+        setStats(statsResult.data)
+      }
 
-  const destinationData = [
-    { destination: "Yaoundé", packages: 85, revenue: 28500 },
-    { destination: "Douala", packages: 120, revenue: 42000 },
-    { destination: "Bafoussam", packages: 35, revenue: 12500 },
-    { destination: "Bamenda", packages: 25, revenue: 8900 },
-    { destination: "Garoua", packages: 15, revenue: 5200 },
-  ]
-
-  const statusData = [
-    { status: "Livré", count: 180, percentage: 64 },
-    { status: "En transit", count: 65, percentage: 23 },
-    { status: "En préparation", count: 25, percentage: 9 },
-    { status: "En attente", count: 12, percentage: 4 },
-  ]
-
-  const exportData = () => {
-    // In a real application, this would generate and download a report
-    const data = {
-      period: selectedPeriod,
-      revenue: revenueData,
-      packages: packageTypeData,
-      destinations: destinationData,
-      status: statusData,
-      generatedAt: new Date().toISOString(),
+      // Récupérer les commandes pour les graphiques
+      const ordersResponse = await fetch('/api/orders')
+      const ordersResult = await ordersResponse.json()
+      
+      if (ordersResult.success) {
+        setOrders(ordersResult.data)
+      }
+    } catch (error) {
+      setError('Erreur lors du chargement des données')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `danemo-analytics-${selectedPeriod}-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  // Données pour les graphiques
+  const getStatusData = () => {
+    if (!stats) return []
+    return [
+      { name: 'En attente', value: stats.pending, color: '#f59e0b' },
+      { name: 'Confirmées', value: stats.confirmed, color: '#3b82f6' },
+      { name: 'En cours', value: stats.in_progress, color: '#f97316' },
+      { name: 'Terminées', value: stats.completed, color: '#10b981' },
+      { name: 'Annulées', value: stats.cancelled, color: '#ef4444' }
+    ]
+  }
+
+  const getServiceTypeData = () => {
+    const serviceTypes = orders.reduce((acc, order) => {
+      acc[order.service_type] = (acc[order.service_type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    return Object.entries(serviceTypes).map(([type, count]) => ({
+      name: getServiceTypeLabel(type),
+      value: count
+    }))
+  }
+
+  const getMonthlyData = () => {
+    const monthlyData = orders.reduce((acc, order) => {
+      const month = new Date(order.created_at).toLocaleDateString('fr-FR', { month: 'short' })
+      acc[month] = (acc[month] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    return Object.entries(monthlyData).map(([month, count]) => ({
+      month,
+      commandes: count
+    }))
+  }
+
+  const getRevenueData = () => {
+    const monthlyRevenue = orders.reduce((acc, order) => {
+      const month = new Date(order.created_at).toLocaleDateString('fr-FR', { month: 'short' })
+      const value = order.value || 0
+      acc[month] = (acc[month] || 0) + value
+      return acc
+    }, {} as Record<string, number>)
+
+    return Object.entries(monthlyRevenue).map(([month, revenue]) => ({
+      month,
+      revenue: revenue / 1000 // Convertir en milliers d'euros
+    }))
+  }
+
+  const getServiceTypeLabel = (type: string) => {
+    const types = {
+      fret_maritime: "Fret maritime",
+      fret_aerien: "Fret aérien",
+      demenagement: "Déménagement",
+      dedouanement: "Dédouanement",
+      negoce: "Négoce"
+    }
+    return types[type as keyof typeof types] || type
+  }
+
+  const totalRevenue = orders.reduce((sum, order) => sum + (order.value || 0), 0)
+  const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
+            <p>Chargement des analyses...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    )
   }
 
   return (
-    <AdminLayout title="Analyses et rapports">
-      {/* Controls */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-4">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">Cette semaine</SelectItem>
-              <SelectItem value="month">Ce mois</SelectItem>
-              <SelectItem value="quarter">Ce trimestre</SelectItem>
-              <SelectItem value="year">Cette année</SelectItem>
-            </SelectContent>
-          </Select>
+    <AdminLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Analyses et rapports</h1>
+            <p className="text-muted-foreground">
+              Consultez les statistiques et générez des rapports
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 derniers jours</SelectItem>
+                <SelectItem value="30">30 derniers jours</SelectItem>
+                <SelectItem value="90">3 derniers mois</SelectItem>
+                <SelectItem value="365">12 derniers mois</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Exporter
+            </Button>
+          </div>
         </div>
-        <Button onClick={exportData} className="bg-orange-600 hover:bg-orange-700">
-          <Download className="h-4 w-4 mr-2" />
-          Exporter les données
-        </Button>
-      </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenus totaux</CardTitle>
-            <Euro className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">€328,500</div>
-            <div className="flex items-center text-xs text-green-600">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +12.5% vs mois dernier
-            </div>
-          </CardContent>
-        </Card>
+        {/* Cartes de statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total commandes</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.total || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                <TrendingUp className="inline h-3 w-3 mr-1" />
+                +12% par rapport au mois dernier
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Colis expédiés</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">795</div>
-            <div className="flex items-center text-xs text-green-600">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +8.2% vs mois dernier
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Commandes en cours</CardTitle>
+              <Truck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.in_progress || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.total ? Math.round(((stats.in_progress || 0) / stats.total) * 100) : 0}% du total
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clients actifs</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">583</div>
-            <div className="flex items-center text-xs text-green-600">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +15.3% vs mois dernier
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Revenus totaux</CardTitle>
+              <Euro className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">€{totalRevenue.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                <TrendingUp className="inline h-3 w-3 mr-1" />
+                +8% par rapport au mois dernier
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Délai moyen</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">23 jours</div>
-            <div className="flex items-center text-xs text-red-600">
-              <TrendingDown className="h-3 w-3 mr-1" />
-              +2 jours vs mois dernier
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Valeur moyenne</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">€{Math.round(averageOrderValue).toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                Par commande
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Revenue Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Évolution des revenus</CardTitle>
-            <CardDescription>Revenus mensuels et nombre de colis expédiés</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                revenue: {
-                  label: "Revenus (€)",
-                  color: "#f39c12",
-                },
-                packages: {
-                  label: "Colis",
-                  color: "#3498db",
-                },
-              }}
-              className="h-80"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueData}>
+        {/* Graphiques */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Graphique en barres - Types de services */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Répartition par type de service</CardTitle>
+              <CardDescription>Nombre de commandes par service</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={getServiceTypeData()}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#f39c12" strokeWidth={3} />
-                  <Line yAxisId="right" type="monotone" dataKey="packages" stroke="#3498db" strokeWidth={2} />
-                </LineChart>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#f97316" />
+                </BarChart>
               </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Package Types Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Répartition par type</CardTitle>
-            <CardDescription>Distribution des types de colis expédiés</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                colis: {
-                  label: "Colis",
-                  color: "#f39c12",
-                },
-                vehicules: {
-                  label: "Véhicules",
-                  color: "#3498db",
-                },
-                marchandises: {
-                  label: "Marchandises",
-                  color: "#2ecc71",
-                },
-              }}
-              className="h-80"
-            >
-              <ResponsiveContainer width="100%" height="100%">
+          {/* Graphique en secteurs - Statuts */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Répartition par statut</CardTitle>
+              <CardDescription>Distribution des commandes par statut</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={packageTypeData}
+                    data={getStatusData()}
                     cx="50%"
                     cy="50%"
-                    outerRadius={100}
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}%`}
                   >
-                    {packageTypeData.map((entry, index) => (
+                    {getStatusData().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Destinations and Status Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Destinations */}
+        {/* Graphiques temporels */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Évolution des commandes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Évolution des commandes</CardTitle>
+              <CardDescription>Nombre de commandes par mois</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={getMonthlyData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="commandes" stroke="#f97316" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Évolution des revenus */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Évolution des revenus</CardTitle>
+              <CardDescription>Revenus par mois (en milliers d'euros)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={getRevenueData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`€${value}k`, 'Revenus']} />
+                  <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tableau des commandes récentes */}
         <Card>
           <CardHeader>
-            <CardTitle>Principales destinations</CardTitle>
-            <CardDescription>Classement par nombre de colis et revenus</CardDescription>
+            <CardTitle>Commandes récentes</CardTitle>
+            <CardDescription>Les dernières commandes ajoutées</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {destinationData.map((dest, index) => (
-                <div key={dest.destination} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-sm font-bold">
-                      {index + 1}
+              {orders.slice(0, 5).map((order) => (
+                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Package className="h-5 w-5 text-orange-600" />
                     </div>
                     <div>
-                      <div className="font-medium">{dest.destination}</div>
-                      <div className="text-sm text-gray-600">{dest.packages} colis</div>
+                      <p className="font-medium">{order.order_number}</p>
+                      <p className="text-sm text-muted-foreground">{order.client_name}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold">€{dest.revenue.toLocaleString()}</div>
-                    <div className="text-sm text-gray-600">{((dest.packages / 280) * 100).toFixed(1)}% du total</div>
+                    <p className="font-medium">{getServiceTypeLabel(order.service_type)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(order.created_at).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">€{order.value?.toLocaleString() || '0'}</p>
+                    <p className="text-sm text-muted-foreground capitalize">{order.status}</p>
                   </div>
                 </div>
               ))}
@@ -262,58 +378,13 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Status Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Répartition des statuts</CardTitle>
-            <CardDescription>État actuel de tous les colis</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {statusData.map((status) => (
-                <div key={status.status} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">{status.status}</span>
-                    <span className="text-sm text-gray-600">
-                      {status.count} colis ({status.percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${status.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Performance Metrics */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Métriques de performance</CardTitle>
-          <CardDescription>Indicateurs clés de performance pour la période sélectionnée</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">96.5%</div>
-              <div className="text-sm text-gray-600">Taux de livraison réussie</div>
-            </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">4.8/5</div>
-              <div className="text-sm text-gray-600">Satisfaction client moyenne</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">€413</div>
-              <div className="text-sm text-gray-600">Valeur moyenne par colis</div>
-            </div>
+        {/* Message d'erreur */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            {error}
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </AdminLayout>
   )
 }
