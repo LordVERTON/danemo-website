@@ -24,7 +24,7 @@ export default function AdminLoginPage() {
     setError("")
 
     // Simple authentication check (in production, this would be server-side)
-    if (email === "admin@danemo.be" && password === "danemo2024") {
+    if (email === "admin@danemo.be" && password === "danemo2025") {
       // Set admin session
       localStorage.setItem("danemo_admin_session", "authenticated")
       router.push("/admin")
