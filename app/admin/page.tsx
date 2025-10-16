@@ -9,6 +9,7 @@ import Link from "next/link"
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [role, setRole] = useState<string | null>(null)
   const [stats, setStats] = useState<any>(null)
   const router = useRouter()
 
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
     const session = localStorage.getItem("danemo_admin_session")
     if (session === "authenticated") {
       setIsAuthenticated(true)
+      setRole(localStorage.getItem("danemo_admin_role"))
       fetchStats()
     } else {
       router.push("/admin/login")
@@ -95,6 +97,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
+          {role !== 'operator' && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Revenus du mois</CardTitle>
@@ -105,6 +108,7 @@ export default function AdminDashboard() {
               <p className="text-xs text-muted-foreground">Commandes terminées</p>
             </CardContent>
           </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -156,17 +160,19 @@ export default function AdminDashboard() {
             </Card>
           </Link>
 
-          <Link href="/admin/analytics">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-orange-600" />
-                  Analyses et rapports
-                </CardTitle>
-                <CardDescription>Consultez les statistiques et générez des rapports</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
+          {role !== 'operator' && (
+            <Link href="/admin/analytics">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-orange-600" />
+                    Analyses et rapports
+                  </CardTitle>
+                  <CardDescription>Consultez les statistiques et générez des rapports</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
         </div>
       </main>
     </div>

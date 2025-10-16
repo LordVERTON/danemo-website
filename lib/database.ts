@@ -46,7 +46,7 @@ export const ordersApi = {
 
   // Créer une nouvelle commande
   async create(order: OrderInsert): Promise<Order> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .insert(order)
       .select()
@@ -58,7 +58,7 @@ export const ordersApi = {
 
   // Mettre à jour une commande
   async update(id: string, updates: OrderUpdate): Promise<Order> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .update(updates)
       .eq('id', id)
@@ -71,7 +71,7 @@ export const ordersApi = {
 
   // Supprimer une commande
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('orders')
       .delete()
       .eq('id', id)
@@ -164,10 +164,17 @@ export const utils = {
   },
 
   // Obtenir les statistiques
-  async getStats() {
-    const { data: orders, error } = await supabase
+  async getStats(startDate?: string) {
+    let query = supabase
       .from('orders')
       .select('status, created_at')
+    
+    // Appliquer le filtre de date si fourni
+    if (startDate) {
+      query = query.gte('created_at', startDate)
+    }
+    
+    const { data: orders, error } = await query
     
     if (error) throw error
 

@@ -18,18 +18,20 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus } from "lucide-react"
+import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, Eye } from "lucide-react"
+import { useCurrentUser } from "@/lib/use-current-user"
 
 interface Order {
   id: string
   order_number: string
   client_name: string
   client_email: string
+  client_phone?: string
   service_type: string
   origin: string
   destination: string
-  weight?: number
-  value?: number
+  weight?: string | number
+  value?: string | number
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   estimated_delivery?: string
   created_at: string
@@ -47,14 +49,17 @@ interface TrackingEvent {
 }
 
 export default function TrackingPage() {
+  const { user: currentUser } = useCurrentUser()
   const [orders, setOrders] = useState<Order[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([])
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false)
+  const [isTrackingDialogOpen, setIsTrackingDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isLoadingTrackingEvents, setIsLoadingTrackingEvents] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
 
@@ -63,8 +68,10 @@ export default function TrackingPage() {
     status: "",
     location: "",
     description: "",
-    operator: ""
+    operator: "",
+    event_date: new Date().toISOString().split('T')[0]
   })
+
 
   useEffect(() => {
     fetchOrders()
@@ -90,6 +97,7 @@ export default function TrackingPage() {
 
   const fetchTrackingEvents = async (orderId: string) => {
     try {
+      setIsLoadingTrackingEvents(true)
       const response = await fetch(`/api/orders/${orderId}/tracking`)
       const result = await response.json()
       
@@ -98,8 +106,18 @@ export default function TrackingPage() {
       }
     } catch (error) {
       console.error('Error fetching tracking events:', error)
+    } finally {
+      setIsLoadingTrackingEvents(false)
     }
   }
+
+  const handleRowClick = async (order: Order) => {
+    setSelectedOrder(order)
+    setIsTrackingDialogOpen(true)
+    // Charger les événements en arrière-plan pour une ouverture plus fluide
+    await fetchTrackingEvents(order.id)
+  }
+
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -121,7 +139,7 @@ export default function TrackingPage() {
       
       if (result.success) {
         setSuccessMessage('Événement ajouté avec succès')
-        setNewEvent({ status: "", location: "", description: "", operator: "" })
+        setNewEvent({ status: "", location: "", description: "", operator: "", event_date: new Date().toISOString().split('T')[0] })
         fetchTrackingEvents(selectedOrder.id)
         fetchOrders() // Refresh orders to update status
         setTimeout(() => setSuccessMessage(""), 3000)
@@ -135,6 +153,7 @@ export default function TrackingPage() {
     }
   }
 
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: "En attente", variant: "outline" as const, icon: Clock, color: "text-yellow-600" },
@@ -143,8 +162,13 @@ export default function TrackingPage() {
       completed: { label: "Terminée", variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
       cancelled: { label: "Annulée", variant: "destructive" as const, icon: AlertCircle, color: "text-red-600" },
     }
-    const config = statusConfig[status as keyof typeof statusConfig]
+    
+    // Configuration par défaut pour les statuts non reconnus
+    const defaultConfig = { label: status, variant: "outline" as const, icon: Clock, color: "text-gray-600" }
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || defaultConfig
     const Icon = config.icon
+    
     return (
       <Badge variant={config.variant} className="flex items-center gap-1">
         <Icon className="h-3 w-3" />
@@ -188,7 +212,7 @@ export default function TrackingPage() {
 
   if (isLoading) {
     return (
-      <AdminLayout>
+      <AdminLayout title="Suivi des commandes">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
@@ -200,12 +224,11 @@ export default function TrackingPage() {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Suivi des commandes">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Suivi des colis</h1>
             <p className="text-muted-foreground">
               Suivez les expéditions et mettez à jour les statuts
             </p>
@@ -227,6 +250,12 @@ export default function TrackingPage() {
         {/* Filtres */}
         <Card>
           <CardContent className="pt-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Eye className="h-4 w-4" />
+                <span>Cliquez sur une ligne pour voir le suivi de la commande</span>
+              </div>
+            </div>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <div className="relative">
@@ -282,9 +311,16 @@ export default function TrackingPage() {
               </TableHeader>
               <TableBody>
                 {filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
+                  <TableRow 
+                    key={order.id}
+                    className="cursor-pointer hover:bg-gray-50 hover:shadow-sm hover:scale-[1.01] transition-all duration-200 ease-in-out group"
+                    onClick={() => handleRowClick(order)}
+                  >
                     <TableCell className="font-mono font-medium">
-                      {order.order_number}
+                      <div className="flex items-center gap-2">
+                        {order.order_number}
+                        <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -335,6 +371,11 @@ export default function TrackingPage() {
                             <DialogDescription>
                               Historique des événements et ajout de nouveaux événements
                             </DialogDescription>
+                            {currentUser && (
+                              <div className="mt-2 text-sm text-muted-foreground">
+                                Géré par : <span className="font-medium">{currentUser.name}</span>
+                              </div>
+                            )}
                           </DialogHeader>
                           
                           <div className="space-y-6">
@@ -373,33 +414,31 @@ export default function TrackingPage() {
                                     </div>
                                   ))
                                 ) : (
-                                  <p className="text-muted-foreground text-center py-4">
-                                    Aucun événement de suivi pour cette commande
-                                  </p>
+                                  <div className="text-center py-8 text-gray-500">
+                                    Aucun événement de suivi enregistré
+                                  </div>
                                 )}
                               </div>
                             </div>
 
-                            {/* Formulaire d'ajout d'événement */}
-                            <div className="border-t pt-6">
-                              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                <Plus className="h-5 w-5" />
-                                Ajouter un événement
-                              </h3>
+                            {/* Formulaire pour ajouter un événement */}
+                            <div>
+                              <h3 className="text-lg font-semibold mb-4">Ajouter un événement</h3>
                               <form onSubmit={handleAddEvent} className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div>
-                                    <Label htmlFor="status">Statut *</Label>
-                                    <Select value={newEvent.status} onValueChange={(value) => setNewEvent({...newEvent, status: value})}>
+                                    <Label htmlFor="status">Statut</Label>
+                                    <Select
+                                      value={newEvent.status}
+                                      onValueChange={(value) => setNewEvent({ ...newEvent, status: value })}
+                                    >
                                       <SelectTrigger>
                                         <SelectValue placeholder="Sélectionner un statut" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="preparation">Préparation</SelectItem>
+                                        <SelectItem value="pending">En attente</SelectItem>
                                         <SelectItem value="confirmed">Confirmée</SelectItem>
                                         <SelectItem value="in_progress">En cours</SelectItem>
-                                        <SelectItem value="arrive_port">Arrivé au port</SelectItem>
-                                        <SelectItem value="dedouane">Dédouanement</SelectItem>
                                         <SelectItem value="completed">Terminée</SelectItem>
                                         <SelectItem value="cancelled">Annulée</SelectItem>
                                       </SelectContent>
@@ -410,33 +449,33 @@ export default function TrackingPage() {
                                     <Input
                                       id="location"
                                       value={newEvent.location}
-                                      onChange={(e) => setNewEvent({...newEvent, location: e.target.value})}
-                                      placeholder="Ex: Port d'Anvers, Belgique"
+                                      onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                                      placeholder="Ex: Port de Dakar"
                                     />
                                   </div>
                                 </div>
                                 <div>
-                                  <Label htmlFor="description">Description *</Label>
+                                  <Label htmlFor="description">Description</Label>
                                   <Textarea
                                     id="description"
                                     value={newEvent.description}
-                                    onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
                                     placeholder="Décrivez l'événement..."
-                                    required
+                                    rows={3}
                                   />
                                 </div>
-                                <div>
-                                  <Label htmlFor="operator">Opérateur</Label>
-                                  <Input
-                                    id="operator"
-                                    value={newEvent.operator}
-                                    onChange={(e) => setNewEvent({...newEvent, operator: e.target.value})}
-                                    placeholder="Nom de l'opérateur"
-                                  />
-                                </div>
-                                <div className="flex justify-end">
-                                  <Button type="submit" disabled={isUpdating || !newEvent.status || !newEvent.description}>
-                                    {isUpdating ? 'Ajout en cours...' : 'Ajouter l\'événement'}
+                                <div className="flex justify-end gap-2">
+                                  <Button type="button" variant="outline" onClick={() => setNewEvent({
+                                    status: '',
+                                    location: '',
+                                    description: '',
+                                    operator: '',
+                                    event_date: new Date().toISOString().split('T')[0]
+                                  })}>
+                                    Annuler
+                                  </Button>
+                                  <Button type="submit" disabled={isUpdating}>
+                                    {isUpdating ? 'Ajout...' : 'Ajouter l\'événement'}
                                   </Button>
                                 </div>
                               </form>
@@ -451,6 +490,140 @@ export default function TrackingPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Modal de suivi avec historique des événements */}
+        <Dialog open={isTrackingDialogOpen} onOpenChange={setIsTrackingDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] transition-all duration-300 ease-in-out flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Suivi de la commande {selectedOrder?.order_number}</DialogTitle>
+              <DialogDescription>
+                Historique des événements et ajout de nouveaux événements
+              </DialogDescription>
+              {currentUser && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  Géré par : <span className="font-medium">{currentUser.name}</span>
+                </div>
+              )}
+            </DialogHeader>
+            
+            <div className="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <div className="space-y-6">
+              {/* Historique des événements */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Historique des événements</h3>
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 relative">
+                  {/* Gradient fade pour indiquer qu'il y a plus de contenu */}
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none z-10"></div>
+                  {isLoadingTrackingEvents ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="flex items-center gap-3">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600"></div>
+                        <span className="text-muted-foreground">Chargement des événements...</span>
+                      </div>
+                    </div>
+                  ) : trackingEvents.length > 0 ? (
+                    trackingEvents.map((event, index) => (
+                      <div key={event.id} className="flex items-start gap-3 p-3 border rounded-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 100}ms` }}>
+                        <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                          <span className="text-orange-600 font-semibold text-sm">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            {getStatusBadge(event.status)}
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(event.event_date).toLocaleString('fr-FR')}
+                            </span>
+                          </div>
+                          {event.location && (
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                              <MapPin className="h-3 w-3" />
+                              {event.location}
+                            </div>
+                          )}
+                          {event.description && (
+                            <p className="text-sm">{event.description}</p>
+                          )}
+                          {event.operator && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Opérateur: {event.operator}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      Aucun événement de suivi enregistré
+                    </div>
+                  )}
+                  {/* Padding en bas pour éviter que le contenu soit coupé par le gradient */}
+                  <div className="h-8"></div>
+                </div>
+              </div>
+
+              {/* Formulaire pour ajouter un événement */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Ajouter un événement</h3>
+                <form onSubmit={handleAddEvent} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="status">Statut</Label>
+                      <Select
+                        value={newEvent.status}
+                        onValueChange={(value) => setNewEvent({ ...newEvent, status: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">En attente</SelectItem>
+                          <SelectItem value="confirmed">Confirmée</SelectItem>
+                          <SelectItem value="in_progress">En cours</SelectItem>
+                          <SelectItem value="completed">Terminée</SelectItem>
+                          <SelectItem value="cancelled">Annulée</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="location">Localisation</Label>
+                      <Input
+                        id="location"
+                        value={newEvent.location}
+                        onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                        placeholder="Ex: Port de Dakar"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={newEvent.description}
+                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                      placeholder="Décrivez l'événement..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setNewEvent({
+                      status: '',
+                      location: '',
+                      description: '',
+                      operator: '',
+                      event_date: new Date().toISOString().split('T')[0]
+                    })}>
+                      Annuler
+                    </Button>
+                    <Button type="submit" disabled={isUpdating}>
+                      {isUpdating ? 'Ajout...' : 'Ajouter l\'événement'}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   )

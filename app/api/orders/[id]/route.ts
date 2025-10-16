@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ordersApi } from '@/lib/database'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // GET /api/orders/[id] - Récupérer une commande par ID
 export async function GET(
@@ -33,7 +34,47 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const order = await ordersApi.update(params.id, body)
+    const { user_id, user_name, ...orderData } = body
+    
+    // Récupérer l'ancienne commande pour comparer les changements
+    const oldOrder = await ordersApi.getById(params.id)
+    if (!oldOrder) {
+      return NextResponse.json(
+        { success: false, error: 'Order not found' },
+        { status: 404 }
+      )
+    }
+    
+    // Mettre à jour la commande
+    const order = await ordersApi.update(params.id, orderData)
+    
+    // TODO: Activer l'historique une fois la table order_history créée
+    /*
+    // Créer un historique manuel si l'utilisateur est fourni
+    if (user_id || user_name) {
+      try {
+        await supabaseAdmin
+          .from('order_history')
+          .insert({
+            order_id: params.id,
+            user_id: user_id || null,
+            action: 'update',
+            description: 'Modification de la commande',
+            changes: {
+              modified_by: user_name || 'Utilisateur inconnu',
+              timestamp: new Date().toISOString()
+            }
+          })
+      } catch (historyError) {
+        console.error('Error creating order history:', historyError)
+        // Si la table n'existe pas encore, c'est normal
+        if (historyError.code === 'PGRST116' || historyError.message?.includes('relation "order_history" does not exist')) {
+          console.log('Order history table does not exist yet, skipping history creation')
+        }
+        // Ne pas faire échouer la mise à jour si l'historique échoue
+      }
+    }
+    */
     
     return NextResponse.json({ success: true, data: order })
   } catch (error) {

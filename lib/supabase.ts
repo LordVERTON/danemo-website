@@ -1,26 +1,37 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+  throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }
 
 // Client Supabase pour le côté client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Client Supabase pour le côté serveur (avec service role key)
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+const isServer = typeof window === 'undefined'
+let supabaseAdminInstance: ReturnType<typeof createClient> | null = null
+
+if (isServer) {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    throw new Error('Missing SupABase env: SUPABASE_SERVICE_ROLE_KEY')
   }
-)
+  supabaseAdminInstance = createClient(
+    supabaseUrl,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+}
+
+export const supabaseAdmin = supabaseAdminInstance as unknown as ReturnType<typeof createClient>
 
 // Types pour la base de données
 export interface Database {
@@ -152,6 +163,76 @@ export interface Database {
           updated_at?: string
         }
       }
+    }
+  }
+  employees: {
+    Row: {
+      id: string
+      user_id: string
+      name: string
+      email: string
+      role: 'admin' | 'operator'
+      salary: number
+      position: string
+      hire_date: string
+      is_active: boolean
+      last_login: string | null
+      created_at: string
+      updated_at: string
+    }
+    Insert: {
+      id?: string
+      user_id: string
+      name: string
+      email: string
+      role: 'admin' | 'operator'
+      salary: number
+      position: string
+      hire_date: string
+      is_active?: boolean
+      last_login?: string | null
+      created_at?: string
+      updated_at?: string
+    }
+    Update: {
+      id?: string
+      user_id?: string
+      name?: string
+      email?: string
+      role?: 'admin' | 'operator'
+      salary?: number
+      position?: string
+      hire_date?: string
+      is_active?: boolean
+      last_login?: string | null
+      created_at?: string
+      updated_at?: string
+    }
+  }
+  employee_activities: {
+    Row: {
+      id: string
+      employee_id: string
+      activity_type: 'login' | 'logout' | 'order_created' | 'order_updated' | 'inventory_updated' | 'tracking_updated'
+      description: string
+      metadata: any
+      created_at: string
+    }
+    Insert: {
+      id?: string
+      employee_id: string
+      activity_type: 'login' | 'logout' | 'order_created' | 'order_updated' | 'inventory_updated' | 'tracking_updated'
+      description: string
+      metadata?: any
+      created_at?: string
+    }
+    Update: {
+      id?: string
+      employee_id?: string
+      activity_type?: 'login' | 'logout' | 'order_created' | 'order_updated' | 'inventory_updated' | 'tracking_updated'
+      description?: string
+      metadata?: any
+      created_at?: string
     }
   }
 }

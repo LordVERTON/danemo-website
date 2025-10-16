@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // GET /api/inventory - Récupérer tous les articles d'inventaire
 export async function GET(request: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type')
     const status = searchParams.get('status')
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('inventory')
       .select('*')
       .order('created_at', { ascending: false })
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('inventory')
       .insert(body)
       .select()

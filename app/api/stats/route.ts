@@ -4,7 +4,10 @@ import { utils } from '@/lib/database'
 // GET /api/stats - Récupérer les statistiques des commandes
 export async function GET(request: NextRequest) {
   try {
-    const stats = await utils.getStats()
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get('start_date')
+    
+    const stats = await utils.getStats(startDate)
     
     return NextResponse.json({ success: true, data: stats })
   } catch (error) {

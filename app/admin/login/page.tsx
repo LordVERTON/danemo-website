@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,12 +24,35 @@ export default function AdminLoginPage() {
     setIsLoading(true)
     setError("")
 
-    // Simple authentication check (in production, this would be server-side)
-    if (email === "admin@danemo.be" && password === "danemo2025") {
-      // Set admin session
+    // Vérification des identifiants en dur d'abord
+    if (email === "admin@danemo.be" && password === "admin123") {
       localStorage.setItem("danemo_admin_session", "authenticated")
+      localStorage.setItem("danemo_admin_role", "admin")
       router.push("/admin")
-    } else {
+      return
+    }
+    
+    if (email === "operator@danemo.be" && password === "operator123") {
+      localStorage.setItem("danemo_admin_session", "authenticated")
+      localStorage.setItem("danemo_admin_role", "operator")
+      router.push("/admin")
+      return
+    }
+
+    // Sinon, essayer avec Supabase Auth
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+      if (authError) {
+        setError("Email ou mot de passe incorrect")
+      } else {
+        // Store session marker and role from user metadata if present
+        localStorage.setItem("danemo_admin_session", "authenticated")
+        const roleFromMetadata = (data.user?.user_metadata as any)?.role
+        const derivedRole = roleFromMetadata || (email === "operator@danemo.be" ? "operator" : "admin")
+        localStorage.setItem("danemo_admin_role", derivedRole)
+        router.push("/admin")
+      }
+    } catch (err: any) {
       setError("Email ou mot de passe incorrect")
     }
 

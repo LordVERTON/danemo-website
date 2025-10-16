@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // GET /api/inventory/[id] - Récupérer un article d'inventaire par ID
 export async function GET(
@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('inventory')
       .select('*')
       .eq('id', params.id)
@@ -31,11 +31,36 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Validation de l'ID
+    if (!params.id || typeof params.id !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid inventory ID' },
+        { status: 400 }
+      )
+    }
+
     const body = await request.json()
     
-    const { data, error } = await supabase
+    // Validation des données
+    const allowedFields = ['type', 'reference', 'description', 'client', 'status', 'location', 'poids', 'dimensions', 'valeur']
+    const updateData: Record<string, any> = {}
+    
+    for (const [key, value] of Object.entries(body)) {
+      if (allowedFields.includes(key) && value !== undefined) {
+        updateData[key] = value
+      }
+    }
+    
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid fields to update' },
+        { status: 400 }
+      )
+    }
+    
+    const { data, error } = await supabaseAdmin
       .from('inventory')
-      .update(body)
+      .update(updateData)
       .eq('id', params.id)
       .select()
       .single()
@@ -58,7 +83,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('inventory')
       .delete()
       .eq('id', params.id)

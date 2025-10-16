@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -29,6 +29,8 @@ import {
   Calendar,
   Download
 } from "lucide-react"
+import ExportMenu from "@/components/export-menu"
+import { ExportData } from "@/lib/export-utils"
 
 interface Stats {
   total: number
@@ -55,25 +57,45 @@ export default function AnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("30")
   const [error, setError] = useState("")
+  const [role, setRole] = useState<string | null>(null)
+  const [isFiltering, setIsFiltering] = useState(false)
+  
+  // Refs pour les graphiques
+  const barChartRef = useRef<HTMLDivElement>(null)
+  const pieChartRef = useRef<HTMLDivElement>(null)
+  const lineChartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const currentRole = typeof window !== 'undefined' ? localStorage.getItem('danemo_admin_role') : null
+    setRole(currentRole)
+    if (currentRole === 'operator') {
+      // Redirect operators away from analytics
+      window.location.href = '/admin'
+      return
+    }
     fetchData()
   }, [timeRange])
 
   const fetchData = async () => {
     try {
       setIsLoading(true)
+      setIsFiltering(true)
       
-      // Récupérer les statistiques
-      const statsResponse = await fetch('/api/stats')
+      // Calculer la date de début selon la période sélectionnée
+      const days = parseInt(timeRange)
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+      
+      // Récupérer les statistiques avec filtre de date
+      const statsResponse = await fetch(`/api/stats?start_date=${startDate.toISOString()}`)
       const statsResult = await statsResponse.json()
       
       if (statsResult.success) {
         setStats(statsResult.data)
       }
 
-      // Récupérer les commandes pour les graphiques
-      const ordersResponse = await fetch('/api/orders')
+      // Récupérer les commandes pour les graphiques avec filtre de date
+      const ordersResponse = await fetch(`/api/orders?start_date=${startDate.toISOString()}`)
       const ordersResult = await ordersResponse.json()
       
       if (ordersResult.success) {
@@ -83,6 +105,7 @@ export default function AnalyticsPage() {
       setError('Erreur lors du chargement des données')
     } finally {
       setIsLoading(false)
+      setIsFiltering(false)
     }
   }
 
@@ -151,9 +174,43 @@ export default function AnalyticsPage() {
   const totalRevenue = orders.reduce((sum, order) => sum + (order.value || 0), 0)
   const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0
 
+  // Fonction pour obtenir le label de la période
+  const getPeriodLabel = () => {
+    const days = parseInt(timeRange)
+    if (days === 7) return "7 derniers jours"
+    if (days === 30) return "30 derniers jours"
+    if (days === 90) return "3 derniers mois"
+    if (days === 365) return "12 derniers mois"
+    return "Période sélectionnée"
+  }
+
+  // Préparer les données d'export
+  const getExportData = (): ExportData => ({
+    stats: stats || {
+      total: 0,
+      pending: 0,
+      confirmed: 0,
+      in_progress: 0,
+      completed: 0,
+      cancelled: 0
+    },
+    orders,
+    timeRange,
+    periodLabel: getPeriodLabel()
+  })
+
+  // Obtenir les éléments des graphiques
+  const getChartElements = (): HTMLElement[] => {
+    const elements: HTMLElement[] = []
+    if (barChartRef.current) elements.push(barChartRef.current)
+    if (pieChartRef.current) elements.push(pieChartRef.current)
+    if (lineChartRef.current) elements.push(lineChartRef.current)
+    return elements
+  }
+
   if (isLoading) {
     return (
-      <AdminLayout>
+      <AdminLayout title="Analyses et rapports">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
@@ -165,32 +222,37 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Analyses et rapports">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Analyses et rapports</h1>
             <p className="text-muted-foreground">
-              Consultez les statistiques et générez des rapports
+              Consultez les statistiques et générez des rapports - {getPeriodLabel()}
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 derniers jours</SelectItem>
-                <SelectItem value="30">30 derniers jours</SelectItem>
-                <SelectItem value="90">3 derniers mois</SelectItem>
-                <SelectItem value="365">12 derniers mois</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Exporter
-            </Button>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Select value={timeRange} onValueChange={setTimeRange} disabled={isFiltering}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 derniers jours</SelectItem>
+                  <SelectItem value="30">30 derniers jours</SelectItem>
+                  <SelectItem value="90">3 derniers mois</SelectItem>
+                  <SelectItem value="365">12 derniers mois</SelectItem>
+                </SelectContent>
+              </Select>
+              {isFiltering && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+              )}
+            </div>
+            <ExportMenu 
+              data={getExportData()}
+              chartElements={getChartElements()}
+            />
           </div>
         </div>
 
@@ -257,18 +319,20 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Répartition par type de service</CardTitle>
-              <CardDescription>Nombre de commandes par service</CardDescription>
+              <CardDescription>Nombre de commandes par service - {getPeriodLabel()}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={getServiceTypeData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#f97316" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div ref={barChartRef}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={getServiceTypeData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#f97316" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
@@ -276,28 +340,30 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Répartition par statut</CardTitle>
-              <CardDescription>Distribution des commandes par statut</CardDescription>
+              <CardDescription>Distribution des commandes par statut - {getPeriodLabel()}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={getStatusData()}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {getStatusData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div ref={pieChartRef}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={getStatusData()}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {getStatusData().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -308,46 +374,50 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Évolution des commandes</CardTitle>
-              <CardDescription>Nombre de commandes par mois</CardDescription>
+              <CardDescription>Nombre de commandes par mois - {getPeriodLabel()}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={getMonthlyData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="commandes" stroke="#f97316" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              <div ref={lineChartRef}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={getMonthlyData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="commandes" stroke="#f97316" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
           {/* Évolution des revenus */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Évolution des revenus</CardTitle>
-              <CardDescription>Revenus par mois (en milliers d'euros)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={getRevenueData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`€${value}k`, 'Revenus']} />
-                  <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          {role !== 'operator' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Évolution des revenus</CardTitle>
+                <CardDescription>Revenus par mois (en milliers d'euros) - {getPeriodLabel()}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={getRevenueData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => [`€${value}k`, 'Revenus']} />
+                    <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Tableau des commandes récentes */}
         <Card>
           <CardHeader>
             <CardTitle>Commandes récentes</CardTitle>
-            <CardDescription>Les dernières commandes ajoutées</CardDescription>
+            <CardDescription>Les dernières commandes ajoutées - {getPeriodLabel()}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
