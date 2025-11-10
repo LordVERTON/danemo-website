@@ -34,6 +34,8 @@ interface InventoryItem {
   poids?: string
   dimensions?: string
   valeur: string
+  container_id?: string | null
+  container_code?: string | null
 }
 
 export default function InventoryPage() {
@@ -42,10 +44,12 @@ export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterContainer, setFilterContainer] = useState<string>("all")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [containers, setContainers] = useState<{ id: string; code: string }[]>([])
 
   // Formulaire pour ajouter/modifier un item
   const [formData, setFormData] = useState({
@@ -57,11 +61,14 @@ export default function InventoryPage() {
     location: "",
     poids: "",
     dimensions: "",
-    valeur: ""
+    valeur: "",
+    container_id: "" as string | "",
+    container_code: "" as string | ""
   })
 
   useEffect(() => {
     fetchInventory()
+    fetchContainers()
   }, [])
 
   useEffect(() => {
@@ -94,6 +101,16 @@ export default function InventoryPage() {
     }
   }
 
+  const fetchContainers = async () => {
+    try {
+      const res = await fetch('/api/containers')
+      const json = await res.json()
+      if (json.success) {
+        setContainers(json.data.map((c: any) => ({ id: c.id, code: c.code })))
+      }
+    } catch {}
+  }
+
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -118,7 +135,9 @@ export default function InventoryPage() {
           location: "",
           poids: "",
           dimensions: "",
-          valeur: ""
+          valeur: "",
+          container_id: "",
+          container_code: ""
         })
         setIsAddDialogOpen(false)
         fetchInventory() // Refresh the inventory
@@ -144,7 +163,9 @@ export default function InventoryPage() {
         location: "",
         poids: data.weight || "",
         dimensions: data.dimensions || "",
-        valeur: data.value || ""
+        valeur: data.value || "",
+        container_id: "",
+        container_code: ""
       })
       
       // Ouvrir le dialog d'ajout
@@ -165,7 +186,9 @@ export default function InventoryPage() {
       location: item.location,
       poids: item.poids || "",
       dimensions: item.dimensions || "",
-      valeur: item.valeur
+      valeur: item.valeur,
+      container_id: item.container_id || "",
+      container_code: item.container_code || ""
     })
     setIsAddDialogOpen(true)
   }
@@ -196,7 +219,9 @@ export default function InventoryPage() {
           location: "",
           poids: "",
           dimensions: "",
-          valeur: ""
+          valeur: "",
+          container_id: "",
+          container_code: ""
         })
         setIsAddDialogOpen(false)
         fetchInventory() // Refresh the inventory
@@ -257,7 +282,11 @@ export default function InventoryPage() {
       item.client.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || item.type === filterType
     const matchesStatus = filterStatus === "all" || item.status === filterStatus
-    return matchesSearch && matchesType && matchesStatus
+    const matchesContainer =
+      filterContainer === "all" ||
+      item.container_id === filterContainer ||
+      item.container_code === filterContainer
+    return matchesSearch && matchesType && matchesStatus && matchesContainer
   })
 
   if (isLoading) {
@@ -371,6 +400,30 @@ export default function InventoryPage() {
                   </div>
                 </div>
                 <div>
+                  <Label htmlFor="container">Conteneur</Label>
+                  <Select
+                    value={formData.container_id}
+                    onValueChange={(value: string) => {
+                      const selected = containers.find((c) => c.id === value)
+                      setFormData({
+                        ...formData,
+                        container_id: value,
+                        container_code: selected?.code || "",
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="text-base sm:text-sm">
+                      <SelectValue placeholder="Aucun" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Aucun</SelectItem>
+                      {containers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.code}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label htmlFor="location">Localisation *</Label>
                   <Input
                     id="location"
@@ -426,7 +479,9 @@ export default function InventoryPage() {
                       location: "",
                       poids: "",
                       dimensions: "",
-                      valeur: ""
+                      valeur: "",
+                      container_id: "",
+                      container_code: ""
                     })
                   }} className="w-full sm:w-auto text-sm sm:text-base py-2 sm:py-1">
                     Annuler
@@ -479,6 +534,17 @@ export default function InventoryPage() {
                     <SelectItem value="en_attente">En attente</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={filterContainer} onValueChange={setFilterContainer}>
+                  <SelectTrigger className="w-full sm:w-56">
+                    <SelectValue placeholder="Conteneur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les conteneurs</SelectItem>
+                    {containers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.code}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
@@ -504,6 +570,7 @@ export default function InventoryPage() {
                     <TableHead>Type</TableHead>
                     <TableHead>Référence</TableHead>
                     <TableHead>Description</TableHead>
+                    <TableHead>Conteneur</TableHead>
                     <TableHead>Client</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Localisation</TableHead>
@@ -532,6 +599,9 @@ export default function InventoryPage() {
                         </div>
                       </TableCell>
                       <TableCell className="max-w-xs truncate">{item.description}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {item.container_code || containers.find((c) => c.id === item.container_id)?.code || "-"}
+                      </TableCell>
                       <TableCell>{item.client}</TableCell>
                       <TableCell>{getStatusBadge(item.status)}</TableCell>
                       <TableCell className="max-w-xs truncate">{item.location}</TableCell>

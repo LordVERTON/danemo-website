@@ -7,17 +7,20 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { 
-  Search, 
-  MapPin, 
-  Clock, 
-  Truck, 
-  Package, 
-  Ship, 
-  CheckCircle, 
+import {
+  Search,
+  MapPin,
+  Clock,
+  Truck,
+  Package,
+  Ship,
+  CheckCircle,
   AlertCircle,
   Plane,
-  Car
+  Car,
+  Copy,
+  ExternalLink,
+  PackageSearch,
 } from "lucide-react"
 
 interface Order {
@@ -34,6 +37,9 @@ interface Order {
   estimated_delivery?: string
   created_at: string
   updated_at: string
+  container_id?: string | null
+  container_code?: string | null
+  container_status?: string | null
 }
 
 interface TrackingEvent {
@@ -46,11 +52,35 @@ interface TrackingEvent {
   event_date: string
 }
 
+interface Container {
+  id: string
+  code: string
+  vessel?: string | null
+  departure_port?: string | null
+  arrival_port?: string | null
+  etd?: string | null
+  eta?: string | null
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+const containerStatusLabels: Record<string, string> = {
+  planned: "Planifié",
+  departed: "Départ confirmé",
+  in_transit: "En transit",
+  arrived: "Arrivé",
+  delivered: "Livré",
+  delayed: "Retard",
+}
+
 export default function TrackingPage() {
   const [trackingNumber, setTrackingNumber] = useState("")
   const [order, setOrder] = useState<Order | null>(null)
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([])
+  const [container, setContainer] = useState<Container | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingContainer, setIsLoadingContainer] = useState(false)
   const [error, setError] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
 
@@ -77,17 +107,59 @@ export default function TrackingPage() {
         if (eventsResult.success) {
           setTrackingEvents(eventsResult.data)
         }
+
+        await fetchContainerDetails(foundOrder)
       } else {
         setOrder(null)
         setTrackingEvents([])
+        setContainer(null)
         setError("Aucune commande trouvée avec ce numéro de suivi")
       }
     } catch (error) {
       setError("Erreur lors de la recherche")
       setOrder(null)
       setTrackingEvents([])
+      setContainer(null)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchContainerDetails = async (order: Order) => {
+    if (!order.container_id && !order.container_code) {
+      setContainer(null)
+      return
+    }
+
+    try {
+      setIsLoadingContainer(true)
+      if (order.container_id) {
+        const response = await fetch(`/api/containers/${order.container_id}`)
+        const result = await response.json()
+        if (result.success) {
+          setContainer(result.data)
+          return
+        }
+      }
+
+      if (order.container_code) {
+        const response = await fetch(`/api/containers`)
+        const result = await response.json()
+        if (result.success) {
+          const match = (result.data as Container[]).find(
+            (item) => item.code === order.container_code,
+          )
+          setContainer(match || null)
+          return
+        }
+      }
+
+      setContainer(null)
+    } catch (err) {
+      console.error("Failed to fetch container details:", err)
+      setContainer(null)
+    } finally {
+      setIsLoadingContainer(false)
     }
   }
 
@@ -201,6 +273,83 @@ export default function TrackingPage() {
         {/* Résultats */}
         {order && (
           <div className="space-y-6">
+            {(isLoadingContainer || container || order.container_code) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PackageSearch className="h-5 w-5 text-orange-600" />
+                    Conteneur associé
+                  </CardTitle>
+                  <CardDescription>
+                    Informations sur le conteneur affecté à votre expédition.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isLoadingContainer ? (
+                    <div className="text-sm text-gray-500">Chargement des informations du conteneur...</div>
+                  ) : container ? (
+                    <>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                          {container.code}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {containerStatusLabels[container.status] || container.status}
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigator.clipboard.writeText(container.code)}
+                          className="flex items-center gap-2"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copier
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`/tracking?code=${container.code}`, "_blank")}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Suivre le conteneur
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
+                          <p className="font-medium text-gray-800">{container.vessel || "Non communiqué"}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
+                          <p>{container.departure_port || "Non communiqué"}</p>
+                          <p className="text-xs text-gray-500">ETD: {formatDate(container.etd)}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
+                          <p>{container.arrival_port || "Non communiqué"}</p>
+                          <p className="text-xs text-gray-500">ETA: {formatDate(container.eta)}</p>
+                        </div>
+                      </div>
+                    </>
+                  ) : order.container_code ? (
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                        {order.container_code}
+                      </Badge>
+                      <span className="text-muted-foreground">
+                        Ce conteneur est en cours de synchronisation avec nos systèmes.
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      Aucun conteneur n&apos;est actuellement associé à cette commande.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Informations de la commande */}
             <Card>
               <CardHeader>
@@ -318,4 +467,11 @@ export default function TrackingPage() {
       </div>
     </div>
   )
+}
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "Non communiqué"
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleDateString("fr-FR")
 }

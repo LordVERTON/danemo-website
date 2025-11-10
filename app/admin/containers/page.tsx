@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { PackageSearch, Plus } from "lucide-react"
+import { PackageSearch, Plus, MapPin, Clock, BadgeCheck } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 
 interface Container {
   id: string
@@ -27,6 +29,12 @@ export default function ContainersPage() {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [form, setForm] = useState<Partial<Container>>({ status: 'planned' })
+  const [trackingOpen, setTrackingOpen] = useState(false)
+  const [selected, setSelected] = useState<Container | null>(null)
+  const [events, setEvents] = useState<any[]>([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [linkedInventory, setLinkedInventory] = useState<any[]>([])
+  const [inventoryLoading, setInventoryLoading] = useState(false)
 
   const fetchContainers = async () => {
     try {
@@ -47,6 +55,36 @@ export default function ContainersPage() {
     }
     fetchContainers()
   }, [])
+
+  const fetchContainerEvents = async (containerId: string) => {
+    try {
+      setEventsLoading(true)
+      // reuse tracking endpoint with container id
+      const res = await fetch(`/api/orders/${containerId}/tracking`)
+      const json = await res.json()
+      if (json.success) setEvents(json.data)
+    } catch {}
+    finally {
+      setEventsLoading(false)
+    }
+  }
+
+  const fetchLinkedInventory = async (container: Container) => {
+    try {
+      setInventoryLoading(true)
+      const res = await fetch('/api/inventory')
+      const json = await res.json()
+      if (json.success) {
+        const items = (json.data as any[]).filter(
+          (it) => it.container_id === container.id || it.container_code === container.code,
+        )
+        setLinkedInventory(items)
+      }
+    } catch {}
+    finally {
+      setInventoryLoading(false)
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -172,7 +210,24 @@ export default function ContainersPage() {
                         <td className="p-2">{c.arrival_port || '-'}</td>
                         <td className="p-2">{c.etd || '-'}</td>
                         <td className="p-2">{c.eta || '-'}</td>
-                        <td className="p-2">{c.status}</td>
+                        <td className="p-2">
+                          <div className="flex items-center gap-2">
+                            <span>{c.status}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelected(c)
+                                setTrackingOpen(true)
+                                fetchContainerEvents(c.id)
+                                fetchLinkedInventory(c)
+                              }}
+                            >
+                              <MapPin className="h-4 w-4" />
+                              Suivi
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -181,6 +236,79 @@ export default function ContainersPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={trackingOpen} onOpenChange={setTrackingOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Suivi du conteneur {selected?.code}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {eventsLoading ? (
+                <div className="text-sm text-muted-foreground">Chargement des événements...</div>
+              ) : events.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Aucun événement</div>
+              ) : (
+                <div className="space-y-2">
+                  {events.map((ev, idx) => (
+                    <div key={ev.id || idx} className="p-3 border rounded-md">
+                      <div className="flex items-center gap-2 text-sm">
+                        <BadgeCheck className="h-4 w-4 text-orange-600" />
+                        <span className="font-medium">{ev.status}</span>
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(ev.event_date).toLocaleString('fr-FR')}
+                        </span>
+                      </div>
+                      {ev.location && (
+                        <div className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {ev.location}
+                        </div>
+                      )}
+                      {ev.description && <div className="mt-1 text-sm">{ev.description}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-2">
+                <h3 className="text-base font-semibold mb-2">Articles liés</h3>
+                {inventoryLoading ? (
+                  <div className="text-sm text-muted-foreground">Chargement des articles...</div>
+                ) : linkedInventory.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Aucun article assigné à ce conteneur</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Référence</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Statut</TableHead>
+                          <TableHead>Localisation</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {linkedInventory.map((it) => (
+                          <TableRow key={it.id}>
+                            <TableCell className="font-mono text-xs">{it.reference}</TableCell>
+                            <TableCell className="capitalize">{it.type}</TableCell>
+                            <TableCell>{it.client}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{it.status}</Badge>
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">{it.location}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   )

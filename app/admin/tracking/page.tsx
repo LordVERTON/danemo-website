@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, Eye } from "lucide-react"
+import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, Eye, ExternalLink, PackageSearch } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 
 interface Order {
@@ -36,6 +36,9 @@ interface Order {
   estimated_delivery?: string
   created_at: string
   updated_at: string
+  container_id?: string | null
+  container_code?: string | null
+  container_status?: string | null
 }
 
 interface TrackingEvent {
@@ -53,6 +56,7 @@ export default function TrackingPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterContainer, setFilterContainer] = useState<string>("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([])
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false)
@@ -62,6 +66,7 @@ export default function TrackingPage() {
   const [isLoadingTrackingEvents, setIsLoadingTrackingEvents] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
+  const [containers, setContainers] = useState<Array<{ id: string; code: string; status?: string | null }>>([])
 
   // Formulaire pour ajouter un événement
   const [newEvent, setNewEvent] = useState({
@@ -75,7 +80,20 @@ export default function TrackingPage() {
 
   useEffect(() => {
     fetchOrders()
+    fetchContainers()
   }, [])
+  const fetchContainers = async () => {
+    try {
+      const response = await fetch('/api/containers')
+      const result = await response.json()
+      if (result.success) {
+        setContainers(result.data.map((c: any) => ({ id: c.id, code: c.code, status: c.status })))
+      }
+    } catch (error) {
+      console.error('Error fetching containers:', error)
+    }
+  }
+
 
   const fetchOrders = async () => {
     try {
@@ -207,8 +225,21 @@ export default function TrackingPage() {
       order.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.client_email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || order.status === filterStatus
-    return matchesSearch && matchesStatus
+    const matchesContainer =
+      filterContainer === "all" ||
+      order.container_id === filterContainer ||
+      order.container_code === filterContainer
+
+    return matchesSearch && matchesStatus && matchesContainer
   })
+
+  const selectedContainer = selectedOrder
+    ? containers.find(
+        (container) =>
+          container.id === selectedOrder.container_id ||
+          container.code === selectedOrder.container_code,
+      )
+    : undefined
 
   if (isLoading) {
     return (
@@ -282,6 +313,19 @@ export default function TrackingPage() {
                     <SelectItem value="cancelled">Annulée</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={filterContainer} onValueChange={setFilterContainer}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Filtrer par conteneur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les conteneurs</SelectItem>
+                    {containers.map((container) => (
+                      <SelectItem key={container.id} value={container.id}>
+                        {container.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
@@ -303,6 +347,7 @@ export default function TrackingPage() {
                   <TableHead>Client</TableHead>
                   <TableHead>Service</TableHead>
                   <TableHead>Trajet</TableHead>
+                  <TableHead>Conteneur</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Livraison estimée</TableHead>
                   <TableHead>Dernière mise à jour</TableHead>
@@ -310,182 +355,247 @@ export default function TrackingPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow 
-                    key={order.id}
-                    className="cursor-pointer hover:bg-gray-50 hover:shadow-sm hover:scale-[1.01] transition-all duration-200 ease-in-out group"
-                    onClick={() => handleRowClick(order)}
-                  >
-                    <TableCell className="font-mono font-medium">
-                      <div className="flex items-center gap-2">
-                        {order.order_number}
-                        <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{order.client_name}</div>
-                        <div className="text-sm text-muted-foreground">{order.client_email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getServiceTypeIcon(order.service_type)}
-                        <span>{getServiceTypeLabel(order.service_type)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>{order.origin}</div>
-                        <div className="text-muted-foreground">→ {order.destination}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell>
-                      {order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString('fr-FR') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {new Date(order.updated_at).toLocaleDateString('fr-FR')}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedOrder(order)
-                              fetchTrackingEvents(order.id)
-                            }}
-                          >
-                            <MapPin className="h-4 w-4" />
-                            Suivi
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl">
-                          <DialogHeader>
-                            <DialogTitle>Suivi de la commande {order.order_number}</DialogTitle>
-                            <DialogDescription>
-                              Historique des événements et ajout de nouveaux événements
-                            </DialogDescription>
-                            {currentUser && (
-                              <div className="mt-2 text-sm text-muted-foreground">
-                                Géré par : <span className="font-medium">{currentUser.name}</span>
-                              </div>
+                {filteredOrders.map((order) => {
+                  const containerForOrder = containers.find(
+                    (container) =>
+                      container.id === order.container_id ||
+                      container.code === order.container_code,
+                  )
+
+                  return (
+                    <TableRow
+                      key={order.id}
+                      className="cursor-pointer hover:bg-gray-50 hover:shadow-sm hover:scale-[1.01] transition-all duration-200 ease-in-out group"
+                      onClick={() => handleRowClick(order)}
+                    >
+                      <TableCell className="font-mono font-medium">
+                        <div className="flex items-center gap-2">
+                          {order.order_number}
+                          <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{order.client_name}</div>
+                          <div className="text-sm text-muted-foreground">{order.client_email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getServiceTypeIcon(order.service_type)}
+                          <span>{getServiceTypeLabel(order.service_type)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{order.origin}</div>
+                          <div className="text-muted-foreground">→ {order.destination}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {containerForOrder ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {containerForOrder.code}
+                            </Badge>
+                            {containerForOrder.status && (
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {containerForOrder.status.replace(/_/g, " ")}
+                              </span>
                             )}
-                          </DialogHeader>
-                          
-                          <div className="space-y-6">
-                            {/* Historique des événements */}
-                            <div>
-                              <h3 className="text-lg font-semibold mb-4">Historique des événements</h3>
-                              <div className="space-y-3">
-                                {trackingEvents.length > 0 ? (
-                                  trackingEvents.map((event, index) => (
-                                    <div key={event.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                                      <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                                        <span className="text-orange-600 font-semibold text-sm">{index + 1}</span>
-                                      </div>
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <Badge variant="outline">{event.status}</Badge>
-                                          <span className="text-sm text-muted-foreground">
-                                            {new Date(event.event_date).toLocaleString('fr-FR')}
-                                          </span>
-                                        </div>
-                                        {event.location && (
-                                          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                                            <MapPin className="h-3 w-3" />
-                                            {event.location}
-                                          </div>
-                                        )}
-                                        {event.description && (
-                                          <p className="text-sm">{event.description}</p>
-                                        )}
-                                        {event.operator && (
-                                          <p className="text-xs text-muted-foreground mt-1">
-                                            Opérateur: {event.operator}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <div className="text-center py-8 text-gray-500">
-                                    Aucun événement de suivi enregistré
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>
+                        {order.estimated_delivery
+                          ? new Date(order.estimated_delivery).toLocaleDateString('fr-FR')
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {new Date(order.updated_at).toLocaleDateString('fr-FR')}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedOrder(order)
+                                fetchTrackingEvents(order.id)
+                              }}
+                            >
+                              <MapPin className="h-4 w-4" />
+                              Suivi
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl">
+                            <DialogHeader>
+                              <DialogTitle>Suivi de la commande {order.order_number}</DialogTitle>
+                              <DialogDescription>
+                                Historique des événements et ajout de nouveaux événements
+                              </DialogDescription>
+                              {currentUser && (
+                                <div className="mt-2 text-sm text-muted-foreground">
+                                  Géré par : <span className="font-medium">{currentUser.name}</span>
+                                </div>
+                              )}
+                            </DialogHeader>
+
+                            <div className="space-y-6">
+                              <div className="border rounded-lg p-4 bg-muted/30">
+                                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                  <PackageSearch className="h-4 w-4 text-orange-600" />
+                                  Conteneur associé
+                                </h4>
+                                {containerForOrder ? (
+                                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                                    <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                                      {containerForOrder.code}
+                                    </Badge>
+                                    <span className="text-muted-foreground capitalize">
+                                      Statut: {containerForOrder.status?.replace(/_/g, " ") || "—"}
+                                    </span>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        window.open(`/admin/containers?code=${containerForOrder.code}`, '_blank')
+                                      }
+                                      className="flex items-center gap-2"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                      Voir les conteneurs
+                                    </Button>
                                   </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">
+                                    Aucun conteneur associé à cette commande.
+                                  </p>
                                 )}
                               </div>
-                            </div>
 
-                            {/* Formulaire pour ajouter un événement */}
-                            <div>
-                              <h3 className="text-lg font-semibold mb-4">Ajouter un événement</h3>
-                              <form onSubmit={handleAddEvent} className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <Label htmlFor="status">Statut</Label>
-                                    <Select
-                                      value={newEvent.status}
-                                      onValueChange={(value) => setNewEvent({ ...newEvent, status: value })}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Sélectionner un statut" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="pending">En attente</SelectItem>
-                                        <SelectItem value="confirmed">Confirmée</SelectItem>
-                                        <SelectItem value="in_progress">En cours</SelectItem>
-                                        <SelectItem value="completed">Terminée</SelectItem>
-                                        <SelectItem value="cancelled">Annulée</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                              {/* Historique des événements */}
+                              <div>
+                                <h3 className="text-lg font-semibold mb-4">Historique des événements</h3>
+                                <div className="space-y-3">
+                                  {trackingEvents.length > 0 ? (
+                                    trackingEvents.map((event, index) => (
+                                      <div key={event.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                                        <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                                          <span className="text-orange-600 font-semibold text-sm">{index + 1}</span>
+                                        </div>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <Badge variant="outline">{event.status}</Badge>
+                                            <span className="text-sm text-muted-foreground">
+                                              {new Date(event.event_date).toLocaleString('fr-FR')}
+                                            </span>
+                                          </div>
+                                          {event.location && (
+                                            <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                                              <MapPin className="h-3 w-3" />
+                                              {event.location}
+                                            </div>
+                                          )}
+                                          {event.description && (
+                                            <p className="text-sm">{event.description}</p>
+                                          )}
+                                          {event.operator && (
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                              Opérateur: {event.operator}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="text-center py-8 text-gray-500">
+                                      Aucun événement de suivi enregistré
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Formulaire pour ajouter un événement */}
+                              <div>
+                                <h3 className="text-lg font-semibold mb-4">Ajouter un événement</h3>
+                                <form onSubmit={handleAddEvent} className="space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <Label htmlFor="status">Statut</Label>
+                                      <Select
+                                        value={newEvent.status}
+                                        onValueChange={(value) => setNewEvent({ ...newEvent, status: value })}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Sélectionner un statut" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="pending">En attente</SelectItem>
+                                          <SelectItem value="confirmed">Confirmée</SelectItem>
+                                          <SelectItem value="in_progress">En cours</SelectItem>
+                                          <SelectItem value="completed">Terminée</SelectItem>
+                                          <SelectItem value="cancelled">Annulée</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="location">Localisation</Label>
+                                      <Input
+                                        id="location"
+                                        value={newEvent.location}
+                                        onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                                        placeholder="Ex: Port de Dakar"
+                                      />
+                                    </div>
                                   </div>
                                   <div>
-                                    <Label htmlFor="location">Localisation</Label>
-                                    <Input
-                                      id="location"
-                                      value={newEvent.location}
-                                      onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                                      placeholder="Ex: Port de Dakar"
+                                    <Label htmlFor="description">Description</Label>
+                                    <Textarea
+                                      id="description"
+                                      value={newEvent.description}
+                                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                                      placeholder="Décrivez l'événement..."
+                                      rows={3}
                                     />
                                   </div>
-                                </div>
-                                <div>
-                                  <Label htmlFor="description">Description</Label>
-                                  <Textarea
-                                    id="description"
-                                    value={newEvent.description}
-                                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                                    placeholder="Décrivez l'événement..."
-                                    rows={3}
-                                  />
-                                </div>
-                                <div className="flex justify-end gap-2">
-                                  <Button type="button" variant="outline" onClick={() => setNewEvent({
-                                    status: '',
-                                    location: '',
-                                    description: '',
-                                    operator: '',
-                                    event_date: new Date().toISOString().split('T')[0]
-                                  })}>
-                                    Annuler
-                                  </Button>
-                                  <Button type="submit" disabled={isUpdating}>
-                                    {isUpdating ? 'Ajout...' : 'Ajouter l\'événement'}
-                                  </Button>
-                                </div>
-                              </form>
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() =>
+                                        setNewEvent({
+                                          status: '',
+                                          location: '',
+                                          description: '',
+                                          operator: '',
+                                          event_date: new Date().toISOString().split('T')[0],
+                                        })
+                                      }
+                                    >
+                                      Annuler
+                                    </Button>
+                                    <Button type="submit" disabled={isUpdating}>
+                                      {isUpdating ? 'Ajout...' : 'Ajouter l\'événement'}
+                                    </Button>
+                                  </div>
+                                </form>
+                              </div>
                             </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -508,6 +618,43 @@ export default function TrackingPage() {
             
             <div className="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <div className="space-y-6">
+              <div className="border rounded-lg p-4 bg-muted/30">
+                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <PackageSearch className="h-4 w-4 text-orange-600" />
+                  Conteneur associé
+                </h3>
+                {selectedContainer ? (
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                      {selectedContainer.code}
+                    </Badge>
+                    <span className="text-muted-foreground capitalize">
+                      Statut: {selectedContainer.status?.replace(/_/g, " ") || "—"}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        window.open(`/admin/containers?code=${selectedContainer.code}`, '_blank')
+                      }
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Voir les conteneurs
+                    </Button>
+                  </div>
+                ) : selectedOrder?.container_code ? (
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                      {selectedOrder.container_code}
+                    </Badge>
+                    <span className="text-muted-foreground">Ce conteneur n’est pas présent dans la liste.</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Aucun conteneur associé à cette commande.</p>
+                )}
+              </div>
               {/* Historique des événements */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Historique des événements</h3>

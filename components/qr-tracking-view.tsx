@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Copy, MapPin, QrCode, RefreshCw, Search, Timer, Truck, CheckCircle2, AlertTriangle } from "lucide-react"
+import { Copy, MapPin, QrCode, RefreshCw, Search, Timer, Truck, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react"
 
 interface TrackingEvent {
   id: string
@@ -187,6 +187,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
   const [activeTab, setActiveTab] = useState("tracking")
 
   const qrDisplay = useMemo(() => decoded.qrCode || "", [decoded])
+  const container = trackingData?.container ?? null
 
   useEffect(() => {
     if (initialPayload) {
@@ -208,6 +209,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
         return
       }
       setTrackingData(json.data)
+      setActiveTab(json.data?.container ? "container" : "tracking")
     } catch (err) {
       console.error("Failed to fetch QR tracking data:", err)
       setError("Impossible de récupérer les informations du colis.")
@@ -348,9 +350,79 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
+                {trackingData?.container && <TabsTrigger value="container">Conteneur</TabsTrigger>}
                 <TabsTrigger value="tracking">Suivi</TabsTrigger>
                 <TabsTrigger value="raw">Contenu brut</TabsTrigger>
               </TabsList>
+              {container && (
+                <TabsContent value="container" className="mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-3">
+                        <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                          {container.code}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {containerStatusMap[container.status] || container.status}
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Détails du conteneur associé à ce colis.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigator.clipboard.writeText(container.code)}
+                          className="flex items-center gap-2"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copier le code
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/tracking?code=${container.code}`)}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Suivre ce conteneur
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Trajet</h4>
+                          <p>
+                            <span className="font-semibold">Départ:</span>{" "}
+                            {container.departure_port || "Non communiqué"}
+                          </p>
+                          <p>
+                            <span className="font-semibold">Arrivée:</span>{" "}
+                            {container.arrival_port || "Non communiqué"}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Dates</h4>
+                          <p>
+                            <span className="font-semibold">ETD:</span>{" "}
+                            {formatDate(container.etd)}
+                          </p>
+                          <p>
+                            <span className="font-semibold">ETA:</span>{" "}
+                            {formatDate(container.eta)}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
+                          <p>{container.vessel || "Non communiqué"}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
               <TabsContent value="tracking" className="mt-4">
                 <div className="text-sm text-gray-500">
                   Le suivi affiche les informations du colis lié au QR et les événements associés au conteneur.
@@ -444,38 +516,63 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                   </div>
                 </div>
 
-                {trackingData.container && (
+                {container && (
                   <div className="rounded-lg border bg-gray-50 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-                      Conteneur associé
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                      <div>
-                        <p className="font-medium text-gray-800">{trackingData.container.code}</p>
-                        {trackingData.container.vessel && <p>Navire: {trackingData.container.vessel}</p>}
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                          {container.code}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {containerStatusMap[container.status] || container.status}
+                        </Badge>
                       </div>
-                      <div>
-                        <p>
-                          <span className="font-semibold">Départ:</span>{" "}
-                          {trackingData.container.departure_port || "Non communiqué"}
-                        </p>
-                        <p>
-                          <span className="font-semibold">ETD:</span> {formatDate(trackingData.container.etd)}
-                        </p>
-                      </div>
-                      <div>
-                        <p>
-                          <span className="font-semibold">Arrivée:</span>{" "}
-                          {trackingData.container.arrival_port || "Non communiqué"}
-                        </p>
-                        <p>
-                          <span className="font-semibold">ETA:</span> {formatDate(trackingData.container.eta)}
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigator.clipboard.writeText(container.code)}
+                          className="flex items-center gap-2"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copier
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/tracking?code=${container.code}`)}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Suivre ce conteneur
+                        </Button>
                       </div>
                     </div>
-                    <div className="mt-3 text-sm text-gray-600">
-                      <span className="font-semibold">Statut conteneur:</span>{" "}
-                      {containerStatusMap[trackingData.container.status] || trackingData.container.status}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                      <div>
+                        <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
+                        <p className="font-medium text-gray-800">
+                          {container.vessel || "Non communiqué"}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
+                        <p>
+                          {container.departure_port || "Non communiqué"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ETD: {formatDate(container.etd)}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
+                        <p>
+                          {container.arrival_port || "Non communiqué"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ETA: {formatDate(container.eta)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}

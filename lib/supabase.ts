@@ -53,6 +53,9 @@ export interface Database {
           estimated_delivery: string | null
           created_at: string
           updated_at: string
+          container_id: string | null
+          container_code: string | null
+          container_status: string | null
         }
         Insert: {
           id?: string
@@ -69,6 +72,9 @@ export interface Database {
           estimated_delivery?: string | null
           created_at?: string
           updated_at?: string
+          container_id?: string | null
+          container_code?: string | null
+          container_status?: string | null
         }
         Update: {
           id?: string
@@ -85,6 +91,9 @@ export interface Database {
           estimated_delivery?: string | null
           created_at?: string
           updated_at?: string
+          container_id?: string | null
+          container_code?: string | null
+          container_status?: string | null
         }
       }
       tracking_events: {

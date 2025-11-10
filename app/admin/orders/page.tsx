@@ -60,6 +60,9 @@ interface Order {
   estimated_delivery?: string
   created_at: string
   updated_at: string
+  container_id?: string | null
+  container_code?: string | null
+  container_status?: string | null
 }
 
 export default function OrdersPage() {
@@ -67,12 +70,14 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterContainer, setFilterContainer] = useState<string>("all")
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [error, setError] = useState("")
+  const [containers, setContainers] = useState<Array<{ id: string; code: string; status?: string | null }>>([])
 
   // Formulaire de création
   const [newOrder, setNewOrder] = useState({
@@ -84,7 +89,9 @@ export default function OrdersPage() {
     destination: "",
     weight: "",
     value: "",
-    estimated_delivery: ""
+    estimated_delivery: "",
+    container_id: "",
+    container_code: ""
   })
 
   // Formulaire de modification
@@ -98,11 +105,14 @@ export default function OrdersPage() {
     weight: "",
     value: "",
     estimated_delivery: "",
-    status: ""
+    status: "",
+    container_id: "",
+    container_code: ""
   })
 
   useEffect(() => {
     fetchOrders()
+    fetchContainers()
   }, [])
 
   useEffect(() => {
@@ -135,14 +145,34 @@ export default function OrdersPage() {
     }
   }
 
+  const fetchContainers = async () => {
+    try {
+      const response = await fetch('/api/containers')
+      const result = await response.json()
+      if (result.success) {
+        setContainers(result.data.map((container: any) => ({
+          id: container.id,
+          code: container.code,
+          status: container.status ?? null,
+        })))
+      }
+    } catch (error) {
+      console.error('Error fetching containers:', error)
+    }
+  }
+
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
       const orderData = {
         ...newOrder,
         weight: newOrder.weight ? parseFloat(newOrder.weight) : null,
         value: newOrder.value ? parseFloat(newOrder.value) : null,
-        estimated_delivery: newOrder.estimated_delivery || null
+        estimated_delivery: newOrder.estimated_delivery || null,
+        container_id: newOrder.container_id || null,
+        container_code: selectedContainer?.code || null,
+        container_status: selectedContainer?.status || null,
       }
 
       const response = await fetch('/api/orders', {
@@ -165,7 +195,9 @@ export default function OrdersPage() {
           destination: "",
           weight: "",
           value: "",
-          estimated_delivery: ""
+          estimated_delivery: "",
+          container_id: "",
+          container_code: ""
         })
         setIsCreateDialogOpen(false)
         fetchOrders()
@@ -189,7 +221,9 @@ export default function OrdersPage() {
       weight: order.weight ? String(order.weight) : "",
       value: order.value ? String(order.value) : "",
       estimated_delivery: order.estimated_delivery || "",
-      status: order.status
+      status: order.status,
+      container_id: order.container_id || "",
+      container_code: order.container_code || ""
     })
     setIsEditDialogOpen(true)
   }
@@ -199,11 +233,15 @@ export default function OrdersPage() {
     if (!selectedOrder) return
 
     try {
+      const selectedContainer = containers.find((container) => container.id === editOrder.container_id)
       const orderData = {
         ...editOrder,
         weight: editOrder.weight ? parseFloat(editOrder.weight) : null,
         value: editOrder.value ? parseFloat(editOrder.value) : null,
-        estimated_delivery: editOrder.estimated_delivery || null
+        estimated_delivery: editOrder.estimated_delivery || null,
+        container_id: editOrder.container_id || null,
+        container_code: selectedContainer?.code || null,
+        container_status: selectedContainer?.status || null,
       }
 
       const response = await fetch(`/api/orders/${selectedOrder.id}`, {
@@ -245,7 +283,9 @@ export default function OrdersPage() {
         destination: data.destination || "",
         weight: data.weight || "",
         value: data.value || "",
-        estimated_delivery: data.estimated_delivery || ""
+        estimated_delivery: data.estimated_delivery || "",
+        container_id: "",
+        container_code: ""
       })
       
       // Ouvrir le dialog de création
@@ -362,7 +402,11 @@ export default function OrdersPage() {
       order.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.client_email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || order.status === filterStatus
-    return matchesSearch && matchesStatus
+    const matchesContainer =
+      filterContainer === "all" ||
+      order.container_id === filterContainer ||
+      order.container_code === filterContainer
+    return matchesSearch && matchesStatus && matchesContainer
   })
 
   if (isLoading) {
@@ -481,6 +525,39 @@ export default function OrdersPage() {
                     />
                   </div>
                 </div>
+                <div>
+                  <Label htmlFor="container_id">Conteneur</Label>
+                  <Select
+                    value={newOrder.container_id}
+                    onValueChange={(value) => {
+                      const selected = containers.find((container) => container.id === value)
+                      setNewOrder({
+                        ...newOrder,
+                        container_id: value,
+                        container_code: selected?.code || "",
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="text-base sm:text-sm">
+                      <SelectValue placeholder="Aucun conteneur assigné" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Aucun</SelectItem>
+                      {containers.map((container) => (
+                        <SelectItem key={container.id} value={container.id}>
+                          {container.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {newOrder.container_id && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Statut:{" "}
+                      {containers.find((container) => container.id === newOrder.container_id)?.status?.replace(/_/g, " ") ||
+                        "Non communiqué"}
+                    </p>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                   <div>
                     <Label htmlFor="weight">Poids (kg)</Label>
@@ -542,7 +619,7 @@ export default function OrdersPage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="w-48">
@@ -555,6 +632,19 @@ export default function OrdersPage() {
                     <SelectItem value="in_progress">En cours</SelectItem>
                     <SelectItem value="completed">Terminée</SelectItem>
                     <SelectItem value="cancelled">Annulée</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterContainer} onValueChange={setFilterContainer}>
+                  <SelectTrigger className="w-56">
+                    <SelectValue placeholder="Filtrer par conteneur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les conteneurs</SelectItem>
+                    {containers.map((container) => (
+                      <SelectItem key={container.id} value={container.id}>
+                        {container.code}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -584,6 +674,7 @@ export default function OrdersPage() {
                     <TableHead>Client</TableHead>
                     <TableHead>Service</TableHead>
                     <TableHead>Trajet</TableHead>
+                    <TableHead>Conteneur</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Valeur</TableHead>
                     <TableHead>Date</TableHead>
@@ -591,7 +682,14 @@ export default function OrdersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrders.map((order) => (
+                  {filteredOrders.map((order) => {
+                    const containerInfo = containers.find(
+                      (container) =>
+                        container.id === order.container_id ||
+                        container.code === order.container_code,
+                    )
+
+                    return (
                     <TableRow 
                       key={order.id}
                       className="cursor-pointer hover:bg-gray-50 hover:shadow-sm hover:scale-[1.01] transition-all duration-200 ease-in-out group"
@@ -615,6 +713,22 @@ export default function OrdersPage() {
                           <div>{order.origin}</div>
                           <div className="text-muted-foreground">→ {order.destination}</div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {containerInfo ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {containerInfo.code}
+                            </Badge>
+                            {containerInfo.status && (
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {containerInfo.status.replace(/_/g, " ")}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell>
@@ -674,14 +788,22 @@ export default function OrdersPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
 
             {/* Version Mobile - Cartes */}
             <div className="lg:hidden space-y-4">
-              {filteredOrders.map((order) => (
+              {filteredOrders.map((order) => {
+                const containerInfo = containers.find(
+                  (container) =>
+                    container.id === order.container_id ||
+                    container.code === order.container_code,
+                )
+
+                return (
                 <Card 
                   key={order.id} 
                   className="p-4 hover:shadow-md hover:scale-[1.02] transition-all duration-200 ease-in-out cursor-pointer"
@@ -718,6 +840,25 @@ export default function OrdersPage() {
                     <div className="text-sm">
                       <span className="text-muted-foreground">Trajet:</span>
                       <p className="font-medium">{order.origin} → {order.destination}</p>
+                    </div>
+
+                    {/* Conteneur */}
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Conteneur:</span>
+                      {containerInfo ? (
+                        <div className="mt-1 flex items-center gap-2">
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {containerInfo.code}
+                          </Badge>
+                          {containerInfo.status && (
+                            <span className="text-xs text-muted-foreground capitalize">
+                              {containerInfo.status.replace(/_/g, " ")}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="font-medium text-muted-foreground">Aucun</p>
+                      )}
                     </div>
 
                     {/* Date et actions */}
@@ -777,7 +918,8 @@ export default function OrdersPage() {
                     </div>
                   </div>
                 </Card>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -999,6 +1141,39 @@ export default function OrdersPage() {
                       onChange={(e) => setEditOrder({ ...editOrder, estimated_delivery: e.target.value })}
                       className="text-base sm:text-sm"
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit_container_id">Conteneur</Label>
+                    <Select
+                      value={editOrder.container_id}
+                      onValueChange={(value) => {
+                        const selected = containers.find((container) => container.id === value)
+                        setEditOrder({
+                          ...editOrder,
+                          container_id: value,
+                          container_code: selected?.code || "",
+                        })
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Aucun conteneur assigné" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Aucun</SelectItem>
+                        {containers.map((container) => (
+                          <SelectItem key={container.id} value={container.id}>
+                            {container.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {editOrder.container_id && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Statut:{" "}
+                        {containers.find((container) => container.id === editOrder.container_id)?.status?.replace(/_/g, " ") ||
+                          "Non communiqué"}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
