@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    let orders
+    let orders: any[] = []
     if (tracking) {
       // Recherche par numéro de commande
       const order = await ordersApi.getByOrderNumber(tracking)

@@ -4,7 +4,7 @@ import { supabase } from './supabase'
 export interface AuthenticatedUser {
   id: string
   email: string
-  role: 'admin' | 'operator'
+  role: 'admin' | 'operator' | 'client'
   name: string
 }
 
@@ -44,7 +44,7 @@ export async function authenticateRequest(request: NextRequest): Promise<Authent
       return {
         id: 'local-user',
         email: 'local@danemo.be',
-        role: role as 'admin' | 'operator',
+        role: role as 'admin' | 'operator' | 'client',
         name: role === 'admin' ? 'Admin Local' : 'Operator Local'
       }
     }
@@ -74,7 +74,7 @@ export function requireAuth(handler: (request: NextRequest, user: AuthenticatedU
   }
 }
 
-export function requireRole(allowedRoles: ('admin' | 'operator')[]) {
+export function requireRole(allowedRoles: ('admin' | 'operator' | 'client')[]) {
   return (handler: (request: NextRequest, user: AuthenticatedUser) => Promise<Response>) => {
     return async (request: NextRequest) => {
       const user = await authenticateRequest(request)

@@ -8,13 +8,14 @@ interface Employee {
 // GET /api/employees/[id] - Récupérer un employé par ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const { data, error } = await supabaseAdmin
       .from('employees')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
     
     if (error) throw error
@@ -32,9 +33,10 @@ export async function GET(
 // PUT /api/employees/[id] - Mettre à jour un employé
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const body = await request.json()
     
     // Validation des données
@@ -49,7 +51,7 @@ export async function PUT(
     const { data: employee, error: fetchError } = await supabaseAdmin
       .from('employees')
       .select('user_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
     
     if (fetchError) throw fetchError
@@ -82,7 +84,7 @@ export async function PUT(
     const { data, error } = await (supabaseAdmin as any)
       .from('employees')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
     
@@ -101,14 +103,15 @@ export async function PUT(
 // DELETE /api/employees/[id] - Supprimer un employé
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     // Récupérer l'employé pour avoir le user_id
     const { data: employee, error: fetchError } = await supabaseAdmin
       .from('employees')
       .select('user_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
     
     if (fetchError) throw fetchError
@@ -118,7 +121,7 @@ export async function DELETE(
     const { error: deleteError } = await supabaseAdmin
       .from('employees')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
     
     if (deleteError) throw deleteError
 

@@ -196,7 +196,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Stocks</span>
           </Link>
 
-          {/* QR Scanner - Au milieu */}
+          {/*QR code */}
           <QRScanner 
             onScan={handleQRScan}
             title="Scanner QR Code"

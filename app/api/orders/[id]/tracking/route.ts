@@ -4,10 +4,11 @@ import { trackingApi, ordersApi } from '@/lib/database'
 // GET /api/orders/[id]/tracking - Récupérer les événements de suivi d'une commande
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const events = await trackingApi.getByOrderId(params.id)
+    const { id } = await context.params
+    const events = await trackingApi.getByOrderId(id)
     
     return NextResponse.json({ success: true, data: events })
   } catch (error) {
@@ -22,13 +23,14 @@ export async function GET(
 // POST /api/orders/[id]/tracking - Ajouter un événement de suivi
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const body = await request.json()
     
     // Vérifier que la commande existe
-    const order = await ordersApi.getById(params.id)
+    const order = await ordersApi.getById(id)
     if (!order) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
@@ -38,13 +40,13 @@ export async function POST(
 
     // Ajouter l'événement
     const event = await trackingApi.addEvent({
-      order_id: params.id,
+      order_id: id,
       ...body
     })
 
     // Si un nouveau statut est fourni, mettre à jour la commande
     if (body.status && body.status !== order.status) {
-      await ordersApi.update(params.id, { status: body.status })
+      await ordersApi.update(id, { status: body.status })
     }
 
     return NextResponse.json({ success: true, data: event }, { status: 201 })

@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, Phone, Mail, Clock } from "lucide-react"
+import LanguageSwitcher from "@/components/language-switcher"
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -31,6 +32,9 @@ export default function Header() {
               <a href="tel:+32488645183" className="hover:text-orange-500">
                 +32488645183
               </a>
+            </div>
+            <div className="md:hidden">
+              <LanguageSwitcher />
             </div>
           </div>
         </div>
@@ -73,10 +77,15 @@ export default function Header() {
               </Link>
             </nav>
 
-            {/* Mobile Menu Button */}
-            <button className="md:hidden p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <div className="hidden md:block">
+                <LanguageSwitcher />
+              </div>
+              <button className="md:hidden p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
 
           {/* Mobile Navigation */}
@@ -101,6 +110,9 @@ export default function Header() {
                 <Link href="/blog" className="text-gray-700 hover:text-orange-500 font-medium">
                   Blog
                 </Link>
+                <div className="pt-4 border-t">
+                  <LanguageSwitcher />
+                </div>
               </div>
             </nav>
           )}

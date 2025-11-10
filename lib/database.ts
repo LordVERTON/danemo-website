@@ -6,6 +6,15 @@ type OrderInsert = Database['public']['Tables']['orders']['Insert']
 type OrderUpdate = Database['public']['Tables']['orders']['Update']
 type TrackingEvent = Database['public']['Tables']['tracking_events']['Row']
 type TrackingEventInsert = Database['public']['Tables']['tracking_events']['Insert']
+type Client = Database['public']['Tables']['clients']['Row']
+type ClientInsert = Database['public']['Tables']['clients']['Insert']
+type ClientUpdate = Database['public']['Tables']['clients']['Update']
+type Container = Database['public']['Tables']['containers']['Row']
+type ContainerInsert = Database['public']['Tables']['containers']['Insert']
+type ContainerUpdate = Database['public']['Tables']['containers']['Update']
+type Package = Database['public']['Tables']['packages']['Row']
+type PackageInsert = Database['public']['Tables']['packages']['Insert']
+type PackageUpdate = Database['public']['Tables']['packages']['Update']
 
 // Fonctions pour les commandes
 export const ordersApi = {
@@ -46,7 +55,7 @@ export const ordersApi = {
 
   // Créer une nouvelle commande
   async create(order: OrderInsert): Promise<Order> {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('orders')
       .insert(order)
       .select()
@@ -58,7 +67,7 @@ export const ordersApi = {
 
   // Mettre à jour une commande
   async update(id: string, updates: OrderUpdate): Promise<Order> {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('orders')
       .update(updates)
       .eq('id', id)
@@ -102,6 +111,132 @@ export const ordersApi = {
     if (error) throw error
     return data || []
   }
+}
+
+// Fonctions pour les clients
+export const clientsApi = {
+  async getAll(): Promise<Client[]> {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+  async getById(id: string): Promise<Client | null> {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    return data
+  },
+  async create(payload: ClientInsert): Promise<Client> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('clients')
+      .insert(payload)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+  async update(id: string, payload: ClientUpdate): Promise<Client> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('clients')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+  async delete(id: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from('clients')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+  },
+}
+
+// Fonctions pour les conteneurs
+export const containersApi = {
+  async getAll(): Promise<Container[]> {
+    const { data, error } = await supabase
+      .from('containers')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+  async getById(id: string): Promise<Container | null> {
+    const { data, error } = await supabase
+      .from('containers')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    return data
+  },
+  async create(payload: ContainerInsert): Promise<Container> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('containers')
+      .insert(payload)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+  async update(id: string, payload: ContainerUpdate): Promise<Container> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('containers')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+  async delete(id: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from('containers')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+  },
+}
+
+// Fonctions pour les colis (packages) avec QR
+export const packagesApi = {
+  async getByQr(qr: string): Promise<Package | null> {
+    const { data, error } = await supabase
+      .from('packages')
+      .select('*')
+      .eq('qr_code', qr)
+      .single()
+    if (error) throw error
+    return data
+  },
+  async updateStatus(id: string, status: Package['status'], extras?: Partial<PackageUpdate>): Promise<Package> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('packages')
+      .update({ status, last_scan_at: new Date().toISOString(), ...extras })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+  async create(payload: PackageInsert): Promise<Package> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('packages')
+      .insert(payload)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
 }
 
 // Fonctions pour les événements de suivi

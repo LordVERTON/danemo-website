@@ -4,13 +4,14 @@ import { supabaseAdmin } from '@/lib/supabase'
 // GET /api/inventory/[id] - Récupérer un article d'inventaire par ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const { data, error } = await supabaseAdmin
       .from('inventory')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
     
     if (error) throw error
@@ -28,11 +29,12 @@ export async function GET(
 // PUT /api/inventory/[id] - Mettre à jour un article d'inventaire
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     // Validation de l'ID
-    if (!params.id || typeof params.id !== 'string') {
+    if (!id || typeof id !== 'string') {
       return NextResponse.json(
         { success: false, error: 'Invalid inventory ID' },
         { status: 400 }
@@ -58,10 +60,10 @@ export async function PUT(
       )
     }
     
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('inventory')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
     
@@ -80,13 +82,14 @@ export async function PUT(
 // DELETE /api/inventory/[id] - Supprimer un article d'inventaire
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const { error } = await supabaseAdmin
       .from('inventory')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
     
     if (error) throw error
     

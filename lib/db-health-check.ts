@@ -117,7 +117,7 @@ export async function testDatabaseOperations(): Promise<{
       valeur: '1'
     }
 
-    const { data: writeData, error: writeError } = await supabaseAdmin
+    const { data: writeData, error: writeError } = await (supabaseAdmin as any)
       .from('inventory')
       .insert(testItem)
       .select()
@@ -129,7 +129,7 @@ export async function testDatabaseOperations(): Promise<{
       results.write = true
 
       // Test de suppression (nettoyage)
-      const { error: deleteError } = await supabaseAdmin
+      const { error: deleteError } = await (supabaseAdmin as any)
         .from('inventory')
         .delete()
         .eq('id', writeData.id)

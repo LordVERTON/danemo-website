@@ -5,10 +5,11 @@ import { supabaseAdmin } from '@/lib/supabase'
 // GET /api/orders/[id] - Récupérer une commande par ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: any
 ) {
   try {
-    const order = await ordersApi.getById(params.id)
+    const id: string = context?.params?.id
+    const order = await ordersApi.getById(id)
     
     if (!order) {
       return NextResponse.json(
@@ -30,14 +31,15 @@ export async function GET(
 // PUT /api/orders/[id] - Mettre à jour une commande
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: any
 ) {
   try {
+    const id: string = context?.params?.id
     const body = await request.json()
     const { user_id, user_name, ...orderData } = body
     
     // Récupérer l'ancienne commande pour comparer les changements
-    const oldOrder = await ordersApi.getById(params.id)
+    const oldOrder = await ordersApi.getById(id)
     if (!oldOrder) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
@@ -46,7 +48,7 @@ export async function PUT(
     }
     
     // Mettre à jour la commande
-    const order = await ordersApi.update(params.id, orderData)
+    const order = await ordersApi.update(id, orderData)
     
     // TODO: Activer l'historique une fois la table order_history créée
     /*
@@ -56,7 +58,7 @@ export async function PUT(
         await supabaseAdmin
           .from('order_history')
           .insert({
-            order_id: params.id,
+            order_id: id,
             user_id: user_id || null,
             action: 'update',
             description: 'Modification de la commande',
@@ -89,10 +91,11 @@ export async function PUT(
 // DELETE /api/orders/[id] - Supprimer une commande
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ordersApi.delete(params.id)
+    const { id } = await context.params
+    await ordersApi.delete(id)
     
     return NextResponse.json({ success: true, message: 'Order deleted successfully' })
   } catch (error) {

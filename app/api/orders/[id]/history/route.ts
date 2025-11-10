@@ -4,11 +4,12 @@ import { supabaseAdmin } from '@/lib/supabase'
 // GET /api/orders/[id]/history - Récupérer l'historique des modifications d'une commande
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Validation de l'ID
-    if (!params.id || typeof params.id !== 'string') {
+    const { id } = await context.params
+    if (!id || typeof id !== 'string') {
       return NextResponse.json(
         { success: false, error: 'Invalid order ID' },
         { status: 400 }

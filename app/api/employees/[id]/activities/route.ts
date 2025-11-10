@@ -4,9 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase'
 // GET /api/employees/[id]/activities - Récupérer les activités d'un employé
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const activityType = searchParams.get('type')
@@ -14,7 +15,7 @@ export async function GET(
     let query = supabaseAdmin
       .from('employee_activities')
       .select('*')
-      .eq('employee_id', params.id)
+      .eq('employee_id', id)
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -39,15 +40,16 @@ export async function GET(
 // POST /api/employees/[id]/activities - Ajouter une activité
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const body = await request.json()
     
     const { data, error } = await supabaseAdmin
       .from('employee_activities')
       .insert({
-        employee_id: params.id,
+        employee_id: id,
         ...body,
         created_at: new Date().toISOString()
       })

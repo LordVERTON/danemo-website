@@ -116,6 +116,126 @@ export interface Database {
           event_date?: string
         }
       }
+      // NEW: clients table
+      clients: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          phone: string | null
+          address: string | null
+          company: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          company?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          company?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // NEW: containers table
+      containers: {
+        Row: {
+          id: string
+          code: string // e.g., MSKU1234567
+          vessel: string | null
+          departure_port: string | null
+          arrival_port: string | null
+          etd: string | null // estimated time of departure
+          eta: string | null // estimated time of arrival
+          status: 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
+          client_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          vessel?: string | null
+          departure_port?: string | null
+          arrival_port?: string | null
+          etd?: string | null
+          eta?: string | null
+          status?: 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
+          client_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          vessel?: string | null
+          departure_port?: string | null
+          arrival_port?: string | null
+          etd?: string | null
+          eta?: string | null
+          status?: 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
+          client_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // NEW: packages table (colis) with QR tracking
+      packages: {
+        Row: {
+          id: string
+          qr_code: string // unique QR content (e.g., URL token)
+          reference: string
+          description: string | null
+          client_id: string | null
+          container_id: string | null
+          weight: number | null
+          value: number | null
+          status: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
+          last_scan_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          qr_code: string
+          reference: string
+          description?: string | null
+          client_id?: string | null
+          container_id?: string | null
+          weight?: number | null
+          value?: number | null
+          status?: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
+          last_scan_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          qr_code?: string
+          reference?: string
+          description?: string | null
+          client_id?: string | null
+          container_id?: string | null
+          weight?: number | null
+          value?: number | null
+          status?: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
+          last_scan_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       inventory: {
         Row: {
           id: string

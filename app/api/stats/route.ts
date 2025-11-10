@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('start_date')
     
-    const stats = await utils.getStats(startDate)
+    const stats = await utils.getStats(startDate || undefined)
     
     return NextResponse.json({ success: true, data: stats })
   } catch (error) {

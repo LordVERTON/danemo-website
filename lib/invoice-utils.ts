@@ -23,6 +23,8 @@ export interface InvoiceData {
     email: string
     siret: string
     tva: string
+    iban?: string
+    bic?: string
   }
 }
 
@@ -73,6 +75,9 @@ export const generateInvoice = async (data: InvoiceData) => {
   pdf.text(data.company.address, 15, 32)
   pdf.text(`Tél: ${data.company.phone} | Email: ${data.company.email}`, 15, 36)
   pdf.text(`SIRET: ${data.company.siret} | TVA: ${data.company.tva}`, 15, 40)
+  if (data.company.iban && data.company.bic) {
+    pdf.text(`IBAN: ${data.company.iban} | BIC: ${data.company.bic}`, 15, 44)
+  }
   
   // Numéro de facture et date
   pdf.setTextColor(0, 0, 0)
@@ -228,5 +233,7 @@ export const defaultCompanyData = {
   phone: '+33 1 23 45 67 89',
   email: 'contact@danemo.be',
   siret: '123 456 789 01234',
-  tva: 'FR12 345678901'
+  tva: 'FR12 345678901',
+  iban: 'BE71 0961 2345 6769',
+  bic: 'GKCCBEBB',
 }

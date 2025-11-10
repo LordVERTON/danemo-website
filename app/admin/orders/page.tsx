@@ -7,6 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -31,10 +37,13 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  FileText
+  FileText,
+  FileDown,
+  FileSpreadsheet
 } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 import { generateInvoice, defaultCompanyData, InvoiceData } from "@/lib/invoice-utils"
+import { generateProformaDocx, generateProformaPdf } from "@/lib/proforma-utils"
 
 interface Order {
   id: string
@@ -279,6 +288,42 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Erreur lors de la génération de la facture:', error)
       setError('Erreur lors de la génération de la facture')
+    }
+  }
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleGenerateProformaPdf = async (order: Order) => {
+    try {
+      await generateProformaPdf({
+        order,
+        company: defaultCompanyData,
+      })
+    } catch (error) {
+      console.error('Erreur lors de la génération de la proforma PDF:', error)
+      setError('Erreur lors de la génération de la proforma PDF')
+    }
+  }
+
+  const handleGenerateProformaDocx = async (order: Order) => {
+    try {
+      const blob = await generateProformaDocx({
+        order,
+        company: defaultCompanyData,
+      })
+      downloadBlob(blob, `proforma-${order.order_number}.docx`)
+    } catch (error) {
+      console.error('Erreur lors de la génération de la proforma DOCX:', error)
+      setError('Erreur lors de la génération de la proforma DOCX')
     }
   }
 
@@ -580,6 +625,41 @@ export default function OrdersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:bg-orange-50 hover:border-orange-200 transition-colors flex items-center gap-1"
+                              >
+                                <FileSpreadsheet className="h-4 w-4" />
+                                <span className="hidden xl:inline">Proforma</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleGenerateProformaPdf(order)
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <FileDown className="h-4 w-4" />
+                                PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleGenerateProformaDocx(order)
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <FileText className="h-4 w-4" />
+                                DOCX
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <Button
                             variant="outline"
                             size="sm"
@@ -646,6 +726,41 @@ export default function OrdersPage() {
                         {new Date(order.created_at).toLocaleDateString('fr-FR')}
                       </div>
                       <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:bg-orange-50 hover:border-orange-200 transition-colors flex items-center gap-1"
+                            >
+                              <FileSpreadsheet className="h-4 w-4" />
+                              <span className="ml-1">Proforma</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleGenerateProformaPdf(order)
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <FileDown className="h-4 w-4" />
+                              PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleGenerateProformaDocx(order)
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <FileText className="h-4 w-4" />
+                              DOCX
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button
                           variant="outline"
                           size="sm"
