@@ -1,15 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ordersApi } from '@/lib/database'
+import { ordersApi, containersApi, trackingApi, customersApi } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
 
-// GET /api/orders/[id] - Récupérer une commande par ID
+// Helper function to check if a string is a UUID
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
+
+// GET /api/orders/[id] - Récupérer une commande par ID ou QR code
 export async function GET(
   request: NextRequest,
-  context: any
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id: string = context?.params?.id
-    const order = await ordersApi.getById(id)
+    const { id } = await context.params
+    
+    // Determine if the parameter is a UUID (ID) or a QR code
+    const isId = isUUID(id)
+    
+    let order
+    if (isId) {
+      // Try to get by ID first
+      order = await ordersApi.getById(id)
+    } else {
+      // Try to get by QR code
+      try {
+        order = await ordersApi.getByQr(id)
+      } catch (error: any) {
+        const code = error?.code || error?.message
+        if (code && String(code).includes('PGRST116')) {
+          return NextResponse.json(
+            { success: false, error: 'Order not found' },
+            { status: 404 }
+          )
+        }
+        throw error
+      }
+    }
     
     if (!order) {
       return NextResponse.json(
@@ -18,6 +46,26 @@ export async function GET(
       )
     }
 
+    // If it was a QR code lookup, return with related data (like the old [qr] route)
+    if (!isId) {
+      const [container, events, customer] = await Promise.all([
+        order.container_id ? containersApi.getById(order.container_id) : Promise.resolve(null),
+        trackingApi.getByOrderId(order.id),
+        order.client_email ? customersApi.getByEmail(order.client_email) : Promise.resolve(null),
+      ])
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          order,
+          container,
+          events,
+          customer,
+        },
+      })
+    }
+
+    // For ID lookups, return just the order (existing behavior)
     return NextResponse.json({ success: true, data: order })
   } catch (error) {
     console.error('Error fetching order:', error)
@@ -31,15 +79,31 @@ export async function GET(
 // PUT /api/orders/[id] - Mettre à jour une commande
 export async function PUT(
   request: NextRequest,
-  context: any
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id: string = context?.params?.id
+    const { id } = await context.params
     const body = await request.json()
     const { user_id, user_name, ...orderData } = body
     
+    // Determine if the parameter is a UUID (ID) or a QR code
+    const isId = isUUID(id)
+    
+    // Get the order first to find the actual ID if QR code was provided
+    let orderId = id
+    if (!isId) {
+      const order = await ordersApi.getByQr(id)
+      if (!order) {
+        return NextResponse.json(
+          { success: false, error: 'Order not found' },
+          { status: 404 }
+        )
+      }
+      orderId = order.id
+    }
+    
     // Récupérer l'ancienne commande pour comparer les changements
-    const oldOrder = await ordersApi.getById(id)
+    const oldOrder = await ordersApi.getById(orderId)
     if (!oldOrder) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
@@ -48,7 +112,7 @@ export async function PUT(
     }
     
     // Mettre à jour la commande
-    const order = await ordersApi.update(id, orderData)
+    const order = await ordersApi.update(orderId, orderData)
     
     // TODO: Activer l'historique une fois la table order_history créée
     /*
@@ -102,6 +166,105 @@ export async function DELETE(
     console.error('Error deleting order:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to delete order' },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH /api/orders/[id] - Actions spéciales sur une commande (comme générer QR code)
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params
+    const body = await request.json()
+    const action = body.action
+
+    if (action === 'generate-qr') {
+      // Determine if the parameter is a UUID (ID) or a QR code
+      const isId = isUUID(id)
+      
+      // Get the order first to find the actual ID if QR code was provided
+      let orderId = id
+      let order
+      if (isId) {
+        order = await ordersApi.getById(id)
+        orderId = id
+      } else {
+        order = await ordersApi.getByQr(id)
+        if (!order) {
+          return NextResponse.json(
+            { success: false, error: 'Order not found' },
+            { status: 404 }
+          )
+        }
+        orderId = order.id
+      }
+      
+      if (!order) {
+        return NextResponse.json(
+          { success: false, error: 'Order not found' },
+          { status: 404 }
+        )
+      }
+
+      // Si la commande a déjà un QR code, le retourner
+      if (order.qr_code) {
+        return NextResponse.json({
+          success: true,
+          data: { qr_code: order.qr_code },
+          message: 'Order already has a QR code'
+        })
+      }
+
+      // Générer un nouveau QR code unique
+      // Format: ORD-{timestamp}-{random}
+      let qrCode: string = ''
+      let exists = true
+      let attempts = 0
+      const maxAttempts = 10
+
+      while (exists && attempts < maxAttempts) {
+        const timestamp = Date.now()
+        const random = Math.random().toString(36).substring(2, 8).toUpperCase()
+        qrCode = `ORD-${timestamp}-${random}`
+        
+        // Vérifier si ce QR code existe déjà
+        const { data: existing } = await (supabaseAdmin as any)
+          .from('orders')
+          .select('id')
+          .eq('qr_code', qrCode)
+          .single()
+        
+        exists = !!existing
+        attempts++
+      }
+
+      if (attempts >= maxAttempts || !qrCode) {
+        return NextResponse.json(
+          { success: false, error: 'Failed to generate unique QR code' },
+          { status: 500 }
+        )
+      }
+
+      // Mettre à jour la commande avec le nouveau QR code
+      const updatedOrder = await ordersApi.update(orderId, { qr_code: qrCode })
+
+      return NextResponse.json({
+        success: true,
+        data: { qr_code: qrCode, order: updatedOrder }
+      })
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Unknown action' },
+      { status: 400 }
+    )
+  } catch (error) {
+    console.error('Error in PATCH order:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to process request' },
       { status: 500 }
     )
   }

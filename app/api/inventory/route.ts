@@ -11,13 +11,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from('inventory')
-      .select(`
-        *,
-        containers (
-          id,
-          code
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (search) {
@@ -36,11 +30,27 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
+    // Fetch container codes for items that have container_id
+    const containerIds = [...new Set((data || []).map((item: any) => item.container_id).filter(Boolean))]
+    const containerMap = new Map<string, string>()
+    
+    if (containerIds.length > 0) {
+      const { data: containers, error: containersError } = await supabaseAdmin
+        .from('containers')
+        .select('id, code')
+        .in('id', containerIds)
+      
+      if (!containersError && containers) {
+        containers.forEach((container: any) => {
+          containerMap.set(container.id, container.code)
+        })
+      }
+    }
+
     // Transform data to include container_code
     const transformedData = (data || []).map((item: any) => ({
       ...item,
-      container_code: item.containers?.code || null,
-      containers: undefined // Remove the nested containers object
+      container_code: item.container_id ? containerMap.get(item.container_id) || null : null
     }))
 
     return NextResponse.json({ success: true, data: transformedData })

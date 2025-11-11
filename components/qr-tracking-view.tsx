@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Copy, MapPin, QrCode, RefreshCw, Search, Timer, Truck, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react"
+import { Copy, MapPin, QrCode, RefreshCw, Search, Timer, Truck, CheckCircle2, AlertTriangle, ExternalLink, Edit, Save, X } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface TrackingEvent {
   id: string
@@ -57,6 +60,49 @@ interface PackagePayload {
   events: TrackingEvent[]
 }
 
+interface OrderPayload {
+  order: {
+    id: string
+    order_number: string
+    qr_code: string | null
+    client_name: string
+    client_email: string
+    client_phone: string | null
+    service_type: string
+    origin: string
+    destination: string
+    weight: number | null
+    value: number | null
+    status: string
+    estimated_delivery: string | null
+    container_id: string | null
+    container_code: string | null
+    created_at: string
+    updated_at: string
+  }
+  container: {
+    id: string
+    code: string
+    vessel?: string | null
+    departure_port?: string | null
+    arrival_port?: string | null
+    etd?: string | null
+    eta?: string | null
+    status: string
+    created_at: string
+    updated_at: string
+  } | null
+  events: TrackingEvent[]
+  customer: {
+    id: string
+    name: string
+    email: string
+    phone?: string | null
+  } | null
+}
+
+type TrackingData = PackagePayload | OrderPayload | null
+
 interface DecodedPayload {
   raw: string
   decoded: string
@@ -81,6 +127,14 @@ const containerStatusMap: Record<string, string> = {
   arrived: "Arrivé",
   delivered: "Livré",
   delayed: "Retard",
+}
+
+const orderStatusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; icon: React.ElementType }> = {
+  pending: { label: "En attente", variant: "outline", icon: Timer },
+  confirmed: { label: "Confirmée", variant: "secondary", icon: CheckCircle2 },
+  in_progress: { label: "En cours", variant: "default", icon: Truck },
+  completed: { label: "Terminée", variant: "secondary", icon: CheckCircle2 },
+  cancelled: { label: "Annulée", variant: "destructive", icon: AlertTriangle },
 }
 
 function tryDecodeBase64(value: string): string | null {
@@ -181,40 +235,108 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
   const router = useRouter()
   const [inputValue, setInputValue] = useState(initialPayload || "")
   const [decoded, setDecoded] = useState<DecodedPayload>(() => decodePayload(initialPayload || ""))
-  const [trackingData, setTrackingData] = useState<PackagePayload | null>(null)
+  const [trackingData, setTrackingData] = useState<TrackingData>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("tracking")
+  const [isEditing, setIsEditing] = useState(false)
+  const [editStatus, setEditStatus] = useState("")
+  const [editLocation, setEditLocation] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editOperator, setEditOperator] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   const qrDisplay = useMemo(() => decoded.qrCode || "", [decoded])
-  const container = trackingData?.container ?? null
+  const isOrder = useMemo(() => {
+    if (!trackingData) return false
+    return 'order' in trackingData
+  }, [trackingData])
+  const container = isOrder ? (trackingData as OrderPayload)?.container : (trackingData as PackagePayload)?.container ?? null
 
   useEffect(() => {
     if (initialPayload) {
-      handleDecode(initialPayload)
+      const decodedPayload = decodePayload(initialPayload)
+      setDecoded(decodedPayload)
+      setInputValue(initialPayload)
+      
+      // Charger automatiquement les données si un QR code est détecté
+      if (decodedPayload.qrCode) {
+        fetchTrackingData(decodedPayload.qrCode)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [initialPayload])
 
   const fetchTrackingData = async (qrCode: string) => {
     if (!qrCode) return
     try {
       setIsLoading(true)
       setError(null)
-      const res = await fetch(`/api/packages/${encodeURIComponent(qrCode)}`)
+      
+      // Détecter si c'est un QR code de commande (commence par "ORD-")
+      const isOrderQr = qrCode.startsWith("ORD-")
+      const endpoint = isOrderQr 
+        ? `/api/orders/${encodeURIComponent(qrCode)}`
+        : `/api/packages/${encodeURIComponent(qrCode)}`
+      
+      const res = await fetch(endpoint)
       const json = await res.json()
+      
       if (!json.success) {
         setTrackingData(null)
-        setError(json.error || "Aucun colis trouvé pour ce QR code")
+        setError(json.error || (isOrderQr ? "Aucune commande trouvée pour ce QR code" : "Aucun colis trouvé pour ce QR code"))
         return
       }
+      
       setTrackingData(json.data)
+      
+      // Initialiser les valeurs d'édition pour les commandes
+      if (isOrderQr && json.data.order) {
+        setEditStatus(json.data.order.status)
+      }
+      
       setActiveTab(json.data?.container ? "container" : "tracking")
     } catch (err) {
       console.error("Failed to fetch QR tracking data:", err)
-      setError("Impossible de récupérer les informations du colis.")
+      setError("Impossible de récupérer les informations.")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleSaveTracking = async () => {
+    if (!qrDisplay || !isOrder) return
+    
+    try {
+      setIsSaving(true)
+      const res = await fetch(`/api/orders/${encodeURIComponent(qrDisplay)}/tracking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: editStatus,
+          location: editLocation || null,
+          description: editDescription || null,
+          operator: editOperator || null,
+        }),
+      })
+      
+      const json = await res.json()
+      if (!json.success) {
+        setError(json.error || "Erreur lors de la sauvegarde")
+        return
+      }
+      
+      // Rafraîchir les données
+      await fetchTrackingData(qrDisplay)
+      setIsEditing(false)
+      setEditLocation("")
+      setEditDescription("")
+      setEditOperator("")
+    } catch (err) {
+      console.error("Failed to save tracking:", err)
+      setError("Impossible de sauvegarder les modifications.")
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -239,8 +361,9 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
     }
   }
 
-  const renderStatusBadge = (status: string) => {
-    const config = packageStatusMap[status] || {
+  const renderStatusBadge = (status: string, isOrderStatus = false) => {
+    const statusMap = isOrderStatus ? orderStatusMap : packageStatusMap
+    const config = statusMap[status] || {
       label: status,
       variant: "outline" as const,
       icon: AlertTriangle,
@@ -266,7 +389,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold text-gray-900">Suivi via QR code</h1>
           <p className="text-lg text-gray-600">
-            Scannez ou collez un QR Danemo pour obtenir le statut du colis et l&apos;historique détaillé.
+            Scannez ou collez un QR Danemo pour obtenir le statut de votre commande ou colis et l&apos;historique détaillé.
           </p>
         </div>
 
@@ -467,138 +590,359 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
 
         {trackingData && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-orange-500" />
-                  Colis {trackingData.package.reference}
-                </CardTitle>
-                <CardDescription>Statut détaillé du colis scanné</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations colis</h3>
-                    <div className="text-sm text-gray-600">
-                      <p>
-                        <span className="font-semibold">Identifiant:</span> {trackingData.package.id}
-                      </p>
-                      <p>
-                        <span className="font-semibold">QR:</span> {trackingData.package.qr_code}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Dernier scan:</span>{" "}
-                        {formatDateTime(trackingData.package.last_scan_at)}
-                      </p>
+            {isOrder ? (
+              // Affichage pour une commande
+              <>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Truck className="h-5 w-5 text-orange-500" />
+                          Commande {(trackingData as OrderPayload).order.order_number}
+                        </CardTitle>
+                        <CardDescription>Statut détaillé de la commande scannée</CardDescription>
+                      </div>
+                      {isOrder && (
+                        <Button
+                          variant={isEditing ? "outline" : "default"}
+                          onClick={() => {
+                            if (isEditing) {
+                              setIsEditing(false)
+                              setEditLocation("")
+                              setEditDescription("")
+                              setEditOperator("")
+                            } else {
+                              setIsEditing(true)
+                              const order = (trackingData as OrderPayload).order
+                              setEditStatus(order.status)
+                            }
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          {isEditing ? (
+                            <>
+                              <X className="h-4 w-4" />
+                              Annuler
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="h-4 w-4" />
+                              Modifier le suivi
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Statut</h3>
-                    <div className="flex flex-col gap-2">
-                      {renderStatusBadge(trackingData.package.status)}
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold">Mis à jour:</span>{" "}
-                        {formatDateTime(trackingData.package.updated_at)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client</h3>
-                    {trackingData.client ? (
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <p>{trackingData.client.name}</p>
-                        {trackingData.client.email && <p>{trackingData.client.email}</p>}
-                        {trackingData.client.phone && <p>{trackingData.client.phone}</p>}
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {isEditing ? (
+                      // Formulaire d'édition
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="status">Statut</Label>
+                            <Select value={editStatus} onValueChange={setEditStatus}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">En attente</SelectItem>
+                                <SelectItem value="confirmed">Confirmée</SelectItem>
+                                <SelectItem value="in_progress">En cours</SelectItem>
+                                <SelectItem value="completed">Terminée</SelectItem>
+                                <SelectItem value="cancelled">Annulée</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="location">Localisation</Label>
+                            <Input
+                              id="location"
+                              value={editLocation}
+                              onChange={(e) => setEditLocation(e.target.value)}
+                              placeholder="Ex: Port de Douala"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Description</Label>
+                          <Textarea
+                            id="description"
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            placeholder="Détails de l'événement..."
+                            rows={3}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="operator">Opérateur</Label>
+                          <Input
+                            id="operator"
+                            value={editOperator}
+                            onChange={(e) => setEditOperator(e.target.value)}
+                            placeholder="Nom de l'opérateur"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleSaveTracking} disabled={isSaving} className="flex items-center gap-2">
+                            <Save className="h-4 w-4" />
+                            {isSaving ? "Enregistrement..." : "Enregistrer"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsEditing(false)
+                              setEditLocation("")
+                              setEditDescription("")
+                              setEditOperator("")
+                            }}
+                          >
+                            Annuler
+                          </Button>
+                        </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500">Aucun client associé</p>
-                    )}
-                  </div>
-                </div>
-
-                {container && (
-                  <div className="rounded-lg border bg-gray-50 p-6">
-                    <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="font-mono text-xs px-2 py-1">
-                          {container.code}
-                        </Badge>
-                        <Badge variant="secondary">
-                          {containerStatusMap[container.status] || container.status}
-                        </Badge>
+                      // Affichage des informations de la commande
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations commande</h3>
+                          <div className="text-sm text-gray-600">
+                            <p>
+                              <span className="font-semibold">Numéro:</span> {(trackingData as OrderPayload).order.order_number}
+                            </p>
+                            <p>
+                              <span className="font-semibold">Service:</span> {(trackingData as OrderPayload).order.service_type}
+                            </p>
+                            <p>
+                              <span className="font-semibold">Origine:</span> {(trackingData as OrderPayload).order.origin}
+                            </p>
+                            <p>
+                              <span className="font-semibold">Destination:</span> {(trackingData as OrderPayload).order.destination}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Statut</h3>
+                          <div className="flex flex-col gap-2">
+                            {renderStatusBadge((trackingData as OrderPayload).order.status, true)}
+                            <p className="text-sm text-gray-600">
+                              <span className="font-semibold">Mis à jour:</span>{" "}
+                              {formatDateTime((trackingData as OrderPayload).order.updated_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client</h3>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p>{(trackingData as OrderPayload).order.client_name}</p>
+                            <p>{(trackingData as OrderPayload).order.client_email}</p>
+                            {(trackingData as OrderPayload).order.client_phone && (
+                              <p>{(trackingData as OrderPayload).order.client_phone}</p>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigator.clipboard.writeText(container.code)}
-                          className="flex items-center gap-2"
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copier
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => router.push(`/tracking?code=${container.code}`)}
-                          className="flex items-center gap-2"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Suivre ce conteneur
-                        </Button>
+                    )}
+
+                    {container && (
+                      <div className="rounded-lg border bg-gray-50 p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                              {container.code}
+                            </Badge>
+                            <Badge variant="secondary">
+                              {containerStatusMap[container.status] || container.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigator.clipboard.writeText(container.code)}
+                              className="flex items-center gap-2"
+                            >
+                              <Copy className="h-4 w-4" />
+                              Copier
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/tracking?code=${container.code}`)}
+                              className="flex items-center gap-2"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              Suivre ce conteneur
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                          <div>
+                            <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
+                            <p className="font-medium text-gray-800">
+                              {container.vessel || "Non communiqué"}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
+                            <p>
+                              {container.departure_port || "Non communiqué"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              ETD: {formatDate(container.etd)}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
+                            <p>
+                              {container.arrival_port || "Non communiqué"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              ETA: {formatDate(container.eta)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              // Affichage pour un package
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5 text-orange-500" />
+                    Colis {(trackingData as PackagePayload).package.reference}
+                  </CardTitle>
+                  <CardDescription>Statut détaillé du colis scanné</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations colis</h3>
+                      <div className="text-sm text-gray-600">
+                        <p>
+                          <span className="font-semibold">Identifiant:</span> {(trackingData as PackagePayload).package.id}
+                        </p>
+                        <p>
+                          <span className="font-semibold">QR:</span> {(trackingData as PackagePayload).package.qr_code}
+                        </p>
+                        <p>
+                          <span className="font-semibold">Dernier scan:</span>{" "}
+                          {formatDateTime((trackingData as PackagePayload).package.last_scan_at)}
+                        </p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                      <div>
-                        <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
-                        <p className="font-medium text-gray-800">
-                          {container.vessel || "Non communiqué"}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
-                        <p>
-                          {container.departure_port || "Non communiqué"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          ETD: {formatDate(container.etd)}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
-                        <p>
-                          {container.arrival_port || "Non communiqué"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          ETA: {formatDate(container.eta)}
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Statut</h3>
+                      <div className="flex flex-col gap-2">
+                        {renderStatusBadge((trackingData as PackagePayload).package.status)}
+                        <p className="text-sm text-gray-600">
+                          <span className="font-semibold">Mis à jour:</span>{" "}
+                          {formatDateTime((trackingData as PackagePayload).package.updated_at)}
                         </p>
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client</h3>
+                      {(trackingData as PackagePayload).client ? (
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p>{(trackingData as PackagePayload).client!.name}</p>
+                          {(trackingData as PackagePayload).client!.email && <p>{(trackingData as PackagePayload).client!.email}</p>}
+                          {(trackingData as PackagePayload).client!.phone && <p>{(trackingData as PackagePayload).client!.phone}</p>}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">Aucun client associé</p>
+                      )}
+                    </div>
                   </div>
-                )}
 
-                {trackingData.package.description && (
-                  <div className="text-sm text-gray-600">
-                    <span className="font-semibold">Description:</span> {trackingData.package.description}
-                  </div>
-                )}
-                {(trackingData.package.weight || trackingData.package.value) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
-                    {trackingData.package.weight && (
-                      <div>
-                        <span className="font-semibold">Poids:</span> {trackingData.package.weight} kg
+                  {container && (
+                    <div className="rounded-lg border bg-gray-50 p-6">
+                      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                            {container.code}
+                          </Badge>
+                          <Badge variant="secondary">
+                            {containerStatusMap[container.status] || container.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigator.clipboard.writeText(container.code)}
+                            className="flex items-center gap-2"
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copier
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/tracking?code=${container.code}`)}
+                            className="flex items-center gap-2"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Suivre ce conteneur
+                          </Button>
+                        </div>
                       </div>
-                    )}
-                    {trackingData.package.value && (
-                      <div>
-                        <span className="font-semibold">Valeur:</span>{" "}
-                        €{trackingData.package.value.toLocaleString("fr-FR")}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
+                          <p className="font-medium text-gray-800">
+                            {container.vessel || "Non communiqué"}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
+                          <p>
+                            {container.departure_port || "Non communiqué"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            ETD: {formatDate(container.etd)}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
+                          <p>
+                            {container.arrival_port || "Non communiqué"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            ETA: {formatDate(container.eta)}
+                          </p>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    </div>
+                  )}
+
+                  {(trackingData as PackagePayload).package.description && (
+                    <div className="text-sm text-gray-600">
+                      <span className="font-semibold">Description:</span> {(trackingData as PackagePayload).package.description}
+                    </div>
+                  )}
+                  {((trackingData as PackagePayload).package.weight || (trackingData as PackagePayload).package.value) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+                      {(trackingData as PackagePayload).package.weight && (
+                        <div>
+                          <span className="font-semibold">Poids:</span> {(trackingData as PackagePayload).package.weight} kg
+                        </div>
+                      )}
+                      {(trackingData as PackagePayload).package.value && (
+                        <div>
+                          <span className="font-semibold">Valeur:</span>{" "}
+                          €{((trackingData as PackagePayload).package.value || 0).toLocaleString("fr-FR")}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>

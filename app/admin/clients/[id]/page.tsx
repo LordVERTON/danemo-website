@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import AdminLayout from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
@@ -44,11 +44,16 @@ import {
   Mail,
   Phone,
   Building2,
-  Plus
+  Plus,
+  QrCode,
+  Copy,
+  ExternalLink
 } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 import { generateInvoice, defaultCompanyData, InvoiceData } from "@/lib/invoice-utils"
 import { generateProformaDocx, generateProformaPdf } from "@/lib/proforma-utils"
+import { generateQRPrintPDF } from "@/lib/qr-print-utils"
+import QRCode from "qrcode"
 
 interface Order {
   id: string
@@ -68,6 +73,7 @@ interface Order {
   container_id?: string | null
   container_code?: string | null
   container_status?: string | null
+  qr_code?: string | null
 }
 
 interface Customer {
@@ -85,6 +91,45 @@ interface Customer {
   orders: Order[]
   invoices?: any[]
   created_at: string
+  qr_code?: string | null
+}
+
+// Composant pour afficher le QR code
+function QRCodeDisplay({ value }: { value: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (canvasRef.current && value) {
+      // Générer une URL complète pour le QR code
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      const qrUrl = `${baseUrl}/qr?code=${encodeURIComponent(value)}`
+      
+      QRCode.toCanvas(canvasRef.current, qrUrl, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      }, (err) => {
+        if (err) {
+          console.error('Error generating QR code:', err)
+          setError('Erreur lors de la génération du QR code')
+        }
+      })
+    }
+  }, [value])
+
+  if (error) {
+    return (
+      <div className="w-[200px] h-[200px] flex items-center justify-center border rounded bg-gray-100 text-xs text-gray-500">
+        {error}
+      </div>
+    )
+  }
+
+  return <canvas ref={canvasRef} className="w-[200px] h-[200px]" />
 }
 
 export default function ClientDetailPage() {
@@ -103,6 +148,7 @@ export default function ClientDetailPage() {
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [error, setError] = useState("")
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
   const [containers, setContainers] = useState<Array<{ 
     id: string; 
     code: string; 
@@ -317,10 +363,17 @@ export default function ClientDetailPage() {
       const result = await response.json()
 
       if (result.success) {
+        // Mettre à jour selectedOrder avec les nouvelles données (y compris le QR code)
+        if (result.data) {
+          setSelectedOrder(result.data as Order)
+        }
         setIsEditDialogOpen(false)
-        setSelectedOrder(null)
         // Recharger les données du client pour avoir les conteneurs à jour
         await fetchCustomer()
+        // Réinitialiser selectedOrder après un court délai pour permettre la fermeture de la modal
+        setTimeout(() => {
+          setSelectedOrder(null)
+        }, 100)
       } else {
         setError(result.error || 'Erreur lors de la mise à jour')
       }
@@ -351,12 +404,13 @@ export default function ClientDetailPage() {
     }
   }
 
-  const handleCreateOrder = async (e: React.FormEvent) => {
+  const handleCreateOrder = async (e: React.FormEvent, printQR: boolean = false) => {
     e.preventDefault()
     if (!customer) return
     setError("")
     
     try {
+      // Étape 1: Créer la commande dans la base de données
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -380,24 +434,49 @@ export default function ClientDetailPage() {
 
       const result = await response.json()
 
-      if (result.success) {
-        setNewOrder({
-          service_type: "",
-          origin: "",
-          destination: "",
-          weight: "",
-          value: "",
-          estimated_delivery: "",
-          container_id: "",
-        })
-        setIsCreateOrderDialogOpen(false)
-        fetchCustomer()
-      } else {
+      if (!result.success) {
         setError(result.error || 'Erreur lors de la création de la commande')
+        return
+      }
+
+      // La commande a été créée avec succès
+      const createdOrder = result.data
+      
+      // Étape 2: Réinitialiser le formulaire et fermer la modal
+      setNewOrder({
+        service_type: "",
+        origin: "",
+        destination: "",
+        weight: "",
+        value: "",
+        estimated_delivery: "",
+        container_id: "",
+      })
+      setIsCreateOrderDialogOpen(false)
+      
+      // Étape 3: Rafraîchir les données du client pour afficher la nouvelle commande
+      await fetchCustomer()
+      
+      // Étape 4: Générer et imprimer le QR code si demandé (après le rafraîchissement)
+      if (printQR && createdOrder?.qr_code) {
+        try {
+          await generateQRPrintPDF({
+            qrCode: createdOrder.qr_code,
+            orderNumber: createdOrder.order_number,
+            clientName: createdOrder.client_name,
+            serviceType: createdOrder.service_type,
+            origin: createdOrder.origin,
+            destination: createdOrder.destination
+          })
+        } catch (error) {
+          console.error('Erreur lors de la génération du QR code:', error)
+          // Ne pas bloquer - la commande est déjà créée et affichée
+          setError('Commande créée avec succès, mais erreur lors de l\'impression du QR code')
+        }
       }
     } catch (error) {
       console.error('Error creating order:', error)
-      setError('Erreur de connexion')
+      setError('Erreur de connexion lors de la création de la commande')
     }
   }
 
@@ -443,6 +522,47 @@ export default function ClientDetailPage() {
     } catch (error) {
       console.error('Erreur lors de la génération de la proforma DOCX:', error)
       setError('Erreur lors de la génération de la proforma DOCX')
+    }
+  }
+
+  const handleGenerateQRCode = async () => {
+    if (!selectedOrder) return
+
+    try {
+      setIsGeneratingQR(true)
+      setError("")
+
+      const response = await fetch(`/api/orders/${selectedOrder.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'generate-qr' }),
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Mettre à jour la commande sélectionnée avec le nouveau QR code
+        if (result.data?.order) {
+          setSelectedOrder(result.data.order as Order)
+        } else if (result.data?.qr_code && selectedOrder) {
+          setSelectedOrder({
+            ...selectedOrder,
+            qr_code: result.data.qr_code
+          } as Order)
+        }
+        
+        // Rafraîchir les données du client pour mettre à jour la liste
+        await fetchCustomer()
+      } else {
+        setError(result.error || 'Erreur lors de la génération du QR code')
+      }
+    } catch (error) {
+      console.error('Error generating QR code:', error)
+      setError('Erreur de connexion')
+    } finally {
+      setIsGeneratingQR(false)
     }
   }
 
@@ -786,6 +906,116 @@ export default function ClientDetailPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+            
+            {/* Section QR Code */}
+            {selectedOrder?.qr_code ? (
+              <div className="border rounded-lg p-4 bg-muted/30 mb-4">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <QrCode className="h-4 w-4 text-orange-600" />
+                  QR Code de la commande
+                </h3>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex-1">
+                    <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 inline-block">
+                      <QRCodeDisplay value={selectedOrder.qr_code} />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2 max-w-xs">
+                      Scannez ce QR code pour accéder aux informations de la commande
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 p-2 bg-white rounded border">
+                      <code className="text-xs font-mono break-all">{selectedOrder.qr_code}</code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedOrder?.qr_code) {
+                            navigator.clipboard.writeText(selectedOrder.qr_code)
+                            // Message de succès temporaire (on pourrait utiliser un toast)
+                            const successMsg = 'QR code copié dans le presse-papier'
+                            setError('')
+                            // Simuler un message de succès en vidant l'erreur
+                            setTimeout(() => {
+                              // Le message sera géré par un système de notification si disponible
+                            }, 100)
+                          }
+                        }}
+                        className="flex-shrink-0"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/qr?code=${encodeURIComponent(selectedOrder.qr_code || '')}`, '_blank')}
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Voir la page de suivi QR
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        if (selectedOrder?.qr_code) {
+                          try {
+                            await generateQRPrintPDF({
+                              qrCode: selectedOrder.qr_code,
+                              orderNumber: selectedOrder.order_number,
+                              clientName: selectedOrder.client_name,
+                              serviceType: selectedOrder.service_type,
+                              origin: selectedOrder.origin,
+                              destination: selectedOrder.destination
+                            })
+                          } catch (error) {
+                            console.error('Erreur lors de l\'impression:', error)
+                            setError('Erreur lors de l\'impression du QR code')
+                          }
+                        }
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <QrCode className="h-4 w-4" />
+                      Imprimer le QR code
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="border rounded-lg p-4 bg-muted/30 mb-4">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <QrCode className="h-4 w-4 text-orange-600" />
+                  QR Code de la commande
+                </h3>
+                <div className="flex flex-col items-start gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Cette commande n&apos;a pas encore de QR code. Générez-en un pour permettre le suivi via scan.
+                  </p>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleGenerateQRCode}
+                    disabled={isGeneratingQR}
+                    className="flex items-center gap-2"
+                  >
+                    {isGeneratingQR ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Génération...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="h-4 w-4" />
+                        Générer un QR code
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             <form onSubmit={handleUpdateOrder} className="space-y-4">
               {/* Formulaire similaire à la page orders */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1133,6 +1363,15 @@ export default function ClientDetailPage() {
                   onClick={() => setIsCreateOrderDialogOpen(false)}
                 >
                   Annuler
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={(e) => handleCreateOrder(e, true)} 
+                  className="flex items-center gap-2"
+                >
+                  <QrCode className="h-4 w-4" />
+                  Créer et imprimer QR
                 </Button>
                 <Button type="submit">Créer la commande</Button>
               </div>

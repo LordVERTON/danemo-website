@@ -8,27 +8,39 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('inventory')
-      .select(`
-        *,
-        containers (
-          id,
-          code
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .single()
     
     if (error) throw error
+    if (!data) {
+      return NextResponse.json(
+        { success: false, error: 'Inventory item not found' },
+        { status: 404 }
+      )
+    }
+    
+    // Fetch container code if container_id exists
+    let containerCode = null
+    if (data.container_id) {
+      const { data: container, error: containerError } = await (supabaseAdmin as any)
+        .from('containers')
+        .select('code')
+        .eq('id', data.container_id)
+        .single()
+      
+      if (!containerError && container) {
+        containerCode = container.code
+      }
+    }
     
     // Transform data to include container_code
-    const item = data as any
     const transformedData = {
-      ...item,
-      container_code: item.containers?.code || null,
+      ...data,
+      container_code: containerCode,
     }
-    delete transformedData.containers // Remove the nested containers object
     
     return NextResponse.json({ success: true, data: transformedData })
   } catch (error) {

@@ -51,6 +51,7 @@ export interface Database {
           value: number | null
           status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           estimated_delivery: string | null
+          qr_code: string | null
           created_at: string
           updated_at: string
           container_id: string | null
@@ -70,6 +71,7 @@ export interface Database {
           value?: number | null
           status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           estimated_delivery?: string | null
+          qr_code?: string | null
           created_at?: string
           updated_at?: string
           container_id?: string | null
@@ -89,6 +91,7 @@ export interface Database {
           value?: number | null
           status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           estimated_delivery?: string | null
+          qr_code?: string | null
           created_at?: string
           updated_at?: string
           container_id?: string | null

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import AdminLayout from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,8 +18,47 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, Eye, ExternalLink, PackageSearch } from "lucide-react"
+import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, Eye, ExternalLink, PackageSearch, QrCode, Copy } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
+import QRCode from "qrcode"
+
+// Composant pour afficher le QR code
+function QRCodeDisplay({ value }: { value: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (canvasRef.current && value) {
+      // Générer une URL complète pour le QR code
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      const qrUrl = `${baseUrl}/qr?code=${encodeURIComponent(value)}`
+      
+      QRCode.toCanvas(canvasRef.current, qrUrl, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      }, (err) => {
+        if (err) {
+          console.error('Error generating QR code:', err)
+          setError('Erreur lors de la génération du QR code')
+        }
+      })
+    }
+  }, [value])
+
+  if (error) {
+    return (
+      <div className="w-[200px] h-[200px] flex items-center justify-center border rounded bg-gray-100 text-xs text-gray-500">
+        {error}
+      </div>
+    )
+  }
+
+  return <canvas ref={canvasRef} className="w-[200px] h-[200px]" />
+}
 
 interface Order {
   id: string
@@ -34,6 +73,7 @@ interface Order {
   value?: string | number
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   estimated_delivery?: string
+  qr_code?: string | null
   created_at: string
   updated_at: string
   container_id?: string | null
@@ -67,6 +107,7 @@ export default function TrackingPage() {
   const [errorMessage, setErrorMessage] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
   const [containers, setContainers] = useState<Array<{ id: string; code: string; status?: string | null }>>([])
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
 
   // Formulaire pour ajouter un événement
   const [newEvent, setNewEvent] = useState({
@@ -168,6 +209,58 @@ export default function TrackingPage() {
       setErrorMessage('Erreur de connexion')
     } finally {
       setIsUpdating(false)
+    }
+  }
+
+  const handleGenerateQRCode = async () => {
+    if (!selectedOrder) return
+
+    try {
+      setIsGeneratingQR(true)
+      setErrorMessage("")
+
+      const response = await fetch(`/api/orders/${selectedOrder.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'generate-qr' }),
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setSuccessMessage('QR code généré avec succès')
+        
+        // Utiliser directement la commande mise à jour retournée par l'API
+        // L'API retourne { qr_code: string, order: Order }
+        if (result.data?.order) {
+          // La commande complète avec le QR code
+          setSelectedOrder(result.data.order as Order)
+        } else if (result.data?.qr_code && selectedOrder) {
+          // Si seulement le QR code est retourné, mettre à jour la commande sélectionnée
+          setSelectedOrder({
+            ...selectedOrder,
+            qr_code: result.data.qr_code
+          } as Order)
+        }
+        
+        // Rafraîchir la liste des commandes pour que le QR code apparaisse partout
+        await fetchOrders()
+        
+        // S'assurer que la commande sélectionnée est bien mise à jour après le rafraîchissement
+        if (result.data?.order) {
+          setSelectedOrder(result.data.order as Order)
+        }
+        
+        setTimeout(() => setSuccessMessage(""), 3000)
+      } else {
+        setErrorMessage(result.error || 'Erreur lors de la génération du QR code')
+      }
+    } catch (error) {
+      setErrorMessage('Erreur de connexion')
+    } finally {
+      setIsGeneratingQR(false)
     }
   }
 
@@ -618,6 +711,82 @@ export default function TrackingPage() {
             
             <div className="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <div className="space-y-6">
+              {/* QR Code Section */}
+              {selectedOrder?.qr_code ? (
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <QrCode className="h-4 w-4 text-orange-600" />
+                    QR Code de la commande
+                  </h3>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex-1">
+                      <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 inline-block">
+                        <QRCodeDisplay value={selectedOrder.qr_code} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2 max-w-xs">
+                        Scannez ce QR code pour accéder aux informations de la commande
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 p-2 bg-white rounded border">
+                        <code className="text-xs font-mono break-all">{selectedOrder.qr_code}</code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedOrder.qr_code || '')
+                            setSuccessMessage('QR code copié dans le presse-papier')
+                            setTimeout(() => setSuccessMessage(''), 2000)
+                          }}
+                          className="flex-shrink-0"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/qr?code=${encodeURIComponent(selectedOrder.qr_code || '')}`, '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Voir la page de suivi QR
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <QrCode className="h-4 w-4 text-orange-600" />
+                    QR Code de la commande
+                  </h3>
+                  <div className="flex flex-col items-start gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      Cette commande n&apos;a pas encore de QR code. Générez-en un pour permettre le suivi via scan.
+                    </p>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleGenerateQRCode}
+                      disabled={isGeneratingQR}
+                      className="flex items-center gap-2"
+                    >
+                      {isGeneratingQR ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Génération...
+                        </>
+                      ) : (
+                        <>
+                          <QrCode className="h-4 w-4" />
+                          Générer un QR code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div className="border rounded-lg p-4 bg-muted/30">
                 <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
                   <PackageSearch className="h-4 w-4 text-orange-600" />

@@ -63,6 +63,18 @@ export const ordersApi = {
     return data
   },
 
+  // Récupérer une commande par QR code
+  async getByQr(qr: string): Promise<Order | null> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('qr_code', qr)
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
   // Créer une nouvelle commande
   async create(order: OrderInsert): Promise<Order> {
     const { data, error } = await (supabaseAdmin as any)

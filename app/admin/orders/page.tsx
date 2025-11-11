@@ -40,11 +40,13 @@ import {
   AlertCircle,
   FileText,
   FileDown,
-  FileSpreadsheet
+  FileSpreadsheet,
+  QrCode
 } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 import { generateInvoice, defaultCompanyData, InvoiceData } from "@/lib/invoice-utils"
 import { generateProformaDocx, generateProformaPdf } from "@/lib/proforma-utils"
+import { generateQRPrintPDF } from "@/lib/qr-print-utils"
 
 interface Order {
   id: string
@@ -262,8 +264,10 @@ export default function OrdersPage() {
     }
   }
 
-  const handleCreateOrder = async (e: React.FormEvent) => {
+  const handleCreateOrder = async (e: React.FormEvent, printQR: boolean = false) => {
     e.preventDefault()
+    setError("") // Réinitialiser les erreurs
+    
     try {
       const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
       const orderData = {
@@ -276,6 +280,7 @@ export default function OrdersPage() {
         container_status: selectedContainer?.status || null,
       }
 
+      // Étape 1: Créer la commande dans la base de données
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -286,27 +291,54 @@ export default function OrdersPage() {
 
       const result = await response.json()
       
-      if (result.success) {
-        setNewOrder({
-          client_name: "",
-          client_email: "",
-          client_phone: "",
-          service_type: "",
-          origin: "",
-          destination: "",
-          weight: "",
-          value: "",
-          estimated_delivery: "",
-          container_id: "",
-          container_code: ""
-        })
-        setIsCreateDialogOpen(false)
-        fetchOrders()
-      } else {
+      if (!result.success) {
         console.error('Error creating order:', result.error)
+        setError(result.error || 'Erreur lors de la création de la commande')
+        return
+      }
+
+      // La commande a été créée avec succès
+      const createdOrder = result.data
+      
+      // Étape 2: Réinitialiser le formulaire et fermer la modal
+      setNewOrder({
+        client_name: "",
+        client_email: "",
+        client_phone: "",
+        service_type: "",
+        origin: "",
+        destination: "",
+        weight: "",
+        value: "",
+        estimated_delivery: "",
+        container_id: "",
+        container_code: ""
+      })
+      setIsCreateDialogOpen(false)
+      
+      // Étape 3: Rafraîchir la liste des commandes pour afficher la nouvelle commande
+      await fetchOrders()
+      
+      // Étape 4: Générer et imprimer le QR code si demandé (après le rafraîchissement)
+      if (printQR && createdOrder?.qr_code) {
+        try {
+          await generateQRPrintPDF({
+            qrCode: createdOrder.qr_code,
+            orderNumber: createdOrder.order_number,
+            clientName: createdOrder.client_name,
+            serviceType: createdOrder.service_type,
+            origin: createdOrder.origin,
+            destination: createdOrder.destination
+          })
+        } catch (error) {
+          console.error('Erreur lors de la génération du QR code:', error)
+          // Ne pas bloquer - la commande est déjà créée et affichée
+          setError('Commande créée avec succès, mais erreur lors de l\'impression du QR code')
+        }
       }
     } catch (error) {
       console.error('Error creating order:', error)
+      setError('Erreur de connexion lors de la création de la commande')
     }
   }
 
@@ -746,6 +778,15 @@ export default function OrdersPage() {
                 <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="w-full sm:w-auto">
                     Annuler
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={(e) => handleCreateOrder(e, true)} 
+                    className="w-full sm:w-auto flex items-center gap-2"
+                  >
+                    <QrCode className="h-4 w-4" />
+                    Créer et imprimer QR
                   </Button>
                   <Button type="submit" className="w-full sm:w-auto">Créer la commande</Button>
                 </div>
