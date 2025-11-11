@@ -69,9 +69,12 @@ export const ordersApi = {
       .from('orders')
       .select('*')
       .eq('qr_code', qr)
-      .single()
+      .maybeSingle()
     
-    if (error) throw error
+    // maybeSingle() retourne null si aucune ligne trouvée au lieu de lancer une erreur
+    if (error) {
+      throw error
+    }
     return data
   },
 

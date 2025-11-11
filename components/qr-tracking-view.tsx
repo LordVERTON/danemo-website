@@ -547,9 +547,55 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                 </TabsContent>
               )}
               <TabsContent value="tracking" className="mt-4">
-                <div className="text-sm text-gray-500">
-                  Le suivi affiche les informations du colis lié au QR et les événements associés au conteneur.
-                </div>
+                {trackingData && timeline.length > 0 ? (
+                  <div className="space-y-4">
+                    {timeline.map((event) => (
+                      <Card key={event.id}>
+                        <CardContent className="pt-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-2">
+                              {renderStatusBadge(event.status, isOrder)}
+                            </div>
+                            <span className="text-sm text-gray-500">{formatDateTime(event.event_date)}</span>
+                          </div>
+                          {event.location && (
+                            <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                              <MapPin className="h-4 w-4" />
+                              {event.location}
+                            </div>
+                          )}
+                          {event.description && (
+                            <p className="mt-2 text-sm text-gray-700 leading-6">{event.description}</p>
+                          )}
+                          {event.operator && (
+                            <p className="mt-2 text-xs text-gray-500">
+                              Opérateur: <span className="font-medium">{event.operator}</span>
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : trackingData ? (
+                  <div className="py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <AlertTriangle className="h-8 w-8 text-gray-400" />
+                      <p className="text-sm font-medium text-gray-700">
+                        {isOrder ? "Aucun événement de suivi" : "Aucun événement de suivi disponible"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {isOrder 
+                          ? "Aucun événement de suivi n'a été enregistré pour cette commande pour le moment."
+                          : "Aucun événement de suivi disponible pour le moment."
+                        }
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">
+                    Le suivi affiche les informations du colis lié au QR et les événements associés au conteneur.
+                  </div>
+                )}
               </TabsContent>
               <TabsContent value="raw" className="mt-4">
                 <Card>
@@ -951,7 +997,10 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                   Historique des événements
                 </CardTitle>
                 <CardDescription>
-                  Événements remontés depuis le conteneur associé (le plus récent en premier).
+                  {isOrder 
+                    ? "Événements de suivi de la commande (le plus récent en premier)."
+                    : "Événements remontés depuis le conteneur associé (le plus récent en premier)."
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -960,9 +1009,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                     {timeline.map((event) => (
                       <div key={event.id} className="rounded-lg border p-4 bg-white shadow-sm">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <Badge variant="outline" className="w-fit">
-                            {event.status}
-                          </Badge>
+                          {renderStatusBadge(event.status, isOrder)}
                           <span className="text-sm text-gray-500">{formatDateTime(event.event_date)}</span>
                         </div>
                         {event.location && (
@@ -983,8 +1030,19 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                     ))}
                   </div>
                 ) : (
-                  <div className="py-12 text-center text-sm text-gray-500">
-                    Aucun événement de suivi disponible pour ce conteneur pour le moment.
+                  <div className="py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <AlertTriangle className="h-8 w-8 text-gray-400" />
+                      <p className="text-sm font-medium text-gray-700">
+                        {isOrder ? "Aucun événement de suivi" : "Aucun événement de suivi disponible"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {isOrder 
+                          ? "Aucun événement de suivi n'a été enregistré pour cette commande pour le moment."
+                          : "Aucun événement de suivi disponible pour ce conteneur pour le moment."
+                        }
+                      </p>
+                    </div>
                   </div>
                 )}
               </CardContent>

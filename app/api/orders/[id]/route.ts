@@ -25,18 +25,7 @@ export async function GET(
       order = await ordersApi.getById(id)
     } else {
       // Try to get by QR code
-      try {
-        order = await ordersApi.getByQr(id)
-      } catch (error: any) {
-        const code = error?.code || error?.message
-        if (code && String(code).includes('PGRST116')) {
-          return NextResponse.json(
-            { success: false, error: 'Order not found' },
-            { status: 404 }
-          )
-        }
-        throw error
-      }
+      order = await ordersApi.getByQr(id)
     }
     
     if (!order) {
@@ -49,9 +38,9 @@ export async function GET(
     // If it was a QR code lookup, return with related data (like the old [qr] route)
     if (!isId) {
       const [container, events, customer] = await Promise.all([
-        order.container_id ? containersApi.getById(order.container_id) : Promise.resolve(null),
-        trackingApi.getByOrderId(order.id),
-        order.client_email ? customersApi.getByEmail(order.client_email) : Promise.resolve(null),
+        order.container_id ? containersApi.getById(order.container_id).catch(() => null) : Promise.resolve(null),
+        trackingApi.getByOrderId(order.id).catch(() => []),
+        order.client_email ? customersApi.getByEmail(order.client_email).catch(() => null) : Promise.resolve(null),
       ])
 
       return NextResponse.json({
@@ -59,7 +48,7 @@ export async function GET(
         data: {
           order,
           container,
-          events,
+          events: events || [],
           customer,
         },
       })
