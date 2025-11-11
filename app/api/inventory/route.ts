@@ -11,7 +11,13 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from('inventory')
-      .select('*')
+      .select(`
+        *,
+        containers (
+          id,
+          code
+        )
+      `)
       .order('created_at', { ascending: false })
 
     if (search) {
@@ -30,7 +36,14 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, data: data || [] })
+    // Transform data to include container_code
+    const transformedData = (data || []).map((item: any) => ({
+      ...item,
+      container_code: item.containers?.code || null,
+      containers: undefined // Remove the nested containers object
+    }))
+
+    return NextResponse.json({ success: true, data: transformedData })
   } catch (error) {
     console.error('Error fetching inventory:', error)
     return NextResponse.json(
@@ -45,9 +58,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
+    // Convert empty string container_id to null
+    const insertData = {
+      ...body,
+      container_id: body.container_id && body.container_id !== '' ? body.container_id : null
+    }
+    
     const { data, error } = await supabaseAdmin
       .from('inventory')
-      .insert(body)
+      .insert(insertData)
       .select()
       .single()
     

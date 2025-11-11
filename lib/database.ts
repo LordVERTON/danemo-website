@@ -15,6 +15,12 @@ type ContainerUpdate = Database['public']['Tables']['containers']['Update']
 type Package = Database['public']['Tables']['packages']['Row']
 type PackageInsert = Database['public']['Tables']['packages']['Insert']
 type PackageUpdate = Database['public']['Tables']['packages']['Update']
+type Customer = Database['public']['Tables']['customers']['Row']
+type CustomerInsert = Database['public']['Tables']['customers']['Insert']
+type CustomerUpdate = Database['public']['Tables']['customers']['Update']
+type Invoice = Database['public']['Tables']['invoices']['Row']
+type InvoiceInsert = Database['public']['Tables']['invoices']['Insert']
+type InvoiceUpdate = Database['public']['Tables']['invoices']['Update']
 
 // Fonctions pour les commandes
 export const ordersApi = {
@@ -26,7 +32,9 @@ export const ordersApi = {
       .order('created_at', { ascending: false })
     
     if (error) throw error
-    return data || []
+    
+    // container_code est maintenant directement dans la table orders, pas besoin de jointure
+    return (data || [])
   },
 
   // Récupérer une commande par ID
@@ -38,6 +46,8 @@ export const ordersApi = {
       .single()
     
     if (error) throw error
+    
+    // container_code est maintenant directement dans la table orders, pas besoin de jointure
     return data
   },
 
@@ -58,10 +68,12 @@ export const ordersApi = {
     const { data, error } = await (supabaseAdmin as any)
       .from('orders')
       .insert(order)
-      .select()
+      .select('*')
       .single()
     
     if (error) throw error
+    
+    // container_code est maintenant directement dans la table orders (mis à jour par le trigger)
     return data
   },
 
@@ -71,10 +83,12 @@ export const ordersApi = {
       .from('orders')
       .update(updates)
       .eq('id', id)
-      .select()
+      .select('*')
       .single()
     
     if (error) throw error
+    
+    // container_code est maintenant directement dans la table orders (mis à jour par le trigger)
     return data
   },
 
@@ -97,7 +111,9 @@ export const ordersApi = {
       .order('created_at', { ascending: false })
     
     if (error) throw error
-    return data || []
+    
+    // container_code est maintenant directement dans la table orders, pas besoin de jointure
+    return (data || [])
   },
 
   // Filtrer par statut
@@ -109,7 +125,9 @@ export const ordersApi = {
       .order('created_at', { ascending: false })
     
     if (error) throw error
-    return data || []
+    
+    // container_code est maintenant directement dans la table orders, pas besoin de jointure
+    return (data || [])
   }
 }
 
@@ -163,7 +181,8 @@ export const clientsApi = {
 // Fonctions pour les conteneurs
 export const containersApi = {
   async getAll(): Promise<Container[]> {
-    const { data, error } = await supabase
+    // Utiliser supabaseAdmin pour contourner RLS et obtenir tous les conteneurs
+    const { data, error } = await (supabaseAdmin as any)
       .from('containers')
       .select('*')
       .order('created_at', { ascending: false })
@@ -324,4 +343,186 @@ export const utils = {
 
     return stats
   }
+}
+
+// Fonctions pour les clients (customers)
+export const customersApi = {
+  async getAll(): Promise<Customer[]> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  async getById(id: string): Promise<Customer | null> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async getByEmail(email: string): Promise<Customer | null> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('email', email)
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async getWithOrders(id: string): Promise<Customer & { orders: Order[] } | null> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select(`
+        *,
+        orders (*)
+      `)
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    
+    if (!data) return null
+    
+    // container_code est maintenant directement dans la table orders, pas besoin de jointure
+    return data as any
+  },
+
+  async getWithOrdersAndInvoices(id: string): Promise<Customer & { orders: Order[], invoices: Invoice[] } | null> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select(`
+        *,
+        orders (*),
+        invoices (*)
+      `)
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    
+    if (!data) return null
+    
+    // container_code est maintenant directement dans la table orders, pas besoin de jointure
+    return data as any
+  },
+
+  async create(payload: CustomerInsert): Promise<Customer> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('customers')
+      .insert(payload)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async update(id: string, payload: CustomerUpdate): Promise<Customer> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('customers')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from('customers')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+  },
+}
+
+// Fonctions pour les factures (invoices)
+export const invoicesApi = {
+  async getAll(): Promise<Invoice[]> {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  async getById(id: string): Promise<Invoice | null> {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async getByCustomerId(customerId: string): Promise<Invoice[]> {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  async getByOrderId(orderId: string): Promise<Invoice[]> {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  async getWithCustomer(id: string): Promise<Invoice & { customers: Customer } | null> {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select(`
+        *,
+        customers (
+          *
+        )
+      `)
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    return data as any
+  },
+
+  async create(payload: InvoiceInsert): Promise<Invoice> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('invoices')
+      .insert(payload)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async update(id: string, payload: InvoiceUpdate): Promise<Invoice> {
+    const { data, error } = await (supabaseAdmin as any)
+      .from('invoices')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from('invoices')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+  },
 }

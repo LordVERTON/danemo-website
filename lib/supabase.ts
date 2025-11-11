@@ -200,6 +200,120 @@ export interface Database {
           updated_at?: string
         }
       }
+      // NEW: customers table
+      customers: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          phone: string | null
+          address: string | null
+          city: string | null
+          postal_code: string | null
+          country: string | null
+          company: string | null
+          tax_id: string | null
+          notes: string | null
+          status: 'active' | 'inactive' | 'archived'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          phone?: string | null
+          address?: string | null
+          city?: string | null
+          postal_code?: string | null
+          country?: string | null
+          company?: string | null
+          tax_id?: string | null
+          notes?: string | null
+          status?: 'active' | 'inactive' | 'archived'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          phone?: string | null
+          address?: string | null
+          city?: string | null
+          postal_code?: string | null
+          country?: string | null
+          company?: string | null
+          tax_id?: string | null
+          notes?: string | null
+          status?: 'active' | 'inactive' | 'archived'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // NEW: invoices table
+      invoices: {
+        Row: {
+          id: string
+          invoice_number: string
+          customer_id: string
+          order_id: string | null
+          issue_date: string
+          due_date: string | null
+          status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+          subtotal: number
+          tax_rate: number
+          tax_amount: number
+          total_amount: number
+          currency: string
+          payment_method: string | null
+          payment_date: string | null
+          notes: string | null
+          pdf_path: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          invoice_number?: string
+          customer_id: string
+          order_id?: string | null
+          issue_date?: string
+          due_date?: string | null
+          status?: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+          subtotal?: number
+          tax_rate?: number
+          tax_amount?: number
+          total_amount?: number
+          currency?: string
+          payment_method?: string | null
+          payment_date?: string | null
+          notes?: string | null
+          pdf_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          invoice_number?: string
+          customer_id?: string
+          order_id?: string | null
+          issue_date?: string
+          due_date?: string | null
+          status?: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+          subtotal?: number
+          tax_rate?: number
+          tax_amount?: number
+          total_amount?: number
+          currency?: string
+          payment_method?: string | null
+          payment_date?: string | null
+          notes?: string | null
+          pdf_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       // NEW: packages table (colis) with QR tracking
       packages: {
         Row: {
@@ -257,6 +371,7 @@ export interface Database {
           poids: string | null
           dimensions: string | null
           valeur: string
+          container_id: string | null
           date_ajout: string
           created_at: string
           updated_at: string
@@ -272,6 +387,7 @@ export interface Database {
           poids?: string | null
           dimensions?: string | null
           valeur: string
+          container_id?: string | null
           date_ajout?: string
           created_at?: string
           updated_at?: string
@@ -287,6 +403,7 @@ export interface Database {
           poids?: string | null
           dimensions?: string | null
           valeur?: string
+          container_id?: string | null
           date_ajout?: string
           created_at?: string
           updated_at?: string

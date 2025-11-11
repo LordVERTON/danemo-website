@@ -402,21 +402,29 @@ export default function InventoryPage() {
                 <div>
                   <Label htmlFor="container">Conteneur</Label>
                   <Select
-                    value={formData.container_id}
+                    value={formData.container_id || "none"}
                     onValueChange={(value: string) => {
-                      const selected = containers.find((c) => c.id === value)
-                      setFormData({
-                        ...formData,
-                        container_id: value,
-                        container_code: selected?.code || "",
-                      })
+                      if (value === "none") {
+                        setFormData({
+                          ...formData,
+                          container_id: "",
+                          container_code: "",
+                        })
+                      } else {
+                        const selected = containers.find((c) => c.id === value)
+                        setFormData({
+                          ...formData,
+                          container_id: value,
+                          container_code: selected?.code || "",
+                        })
+                      }
                     }}
                   >
                     <SelectTrigger className="text-base sm:text-sm">
                       <SelectValue placeholder="Aucun" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Aucun</SelectItem>
+                      <SelectItem value="none">Aucun</SelectItem>
                       {containers.map((c) => (
                         <SelectItem key={c.id} value={c.id}>{c.code}</SelectItem>
                       ))}

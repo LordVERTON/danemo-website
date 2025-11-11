@@ -99,7 +99,10 @@ export async function POST(request: NextRequest) {
       destination: body.destination?.trim().substring(0, 100),
       weight: body.weight?.trim().substring(0, 20),
       value: body.value?.trim().substring(0, 20),
-      estimated_delivery: body.estimated_delivery
+      estimated_delivery: body.estimated_delivery,
+      container_id: body.container_id && body.container_id !== '' ? body.container_id : null,
+      container_code: body.container_code && body.container_code !== '' ? body.container_code.trim().substring(0, 50) : null,
+      customer_id: body.customer_id && body.customer_id !== '' ? body.customer_id : null
     }
     
     // Générer un numéro de commande unique

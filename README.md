@@ -86,6 +86,7 @@ CREATE TABLE orders (
   value DECIMAL(10,2),
   status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'in_progress', 'completed', 'cancelled')),
   estimated_delivery DATE,
+  container_id UUID REFERENCES containers(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -133,12 +134,66 @@ CREATE TABLE inventory (
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_client_email ON orders(client_email);
 CREATE INDEX idx_orders_created_at ON orders(created_at);
+CREATE INDEX idx_orders_container_id ON orders(container_id);
 CREATE INDEX idx_tracking_events_order_id ON tracking_events(order_id);
 CREATE INDEX idx_tracking_events_event_date ON tracking_events(event_date);
 CREATE INDEX idx_inventory_type ON inventory(type);
 CREATE INDEX idx_inventory_status ON inventory(status);
 CREATE INDEX idx_inventory_client ON inventory(client);
 CREATE INDEX idx_inventory_date_ajout ON inventory(date_ajout);
+
+-- Table des clients (customers)
+CREATE TABLE customers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  phone VARCHAR(50),
+  address TEXT,
+  city VARCHAR(255),
+  postal_code VARCHAR(20),
+  country VARCHAR(100),
+  company VARCHAR(255),
+  tax_id VARCHAR(100),
+  notes TEXT,
+  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des factures (invoices)
+CREATE TABLE invoices (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  invoice_number VARCHAR(50) UNIQUE NOT NULL,
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+  issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  due_date DATE,
+  status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled')),
+  subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
+  tax_rate DECIMAL(5,2) DEFAULT 0,
+  tax_amount DECIMAL(10,2) DEFAULT 0,
+  total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  currency VARCHAR(3) DEFAULT 'EUR',
+  payment_method VARCHAR(50),
+  payment_date DATE,
+  notes TEXT,
+  pdf_path TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Ajouter customer_id à orders si nécessaire
+ALTER TABLE orders 
+ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET NULL;
+
+-- Index pour customers et invoices
+CREATE INDEX idx_customers_email ON customers(email);
+CREATE INDEX idx_customers_status ON customers(status);
+CREATE INDEX idx_invoices_customer_id ON invoices(customer_id);
+CREATE INDEX idx_invoices_order_id ON invoices(order_id);
+CREATE INDEX idx_invoices_invoice_number ON invoices(invoice_number);
+CREATE INDEX idx_invoices_status ON invoices(status);
+CREATE INDEX idx_orders_customer_id ON orders(customer_id);
 
 -- Fonction pour mettre à jour automatiquement updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -159,11 +214,19 @@ CREATE TRIGGER update_admin_users_updated_at BEFORE UPDATE ON admin_users
 CREATE TRIGGER update_inventory_updated_at BEFORE UPDATE ON inventory
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_invoices_updated_at BEFORE UPDATE ON invoices
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- RLS (Row Level Security)
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracking_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 
 -- Politiques RLS
 CREATE POLICY "Orders are viewable by everyone" ON orders FOR SELECT USING (true);
@@ -180,12 +243,71 @@ CREATE POLICY "Inventory is insertable by authenticated users" ON inventory FOR 
 CREATE POLICY "Inventory is updatable by authenticated users" ON inventory FOR UPDATE USING (true);
 CREATE POLICY "Inventory is deletable by authenticated users" ON inventory FOR DELETE USING (true);
 
+CREATE POLICY "Customers are viewable by authenticated users" ON customers FOR SELECT USING (true);
+CREATE POLICY "Customers are insertable by authenticated users" ON customers FOR INSERT WITH CHECK (true);
+CREATE POLICY "Customers are updatable by authenticated users" ON customers FOR UPDATE USING (true);
+CREATE POLICY "Customers are deletable by authenticated users" ON customers FOR DELETE USING (true);
+
+CREATE POLICY "Invoices are viewable by authenticated users" ON invoices FOR SELECT USING (true);
+CREATE POLICY "Invoices are insertable by authenticated users" ON invoices FOR INSERT WITH CHECK (true);
+CREATE POLICY "Invoices are updatable by authenticated users" ON invoices FOR UPDATE USING (true);
+CREATE POLICY "Invoices are deletable by authenticated users" ON invoices FOR DELETE USING (true);
+
 -- Insérer un utilisateur admin par défaut
 INSERT INTO admin_users (email, password_hash, name, role) 
 VALUES ('admin@danemo.be', '$2a$10$rQZ8K9vL2mN3pO4qR5sT6uV7wX8yZ9aB0cD1eF2gH3iJ4kL5mN6oP7qR8sT9uV', 'Admin DANEMO', 'admin');
 ```
 
-### 5. Lancer le serveur de développement
+### 5. Remplir la base de données avec des données de test (Seeds)
+
+#### Option 1 : Supprimer et recréer les données (Recommandé pour un reset complet)
+
+**Via SQL :**
+1. Exécutez d'abord `delete-orders-customers-containers.sql` pour supprimer toutes les données existantes
+2. Exécutez ensuite `seed-15-customers-3-containers.sql` pour créer :
+   - 15 clients différents
+   - 3 conteneurs
+   - Entre 1 et 5 commandes par client (aléatoire)
+
+**Via API :**
+```bash
+# Supprimer toutes les données et recréer avec 15 clients, 3 conteneurs, et 1-5 commandes par client
+curl -X POST http://localhost:3000/api/admin/reseed-data \
+  -H "Content-Type: application/json" \
+  -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
+```
+
+#### Option 2 : Autres scripts de seed disponibles
+
+**Via SQL :**
+- `seed-containers.sql` - Créer uniquement des conteneurs de test
+- `seed-customers-from-orders.sql` - Extraire les clients des commandes existantes et créer des factures
+- `seed-orders-with-containers.sql` - Créer des commandes complètes avec des clients et des conteneurs liés
+
+**Via API :**
+```bash
+# Créer des conteneurs de test
+curl -X POST http://localhost:3000/api/admin/seed-containers \
+  -H "Content-Type: application/json" \
+  -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
+
+# Créer des clients et factures depuis les commandes existantes
+curl -X POST http://localhost:3000/api/admin/seed-customers \
+  -H "Content-Type: application/json" \
+  -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
+
+# Créer des commandes avec clients et conteneurs
+curl -X POST http://localhost:3000/api/admin/seed-orders \
+  -H "Content-Type: application/json" \
+  -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
+```
+
+**Note** : 
+- Assurez-vous d'avoir défini la variable d'environnement `ADMIN_SEED_KEY` dans votre fichier `.env.local`.
+- Si vous rencontrez une erreur avec la fonction `generate_invoice_number()`, exécutez d'abord le script `fix-invoice-number-function.sql` pour corriger la fonction.
+- Le script `seed-15-customers-3-containers.sql` crée un dataset complet avec 15 clients, 3 conteneurs, et des commandes aléatoires (1-5 par client).
+
+### 6. Lancer le serveur de développement
 
 ```bash
 # Avec npm
@@ -200,7 +322,7 @@ pnpm dev
 
 Le serveur de développement se lancera automatiquement sur le port 3000.
 
-### 6. Ouvrir l'application
+### 7. Ouvrir l'application
 
 Ouvrez votre navigateur et allez sur [http://localhost:3000](http://localhost:3000)
 

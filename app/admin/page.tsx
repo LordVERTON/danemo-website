@@ -124,14 +124,14 @@ export default function AdminDashboard() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link href="/admin/orders">
+          <Link href="/admin/clients">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5 text-orange-600" />
-                  Gestion des commandes
+                  <Users className="h-5 w-5 text-orange-600" />
+                  Gestion des clients
                 </CardTitle>
-                <CardDescription>Créez et gérez les commandes clients</CardDescription>
+                <CardDescription>Gérez vos clients et leurs commandes</CardDescription>
               </CardHeader>
             </Card>
           </Link>

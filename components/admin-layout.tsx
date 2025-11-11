@@ -5,7 +5,7 @@ import type React from "react"
 import { useEffect, useState, memo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LogOut, Package, Truck, BarChart3, ShoppingCart, Users, QrCode } from "lucide-react"
+import { LogOut, Package, Truck, BarChart3, Users, QrCode } from "lucide-react"
 import Link from "next/link"
 import QRScanner from "@/components/qr-scanner"
 
@@ -63,7 +63,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           }
         })
         window.dispatchEvent(event)
-      } else if (currentPath === "/admin/orders") {
+      } else if (currentPath === "/admin/clients" || currentPath.startsWith("/admin/clients/")) {
         // Pour la page orders
         const event = new CustomEvent('qrScanResult', { 
           detail: { 
@@ -125,9 +125,9 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                 Administration Danemo
               </Link>
               <nav className="hidden md:flex space-x-6">
-                <Link href="/admin/orders" className="flex items-center gap-2 text-gray-600 hover:text-orange-600">
-                  <ShoppingCart className="h-4 w-4" />
-                  Commandes
+                <Link href="/admin/clients" className="flex items-center gap-2 text-gray-600 hover:text-orange-600">
+                  <Users className="h-4 w-4" />
+                  Clients
                 </Link>
                 <Link href="/admin/inventory" className="flex items-center gap-2 text-gray-600 hover:text-orange-600">
                   <Package className="h-4 w-4" />
@@ -170,17 +170,17 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       {/* Mobile Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
         <div className="flex items-center justify-around py-1 sm:py-2 px-1 sm:px-2 gap-0.5 sm:gap-1">
-          {/* Orders */}
+          {/* Clients */}
           <Link 
-            href="/admin/orders" 
+            href="/admin/clients" 
             className={`flex flex-col items-center py-1 sm:py-2 px-1 sm:px-2 rounded-lg transition-colors min-w-0 flex-1 ${
-              currentPath === "/admin/orders" 
+              currentPath === "/admin/clients" || currentPath.startsWith("/admin/clients/") 
                 ? "text-orange-600 bg-orange-50" 
                 : "text-gray-600 hover:text-orange-600"
             }`}
           >
-            <ShoppingCart className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5" />
-            <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Commandes</span>
+            <Users className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5" />
+            <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Clients</span>
           </Link>
 
           {/* Inventory */}

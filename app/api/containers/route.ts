@@ -5,7 +5,8 @@ import { containersApi } from '@/lib/database'
 export async function GET() {
   try {
     const containers = await containersApi.getAll()
-    return NextResponse.json({ success: true, data: containers })
+    console.log('API /api/containers: Returning', containers?.length || 0, 'containers')
+    return NextResponse.json({ success: true, data: containers || [] })
   } catch (error) {
     console.error('Error fetching containers:', error)
     return NextResponse.json({ success: false, error: 'Failed to fetch containers' }, { status: 500 })

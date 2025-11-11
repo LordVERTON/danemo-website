@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Dialog,
   DialogContent,
@@ -77,7 +78,26 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [error, setError] = useState("")
-  const [containers, setContainers] = useState<Array<{ id: string; code: string; status?: string | null }>>([])
+  const [containers, setContainers] = useState<Array<{ 
+    id: string; 
+    code: string; 
+    status?: string | null;
+    vessel?: string | null;
+    departure_port?: string | null;
+    arrival_port?: string | null;
+    etd?: string | null;
+    eta?: string | null;
+  }>>([])
+  const [isCreateContainerDialogOpen, setIsCreateContainerDialogOpen] = useState(false)
+  const [newContainer, setNewContainer] = useState({
+    code: "",
+    vessel: "",
+    departure_port: "",
+    arrival_port: "",
+    etd: "",
+    eta: "",
+    status: "planned" as const
+  })
 
   // Formulaire de création
   const [newOrder, setNewOrder] = useState({
@@ -116,15 +136,18 @@ export default function OrdersPage() {
   }, [])
 
   useEffect(() => {
-    const handleQRScanResult = (event: CustomEvent) => {
-      if (event.detail.type === 'orders') {
-        setNewOrder(event.detail.data)
-        setIsCreateDialogOpen(true)
+    const handleQRScanResult = (event: Event) => {
+      const customEvent = event as CustomEvent
+      if (customEvent.detail?.type === 'orders') {
+        fetchContainers().then(() => {
+          setNewOrder(customEvent.detail.data)
+          setIsCreateDialogOpen(true)
+        })
       }
     }
 
-    window.addEventListener('qrScanResult', handleQRScanResult as EventListener)
-    return () => window.removeEventListener('qrScanResult', handleQRScanResult as EventListener)
+    window.addEventListener('qrScanResult', handleQRScanResult)
+    return () => window.removeEventListener('qrScanResult', handleQRScanResult)
   }, [])
 
   const fetchOrders = async () => {
@@ -149,15 +172,93 @@ export default function OrdersPage() {
     try {
       const response = await fetch('/api/containers')
       const result = await response.json()
-      if (result.success) {
-        setContainers(result.data.map((container: any) => ({
+      if (result.success && result.data) {
+        const containersList = result.data.map((container: any) => ({
           id: container.id,
           code: container.code,
           status: container.status ?? null,
-        })))
+          vessel: container.vessel ?? null,
+          departure_port: container.departure_port ?? null,
+          arrival_port: container.arrival_port ?? null,
+          etd: container.etd ?? null,
+          eta: container.eta ?? null,
+        }))
+        setContainers(containersList)
+        console.log('Containers loaded:', containersList.length)
+      } else {
+        console.error('Failed to fetch containers:', result.error)
+        setContainers([])
       }
     } catch (error) {
       console.error('Error fetching containers:', error)
+      setContainers([])
+    }
+  }
+
+  const handleCreateContainer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      if (!newContainer.code.trim()) {
+        setError('Le code du conteneur est requis')
+        return
+      }
+
+      const response = await fetch('/api/containers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: newContainer.code.trim(),
+          vessel: newContainer.vessel.trim() || null,
+          departure_port: newContainer.departure_port.trim() || null,
+          arrival_port: newContainer.arrival_port.trim() || null,
+          etd: newContainer.etd || null,
+          eta: newContainer.eta || null,
+          status: newContainer.status,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Recharger la liste complète des conteneurs depuis l'API
+        await fetchContainers()
+        
+        // Sélectionner automatiquement le nouveau conteneur dans le formulaire actif
+        const createdContainer = result.data
+        if (isCreateDialogOpen) {
+          setNewOrder({
+            ...newOrder,
+            container_id: createdContainer.id,
+            container_code: createdContainer.code,
+          })
+        } else if (isEditDialogOpen) {
+          setEditOrder({
+            ...editOrder,
+            container_id: createdContainer.id,
+            container_code: createdContainer.code,
+          })
+        }
+        
+        // Réinitialiser le formulaire et fermer le dialog
+        setNewContainer({
+          code: "",
+          vessel: "",
+          departure_port: "",
+          arrival_port: "",
+          etd: "",
+          eta: "",
+          status: "planned"
+        })
+        setIsCreateContainerDialogOpen(false)
+        setError("")
+      } else {
+        setError(result.error || 'Erreur lors de la création du conteneur')
+      }
+    } catch (error) {
+      console.error('Error creating container:', error)
+      setError('Erreur de connexion')
     }
   }
 
@@ -209,7 +310,10 @@ export default function OrdersPage() {
     }
   }
 
-  const handleEditOrder = (order: Order) => {
+  const handleEditOrder = async (order: Order) => {
+    // Recharger les conteneurs pour s'assurer d'avoir les données à jour
+    await fetchContainers()
+    
     setSelectedOrder(order)
     setEditOrder({
       client_name: order.client_name,
@@ -269,7 +373,7 @@ export default function OrdersPage() {
   }
 
 
-  const handleQRScan = (qrData: string) => {
+  const handleQRScan = async (qrData: string) => {
     try {
       const data = JSON.parse(qrData)
       
@@ -288,7 +392,8 @@ export default function OrdersPage() {
         container_code: ""
       })
       
-      // Ouvrir le dialog de création
+      // Recharger les conteneurs et ouvrir le dialog de création
+      await fetchContainers()
       setIsCreateDialogOpen(true)
     } catch (error) {
       setError('Format de QR code invalide')
@@ -528,35 +633,81 @@ export default function OrdersPage() {
                 <div>
                   <Label htmlFor="container_id">Conteneur</Label>
                   <Select
-                    value={newOrder.container_id}
+                    value={newOrder.container_id || "none"}
                     onValueChange={(value) => {
-                      const selected = containers.find((container) => container.id === value)
-                      setNewOrder({
-                        ...newOrder,
-                        container_id: value,
-                        container_code: selected?.code || "",
-                      })
+                      if (value === "none") {
+                        setNewOrder({
+                          ...newOrder,
+                          container_id: "",
+                          container_code: "",
+                        })
+                      } else {
+                        const selected = containers.find((container) => container.id === value)
+                        setNewOrder({
+                          ...newOrder,
+                          container_id: value,
+                          container_code: selected?.code || "",
+                        })
+                      }
                     }}
                   >
                     <SelectTrigger className="text-base sm:text-sm">
                       <SelectValue placeholder="Aucun conteneur assigné" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Aucun</SelectItem>
-                      {containers.map((container) => (
-                        <SelectItem key={container.id} value={container.id}>
-                          {container.code}
+                      <SelectItem value="none">Aucun</SelectItem>
+                      {containers.length === 0 ? (
+                        <SelectItem value="no-containers" disabled>
+                          Aucun conteneur disponible
                         </SelectItem>
-                      ))}
+                      ) : (
+                        containers.map((container) => (
+                          <SelectItem key={container.id} value={container.id}>
+                            {container.code} {container.status && `(${container.status.replace(/_/g, " ")})`}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
-                  {newOrder.container_id && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Statut:{" "}
-                      {containers.find((container) => container.id === newOrder.container_id)?.status?.replace(/_/g, " ") ||
-                        "Non communiqué"}
-                    </p>
-                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={() => setIsCreateContainerDialogOpen(true)}
+                  >
+                    + Créer un nouveau conteneur
+                  </Button>
+                  {newOrder.container_id && (() => {
+                    const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
+                    return (
+                      <div className="mt-2 p-2 bg-muted rounded-md">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {selectedContainer?.code || newOrder.container_code || "N/A"}
+                          </Badge>
+                          {selectedContainer?.status && (
+                            <Badge variant="secondary" className="text-xs">
+                              {selectedContainer.status.replace(/_/g, " ")}
+                            </Badge>
+                          )}
+                        </div>
+                        {selectedContainer && (
+                          <div className="text-xs text-muted-foreground space-y-0.5">
+                            {selectedContainer.vessel && (
+                              <div>Navire: <span className="font-medium">{selectedContainer.vessel}</span></div>
+                            )}
+                            {selectedContainer.departure_port && (
+                              <div>Départ: <span className="font-medium">{selectedContainer.departure_port}</span></div>
+                            )}
+                            {selectedContainer.arrival_port && (
+                              <div>Arrivée: <span className="font-medium">{selectedContainer.arrival_port}</span></div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                   <div>
@@ -597,6 +748,126 @@ export default function OrdersPage() {
                     Annuler
                   </Button>
                   <Button type="submit" className="w-full sm:w-auto">Créer la commande</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog pour créer un nouveau conteneur */}
+          <Dialog open={isCreateContainerDialogOpen} onOpenChange={setIsCreateContainerDialogOpen}>
+            <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Créer un nouveau conteneur</DialogTitle>
+                <DialogDescription>
+                  Créez un nouveau conteneur pour l'assigner à cette commande
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateContainer} className="space-y-4">
+                <div>
+                  <Label htmlFor="container_code">Code du conteneur *</Label>
+                  <Input
+                    id="container_code"
+                    value={newContainer.code}
+                    onChange={(e) => setNewContainer({ ...newContainer, code: e.target.value.toUpperCase() })}
+                    placeholder="Ex: MSKU1234567"
+                    required
+                    className="text-base sm:text-sm font-mono"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="container_vessel">Navire</Label>
+                    <Input
+                      id="container_vessel"
+                      value={newContainer.vessel}
+                      onChange={(e) => setNewContainer({ ...newContainer, vessel: e.target.value })}
+                      placeholder="Ex: MSC OSCAR"
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="container_status">Statut</Label>
+                    <Select
+                      value={newContainer.status}
+                      onValueChange={(value: any) => setNewContainer({ ...newContainer, status: value })}
+                    >
+                      <SelectTrigger className="text-base sm:text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="planned">Planifié</SelectItem>
+                        <SelectItem value="departed">Parti</SelectItem>
+                        <SelectItem value="in_transit">En transit</SelectItem>
+                        <SelectItem value="arrived">Arrivé</SelectItem>
+                        <SelectItem value="delivered">Livré</SelectItem>
+                        <SelectItem value="delayed">Retardé</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="container_departure_port">Port de départ</Label>
+                    <Input
+                      id="container_departure_port"
+                      value={newContainer.departure_port}
+                      onChange={(e) => setNewContainer({ ...newContainer, departure_port: e.target.value })}
+                      placeholder="Ex: Port d'Anvers, Belgique"
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="container_arrival_port">Port d'arrivée</Label>
+                    <Input
+                      id="container_arrival_port"
+                      value={newContainer.arrival_port}
+                      onChange={(e) => setNewContainer({ ...newContainer, arrival_port: e.target.value })}
+                      placeholder="Ex: Port de Douala, Cameroun"
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="container_etd">Date de départ estimée (ETD)</Label>
+                    <Input
+                      id="container_etd"
+                      type="datetime-local"
+                      value={newContainer.etd}
+                      onChange={(e) => setNewContainer({ ...newContainer, etd: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="container_eta">Date d'arrivée estimée (ETA)</Label>
+                    <Input
+                      id="container_eta"
+                      type="datetime-local"
+                      value={newContainer.eta}
+                      onChange={(e) => setNewContainer({ ...newContainer, eta: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                </div>
+                {error && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsCreateContainerDialogOpen(false)
+                      setError("")
+                    }} 
+                    className="w-full sm:w-auto"
+                  >
+                    Annuler
+                  </Button>
+                  <Button type="submit" className="w-full sm:w-auto">Créer le conteneur</Button>
                 </div>
               </form>
             </DialogContent>
@@ -683,12 +954,6 @@ export default function OrdersPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredOrders.map((order) => {
-                    const containerInfo = containers.find(
-                      (container) =>
-                        container.id === order.container_id ||
-                        container.code === order.container_code,
-                    )
-
                     return (
                     <TableRow 
                       key={order.id}
@@ -715,14 +980,14 @@ export default function OrdersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {containerInfo ? (
+                        {order.container_code ? (
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="font-mono text-xs">
-                              {containerInfo.code}
+                              {order.container_code}
                             </Badge>
-                            {containerInfo.status && (
+                            {order.container_status && (
                               <span className="text-xs text-muted-foreground capitalize">
-                                {containerInfo.status.replace(/_/g, " ")}
+                                {order.container_status.replace(/_/g, " ")}
                               </span>
                             )}
                           </div>
@@ -797,12 +1062,6 @@ export default function OrdersPage() {
             {/* Version Mobile - Cartes */}
             <div className="lg:hidden space-y-4">
               {filteredOrders.map((order) => {
-                const containerInfo = containers.find(
-                  (container) =>
-                    container.id === order.container_id ||
-                    container.code === order.container_code,
-                )
-
                 return (
                 <Card 
                   key={order.id} 
@@ -845,14 +1104,14 @@ export default function OrdersPage() {
                     {/* Conteneur */}
                     <div className="text-sm">
                       <span className="text-muted-foreground">Conteneur:</span>
-                      {containerInfo ? (
+                      {order.container_code ? (
                         <div className="mt-1 flex items-center gap-2">
                           <Badge variant="outline" className="font-mono text-xs">
-                            {containerInfo.code}
+                            {order.container_code}
                           </Badge>
-                          {containerInfo.status && (
+                          {order.container_status && (
                             <span className="text-xs text-muted-foreground capitalize">
-                              {containerInfo.status.replace(/_/g, " ")}
+                              {order.container_status.replace(/_/g, " ")}
                             </span>
                           )}
                         </div>
@@ -1145,35 +1404,81 @@ export default function OrdersPage() {
                   <div>
                     <Label htmlFor="edit_container_id">Conteneur</Label>
                     <Select
-                      value={editOrder.container_id}
+                      value={editOrder.container_id || "none"}
                       onValueChange={(value) => {
-                        const selected = containers.find((container) => container.id === value)
-                        setEditOrder({
-                          ...editOrder,
-                          container_id: value,
-                          container_code: selected?.code || "",
-                        })
+                        if (value === "none") {
+                          setEditOrder({
+                            ...editOrder,
+                            container_id: "",
+                            container_code: "",
+                          })
+                        } else {
+                          const selected = containers.find((container) => container.id === value)
+                          setEditOrder({
+                            ...editOrder,
+                            container_id: value,
+                            container_code: selected?.code || "",
+                          })
+                        }
                       }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Aucun conteneur assigné" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Aucun</SelectItem>
-                        {containers.map((container) => (
-                          <SelectItem key={container.id} value={container.id}>
-                            {container.code}
+                        <SelectItem value="none">Aucun</SelectItem>
+                        {containers.length === 0 ? (
+                          <SelectItem value="no-containers" disabled>
+                            Aucun conteneur disponible
                           </SelectItem>
-                        ))}
+                        ) : (
+                          containers.map((container) => (
+                            <SelectItem key={container.id} value={container.id}>
+                              {container.code} {container.status && `(${container.status.replace(/_/g, " ")})`}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
-                    {editOrder.container_id && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Statut:{" "}
-                        {containers.find((container) => container.id === editOrder.container_id)?.status?.replace(/_/g, " ") ||
-                          "Non communiqué"}
-                      </p>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 w-full"
+                      onClick={() => setIsCreateContainerDialogOpen(true)}
+                    >
+                      + Créer un nouveau conteneur
+                    </Button>
+                    {editOrder.container_id && (() => {
+                      const selectedContainer = containers.find((container) => container.id === editOrder.container_id)
+                      return (
+                        <div className="mt-2 p-2 bg-muted rounded-md">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {editOrder.container_code || selectedContainer?.code || "N/A"}
+                            </Badge>
+                            {selectedContainer?.status && (
+                              <Badge variant="secondary" className="text-xs">
+                                {selectedContainer.status.replace(/_/g, " ")}
+                              </Badge>
+                            )}
+                          </div>
+                          {selectedContainer && (
+                            <div className="text-xs text-muted-foreground space-y-0.5">
+                              {selectedContainer.vessel && (
+                                <div>Navire: <span className="font-medium">{selectedContainer.vessel}</span></div>
+                              )}
+                              {selectedContainer.departure_port && (
+                                <div>Départ: <span className="font-medium">{selectedContainer.departure_port}</span></div>
+                              )}
+                              {selectedContainer.arrival_port && (
+                                <div>Arrivée: <span className="font-medium">{selectedContainer.arrival_port}</span></div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>

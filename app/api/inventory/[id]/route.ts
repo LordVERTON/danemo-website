@@ -10,13 +10,27 @@ export async function GET(
     const { id } = await context.params
     const { data, error } = await supabaseAdmin
       .from('inventory')
-      .select('*')
+      .select(`
+        *,
+        containers (
+          id,
+          code
+        )
+      `)
       .eq('id', id)
       .single()
     
     if (error) throw error
     
-    return NextResponse.json({ success: true, data })
+    // Transform data to include container_code
+    const item = data as any
+    const transformedData = {
+      ...item,
+      container_code: item.containers?.code || null,
+    }
+    delete transformedData.containers // Remove the nested containers object
+    
+    return NextResponse.json({ success: true, data: transformedData })
   } catch (error) {
     console.error('Error fetching inventory item:', error)
     return NextResponse.json(
@@ -44,12 +58,17 @@ export async function PUT(
     const body = await request.json()
     
     // Validation des données
-    const allowedFields = ['type', 'reference', 'description', 'client', 'status', 'location', 'poids', 'dimensions', 'valeur']
+    const allowedFields = ['type', 'reference', 'description', 'client', 'status', 'location', 'poids', 'dimensions', 'valeur', 'container_id']
     const updateData: Record<string, any> = {}
     
     for (const [key, value] of Object.entries(body)) {
       if (allowedFields.includes(key) && value !== undefined) {
-        updateData[key] = value
+        // Convert empty string container_id to null
+        if (key === 'container_id' && value === '') {
+          updateData[key] = null
+        } else {
+          updateData[key] = value
+        }
       }
     }
     
