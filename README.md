@@ -2,6 +2,8 @@
 
 **DANEMO** est une entreprise de logistique spécialisée dans le rapprochement de l'Afrique et de la Diaspora. Notre mission est de faciliter les échanges commerciaux et les services de transport entre l'Europe et l'Afrique.
 
+🌐 **Plateforme accessible sur** : [danemo.app](https://danemo.app)
+
 ## 🌍 À propos
 
 DANEMO propose une gamme complète de services logistiques :
@@ -12,17 +14,35 @@ DANEMO propose une gamme complète de services logistiques :
 - **Négoce** - Intermédiation commerciale
 - **Déménagement international** - Services de déménagement intercontinental
 
-## 🚀 Technologies utilisées
+## 🚀 Stack Technologique
 
+### Frontend
 - **Framework** : Next.js 15 (App Router)
 - **Langage** : TypeScript
 - **Styling** : Tailwind CSS v4
 - **UI Components** : shadcn/ui avec Radix UI
-- **Base de données** : Supabase (PostgreSQL)
 - **Icônes** : Lucide React
 - **Formulaires** : React Hook Form + Zod
 - **Graphiques** : Recharts
 - **Thèmes** : next-themes (mode sombre/clair)
+- **QR Code** : html5-qrcode, qrcode
+
+### Backend
+- **Base de données** : Supabase (PostgreSQL)
+- **Authentification** : Supabase Auth
+- **API** : Next.js API Routes
+- **Email** : Resend + React Email
+- **Notifications** : Email automatiques (Resend)
+
+### Documents & Export
+- **PDF** : jsPDF
+- **DOCX** : docx
+- **Excel** : ExcelJS
+- **CSV** : PapaParse
+
+### Déploiement
+- **Hébergement** : Vercel (recommandé)
+- **Domaine** : danemo.app
 
 ## 📋 Prérequis
 
@@ -326,6 +346,8 @@ Le serveur de développement se lancera automatiquement sur le port 3000.
 
 Ouvrez votre navigateur et allez sur [http://localhost:3000](http://localhost:3000)
 
+**Note** : La plateforme de production est accessible sur [danemo.app](https://danemo.app)
+
 ## 📁 Structure du projet
 
 ```
@@ -367,6 +389,8 @@ danemo-website/
 
 ### Déploiement sur Vercel (Recommandé)
 
+La plateforme est actuellement déployée sur Vercel et accessible sur **danemo.app**.
+
 1. **Connecter votre repository GitHub à Vercel**
    - Allez sur [vercel.com](https://vercel.com)
    - Connectez-vous avec votre compte GitHub
@@ -378,10 +402,16 @@ danemo-website/
      - `NEXT_PUBLIC_SUPABASE_URL`
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
      - `SUPABASE_SERVICE_ROLE_KEY`
+     - `RESEND_API_KEY` (pour les notifications email)
+     - `ADMIN_SEED_KEY` (pour les scripts de seed)
 
-3. **Déployer**
+3. **Configuration du domaine**
+   - Configurez le domaine personnalisé `danemo.app` dans les paramètres Vercel
+   - Ajoutez les enregistrements DNS nécessaires
+
+4. **Déployer**
    - Cliquez sur "Deploy"
-   - Votre site sera disponible sur une URL Vercel
+   - Votre site sera disponible sur danemo.app
 
 ### Déploiement sur Netlify
 
@@ -404,26 +434,73 @@ danemo-website/
 
 ## 📊 Fonctionnalités
 
-### Interface Admin
-- ✅ Dashboard avec statistiques en temps réel
-- ✅ Gestion complète des commandes (CRUD)
-- ✅ Suivi des colis avec historique des événements
-- ✅ Gestion des stocks et inventaire
-- ✅ Analytics avec graphiques interactifs
-- ✅ Recherche et filtrage avancés
+### 🎯 Priorités & Fonctionnalités Principales
 
-### Interface Publique
-- ✅ Page d'accueil moderne
-- ✅ Présentation des services
-- ✅ Suivi public des colis
-- ✅ Blog et actualités
-- ✅ Formulaire de contact
+#### 1. Gestion des Commandes
+- ✅ **CRUD complet** : Création, lecture, mise à jour, suppression
+- ✅ **Gestion expéditeur/destinataire** : 
+  - Distinction entre expéditeur et destinataire
+  - Le client peut être expéditeur, destinataire, les deux, ou aucun
+  - Formulaires dédiés pour chaque rôle
+  - Synchronisation automatique avec les données client
+- ✅ **Association clients** : Liaison des commandes aux clients existants
+- ✅ **Statuts multiples** : pending, confirmed, in_progress, completed, cancelled
+- ✅ **Recherche avancée** : Par numéro, client, email, destinataire
+- ✅ **Filtres** : Par statut, conteneur, date
+
+#### 2. Suivi & Tracking
+- ✅ **QR Codes** : Génération et impression de QR codes pour chaque commande
+- ✅ **Scan QR** : Suivi en temps réel via scan de QR code
+- ✅ **Historique complet** : Tous les événements de suivi enregistrés
+- ✅ **Suivi public** : Interface publique pour suivre les commandes
+- ✅ **Notifications automatiques** : Emails envoyés aux clients lors des changements de statut
+
+#### 3. Gestion des Conteneurs
+- ✅ **CRUD conteneurs** : Création et gestion des conteneurs
+- ✅ **Association commandes** : Liaison des commandes aux conteneurs
+- ✅ **Statuts conteneurs** : planned, departed, in_transit, arrived, delivered, delayed
+- ✅ **Notifications groupées** : Notification de tous les clients d'un conteneur lors de changement de statut
+- ✅ **Informations détaillées** : Navire, ports de départ/arrivée, ETD/ETA
+
+#### 4. Gestion des Clients
+- ✅ **Base de données clients** : Gestion complète des clients
+- ✅ **Détails clients** : Coordonnées, adresses, informations entreprise
+- ✅ **Historique commandes** : Visualisation de toutes les commandes d'un client
+- ✅ **Statuts clients** : active, inactive, archived
+
+#### 5. Documents & Facturation
+- ✅ **Factures PDF** : Génération automatique de factures en PDF
+- ✅ **Proformas** : Génération de proformas en PDF et DOCX
+- ✅ **Informations complètes** : Adresses expéditeur/destinataire, détails de service
+- ✅ **Export Excel/CSV** : Export des données pour analyse
+
+#### 6. Notifications & Communication
+- ✅ **Emails automatiques** : Notifications de changement de statut
+- ✅ **Templates personnalisés** : Emails avec liens de suivi
+- ✅ **Historique notifications** : Suivi des notifications envoyées
+- ✅ **Notifications conteneurs** : Notifications groupées pour les conteneurs
+
+#### 7. Analytics & Rapports
+- ✅ **Dashboard admin** : Statistiques en temps réel
+- ✅ **Graphiques interactifs** : Visualisation des données avec Recharts
+- ✅ **Métriques clés** : Commandes, revenus, statuts, etc.
+
+#### 8. Interface Publique
+- ✅ **Page d'accueil** : Présentation moderne de l'entreprise
+- ✅ **Services** : Détails des services proposés
+- ✅ **Tarifs** : Informations tarifaires
+- ✅ **Suivi public** : Interface de suivi pour les clients
+- ✅ **Blog** : Articles et actualités
+- ✅ **Contact** : Formulaire de contact
+- ✅ **Multilingue** : Support FR/EN
 
 ### API REST
-- ✅ Endpoints complets pour toutes les fonctionnalités
-- ✅ Authentification sécurisée
-- ✅ Validation des données
-- ✅ Gestion d'erreurs
+- ✅ **Endpoints complets** : CRUD pour toutes les entités
+- ✅ **Authentification sécurisée** : Middleware d'authentification
+- ✅ **Validation des données** : Validation côté serveur
+- ✅ **Gestion d'erreurs** : Gestion robuste des erreurs
+- ✅ **QR Code endpoints** : API dédiée pour le scan QR
+- ✅ **Tracking endpoints** : API pour le suivi en temps réel
 
 ## 🤝 Contribution
 
@@ -442,6 +519,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 - **Email** : info@danemo.be
 - **Téléphone** : +32488645183
 - **Site web** : [danemo.be](https://danemo.be)
+- **Plateforme** : [danemo.app](https://danemo.app)
 
 ---
 
