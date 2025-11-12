@@ -264,7 +264,6 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
         fetchTrackingData(decodedPayload.qrCode)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPayload])
 
   const fetchTrackingData = async (qrCode: string) => {
