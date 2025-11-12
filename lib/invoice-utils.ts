@@ -22,6 +22,13 @@ export interface InvoiceData {
     client_city?: string
     client_postal_code?: string
     client_country?: string
+    recipient_name?: string | null
+    recipient_email?: string | null
+    recipient_phone?: string | null
+    recipient_address?: string | null
+    recipient_city?: string | null
+    recipient_postal_code?: string | null
+    recipient_country?: string | null
     service_type: string
     origin: string
     destination: string
@@ -112,7 +119,14 @@ export const generateInvoice = async (data: InvoiceData) => {
     country: data.order.client_country
   }
   
-  const shippingAddress = data.shippingAddress || billingAddress
+  const defaultShippingAddress = {
+    name: data.order.recipient_name || data.order.client_name,
+    address: data.order.recipient_address || data.order.destination || undefined,
+    postal_code: data.order.recipient_postal_code || undefined,
+    city: data.order.recipient_city || undefined,
+    country: data.order.recipient_country || undefined,
+  }
+  const shippingAddress = data.shippingAddress || defaultShippingAddress
   
   // Marges
   const margin = 15

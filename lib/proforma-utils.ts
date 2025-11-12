@@ -15,6 +15,13 @@ export interface ProformaData {
     client_name: string
     client_email: string
     client_phone?: string | null
+    recipient_name?: string | null
+    recipient_email?: string | null
+    recipient_phone?: string | null
+    recipient_address?: string | null
+    recipient_city?: string | null
+    recipient_postal_code?: string | null
+    recipient_country?: string | null
     service_type: string
     origin: string
     destination: string
@@ -88,9 +95,28 @@ export async function generateProformaDocx(data: ProformaData): Promise<Blob> {
           new Paragraph({
             children: [
               new TextRun({ text: 'Destinataire', bold: true }),
-              new TextRun({ text: `\n${data.order.client_name}` }),
-              new TextRun({ text: `\n${data.order.client_email}` }),
-              data.order.client_phone ? new TextRun({ text: `\n${data.order.client_phone}` }) : new TextRun(''),
+              new TextRun({ text: `\n${data.order.recipient_name || data.order.client_name}` }),
+              new TextRun({
+                text: `\n${data.order.recipient_email || data.order.client_email}`,
+              }),
+              data.order.recipient_phone || data.order.client_phone
+                ? new TextRun({
+                    text: `\n${data.order.recipient_phone || data.order.client_phone}`,
+                  })
+                : new TextRun(''),
+              data.order.recipient_address
+                ? new TextRun({ text: `\n${data.order.recipient_address}` })
+                : new TextRun(''),
+              data.order.recipient_postal_code || data.order.recipient_city
+                ? new TextRun({
+                    text: `\n${[data.order.recipient_postal_code, data.order.recipient_city]
+                      .filter(Boolean)
+                      .join(' ')}`,
+                  })
+                : new TextRun(''),
+              data.order.recipient_country
+                ? new TextRun({ text: `\n${data.order.recipient_country}` })
+                : new TextRun(''),
             ],
           }),
           new Paragraph({ text: '' }),
@@ -218,9 +244,21 @@ export async function generateProformaPdf(data: ProformaData) {
   doc.setFont('helvetica', 'bold')
   doc.text('Destinataire', pageWidth / 2, 45)
   doc.setFont('helvetica', 'normal')
-  doc.text(data.order.client_name, pageWidth / 2, 51)
-  doc.text(data.order.client_email, pageWidth / 2, 55)
-  if (data.order.client_phone) doc.text(String(data.order.client_phone), pageWidth / 2, 59)
+  let recipientLine = 51
+  const addRecipientLine = (value?: string | null) => {
+    if (!value) return
+    doc.text(value, pageWidth / 2, recipientLine)
+    recipientLine += 4
+  }
+  addRecipientLine(data.order.recipient_name || data.order.client_name)
+  addRecipientLine(data.order.recipient_email || data.order.client_email)
+  addRecipientLine(data.order.recipient_phone || data.order.client_phone || undefined)
+  addRecipientLine(data.order.recipient_address || undefined)
+  const cityLine = [data.order.recipient_postal_code, data.order.recipient_city]
+    .filter(Boolean)
+    .join(' ')
+  addRecipientLine(cityLine || undefined)
+  addRecipientLine(data.order.recipient_country || undefined)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)

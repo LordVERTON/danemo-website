@@ -19,6 +19,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -56,6 +57,13 @@ interface Order {
   client_name: string
   client_email: string
   client_phone?: string
+  recipient_name?: string | null
+  recipient_email?: string | null
+  recipient_phone?: string | null
+  recipient_address?: string | null
+  recipient_city?: string | null
+  recipient_postal_code?: string | null
+  recipient_country?: string | null
   service_type: string
   origin: string
   destination: string
@@ -68,7 +76,17 @@ interface Order {
   container_id?: string | null
   container_code?: string | null
   container_status?: string | null
+  customer_id?: string | null
 }
+
+interface ClientSummary {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+}
+
+type ClientRole = "sender" | "recipient" | "both" | "none"
 
 export default function OrdersPage() {
   const { user: currentUser } = useCurrentUser()
@@ -107,12 +125,55 @@ export default function OrdersPage() {
     type: null,
     message: "",
   })
+  const [orderNotificationHistory, setOrderNotificationHistory] = useState<
+    Record<string, { status: string; timestamp: string }>
+  >({})
+  const [clients, setClients] = useState<ClientSummary[]>([])
+  const [createSenderClientId, setCreateSenderClientId] = useState<string>("custom")
+  const [createRecipientClientId, setCreateRecipientClientId] = useState<string>("custom")
+  const [isCreateSenderDetailsOpen, setIsCreateSenderDetailsOpen] = useState(false)
+  const [isCreateRecipientDetailsOpen, setIsCreateRecipientDetailsOpen] = useState(false)
+  const [useClientForSender, setUseClientForSender] = useState(false)
+  const [useClientForRecipient, setUseClientForRecipient] = useState(false)
+  const [createClientRole, setCreateClientRole] = useState<ClientRole>("sender")
+  const [editClientRole, setEditClientRole] = useState<ClientRole>("sender")
+  const [editSenderClientId, setEditSenderClientId] = useState<string>("custom")
+  const [editRecipientClientId, setEditRecipientClientId] = useState<string>("custom")
+
+  const findClientIdByEmail = (email?: string | null) => {
+    if (!email) return undefined
+    const normalized = email.toLowerCase()
+    return clients.find((client) => client.email?.toLowerCase() === normalized)?.id
+  }
+
+  const computeRoleFromOrder = (order: Order | null, client?: ClientSummary | null): ClientRole => {
+    if (!order || !order.customer_id || !client) return "none"
+    const matchesSender =
+      !!order.client_email &&
+      !!client.email &&
+      order.client_email.toLowerCase() === client.email.toLowerCase()
+    const matchesRecipient =
+      !!order.recipient_email &&
+      !!client.email &&
+      order.recipient_email.toLowerCase() === client.email.toLowerCase()
+    if (matchesSender && matchesRecipient) return "both"
+    if (matchesSender) return "sender"
+    if (matchesRecipient) return "recipient"
+    return "none"
+  }
 
   // Formulaire de création
   const [newOrder, setNewOrder] = useState({
     client_name: "",
     client_email: "",
     client_phone: "",
+    recipient_name: "",
+    recipient_email: "",
+    recipient_phone: "",
+    recipient_address: "",
+    recipient_city: "",
+    recipient_postal_code: "",
+    recipient_country: "",
     service_type: "",
     origin: "",
     destination: "",
@@ -120,7 +181,8 @@ export default function OrdersPage() {
     value: "",
     estimated_delivery: "",
     container_id: "",
-    container_code: ""
+    container_code: "",
+    customer_id: "",
   })
 
   // Formulaire de modification
@@ -128,6 +190,13 @@ export default function OrdersPage() {
     client_name: "",
     client_email: "",
     client_phone: "",
+    recipient_name: "",
+    recipient_email: "",
+    recipient_phone: "",
+    recipient_address: "",
+    recipient_city: "",
+    recipient_postal_code: "",
+    recipient_country: "",
     service_type: "",
     origin: "",
     destination: "",
@@ -136,12 +205,48 @@ export default function OrdersPage() {
     estimated_delivery: "",
     status: "",
     container_id: "",
-    container_code: ""
+    container_code: "",
+    customer_id: "",
   })
+
+  const copyClientToRecipientForCreate = () => {
+    setNewOrder((prev) => ({
+      ...prev,
+      recipient_name: prev.client_name,
+      recipient_email: prev.client_email,
+      recipient_phone: prev.client_phone,
+      recipient_address: prev.recipient_address,
+      recipient_city: prev.recipient_city,
+      recipient_postal_code: prev.recipient_postal_code,
+      recipient_country: prev.recipient_country,
+    }))
+    setCreateRecipientClientId(createSenderClientId)
+    if (newOrder.customer_id) {
+      setCreateClientRole("both")
+    }
+  }
+
+  const copyClientToRecipientForEdit = () => {
+    setEditOrder((prev) => ({
+      ...prev,
+      recipient_name: prev.client_name,
+      recipient_email: prev.client_email,
+      recipient_phone: prev.client_phone,
+      recipient_address: prev.recipient_address,
+      recipient_city: prev.recipient_city,
+      recipient_postal_code: prev.recipient_postal_code,
+      recipient_country: prev.recipient_country,
+    }))
+    setEditRecipientClientId(editSenderClientId)
+    if (editOrder.customer_id) {
+      setEditClientRole("both")
+    }
+  }
 
   useEffect(() => {
     fetchOrders()
     fetchContainers()
+    fetchClients()
   }, [])
 
   useEffect(() => {
@@ -149,7 +254,38 @@ export default function OrdersPage() {
       const customEvent = event as CustomEvent
       if (customEvent.detail?.type === 'orders') {
         fetchContainers().then(() => {
-          setNewOrder(customEvent.detail.data)
+          const data = customEvent.detail.data || {}
+          const recipientName = data.recipient_name || data.client_name || ""
+          const recipientEmail = data.recipient_email || data.client_email || ""
+          const recipientPhone = data.recipient_phone || data.client_phone || ""
+
+          const senderClientId = data.customer_id || findClientIdByEmail(data.client_email) || "custom"
+          const recipientClientId = findClientIdByEmail(data.recipient_email || data.client_email) || "custom"
+
+          setNewOrder({
+            client_name: data.client_name || "",
+            client_email: data.client_email || "",
+            client_phone: data.client_phone || "",
+            recipient_name: recipientName,
+            recipient_email: recipientEmail,
+            recipient_phone: recipientPhone,
+            recipient_address: data.recipient_address || "",
+            recipient_city: data.recipient_city || "",
+            recipient_postal_code: data.recipient_postal_code || "",
+            recipient_country: data.recipient_country || "",
+            service_type: data.service_type || "fret_maritime",
+            origin: data.origin || "",
+            destination: data.destination || "",
+            weight: data.weight || "",
+            value: data.value || "",
+            estimated_delivery: data.estimated_delivery || "",
+            container_id: "",
+            container_code: "",
+            customer_id: senderClientId === "custom" ? "" : senderClientId,
+          })
+
+          setCreateSenderClientId(senderClientId)
+          setCreateRecipientClientId(recipientClientId)
           setIsCreateDialogOpen(true)
         })
       }
@@ -158,6 +294,192 @@ export default function OrdersPage() {
     window.addEventListener('qrScanResult', handleQRScanResult)
     return () => window.removeEventListener('qrScanResult', handleQRScanResult)
   }, [])
+
+useEffect(() => {
+  if (!selectedOrder) {
+    setEditClientRole("sender")
+    return
+  }
+  const associatedClient = selectedOrder.customer_id
+    ? clients.find((client) => client.id === selectedOrder.customer_id)
+    : undefined
+  const derivedRole = computeRoleFromOrder(selectedOrder, associatedClient)
+  setEditClientRole(derivedRole)
+
+  const fallbackSenderId =
+    findClientIdByEmail(selectedOrder.client_email) || "custom"
+  const fallbackRecipientId =
+    findClientIdByEmail(selectedOrder.recipient_email || selectedOrder.client_email) || "custom"
+
+  if (associatedClient?.id) {
+    const senderId =
+      derivedRole === "sender" || derivedRole === "both"
+        ? associatedClient.id
+        : fallbackSenderId
+    const recipientId =
+      derivedRole === "recipient" || derivedRole === "both"
+        ? associatedClient.id
+        : fallbackRecipientId
+    setEditSenderClientId(senderId)
+    setEditRecipientClientId(recipientId)
+  } else {
+    setEditSenderClientId(fallbackSenderId)
+    setEditRecipientClientId(fallbackRecipientId)
+  }
+}, [clients, selectedOrder])
+
+  useEffect(() => {
+    if (createSenderClientId !== "custom" || clients.length === 0) return
+    if (!newOrder.customer_id) return
+    if (clients.some((client) => client.id === newOrder.customer_id)) {
+      setCreateSenderClientId(newOrder.customer_id)
+    }
+  }, [clients, newOrder.customer_id, createSenderClientId])
+
+  useEffect(() => {
+    if (createRecipientClientId !== "custom" || clients.length === 0) return
+    const match = findClientIdByEmail(newOrder.recipient_email)
+    if (match) {
+      setCreateRecipientClientId(match)
+    }
+  }, [clients, newOrder.recipient_email, createRecipientClientId])
+
+useEffect(() => {
+  if (!newOrder.customer_id) {
+    if (useClientForSender) setUseClientForSender(false)
+    if (useClientForRecipient) setUseClientForRecipient(false)
+    return
+  }
+  const shouldSender = createClientRole === "sender" || createClientRole === "both"
+  const shouldRecipient = createClientRole === "recipient" || createClientRole === "both"
+  if (useClientForSender !== shouldSender) {
+    setUseClientForSender(shouldSender)
+  }
+  if (useClientForRecipient !== shouldRecipient) {
+    setUseClientForRecipient(shouldRecipient)
+  }
+}, [createClientRole, newOrder.customer_id, useClientForSender, useClientForRecipient])
+
+  useEffect(() => {
+    if (!newOrder.customer_id) return
+    const client = clients.find((c) => c.id === newOrder.customer_id)
+    if (!client) return
+
+    if (useClientForSender) {
+      setNewOrder((prev) => {
+        const nextName = client.name || ""
+        const nextEmail = client.email || ""
+        const nextPhone = client.phone || ""
+        if (
+          prev.client_name === nextName &&
+          prev.client_email === nextEmail &&
+          (prev.client_phone || "") === (nextPhone || "")
+        ) {
+          return prev
+        }
+        return {
+          ...prev,
+          client_name: nextName,
+          client_email: nextEmail,
+          client_phone: nextPhone || "",
+        }
+      })
+      if (createSenderClientId !== client.id) {
+        setCreateSenderClientId(client.id)
+      }
+    }
+
+    if (useClientForRecipient) {
+      setNewOrder((prev) => {
+        const nextName = client.name || ""
+        const nextEmail = client.email || ""
+        const nextPhone = client.phone || ""
+        if (
+          prev.recipient_name === nextName &&
+          prev.recipient_email === nextEmail &&
+          (prev.recipient_phone || "") === (nextPhone || "")
+        ) {
+          return prev
+        }
+        return {
+          ...prev,
+          recipient_name: nextName,
+          recipient_email: nextEmail,
+          recipient_phone: nextPhone || "",
+        }
+      })
+      if (createRecipientClientId !== client.id) {
+        setCreateRecipientClientId(client.id)
+      }
+    }
+  }, [
+    newOrder.customer_id,
+    clients,
+    useClientForSender,
+    useClientForRecipient,
+    createSenderClientId,
+    createRecipientClientId,
+  ])
+
+useEffect(() => {
+  if (!editOrder.customer_id) return
+  const client = clients.find((c) => c.id === editOrder.customer_id)
+  if (!client) return
+
+  if (editClientRole === "sender" || editClientRole === "both") {
+    setEditOrder((prev) => {
+      const nextName = client.name || ""
+      const nextEmail = client.email || ""
+      const nextPhone = client.phone || ""
+      if (
+        prev.client_name === nextName &&
+        prev.client_email === nextEmail &&
+        (prev.client_phone || "") === (nextPhone || "")
+      ) {
+        return prev
+      }
+      return {
+        ...prev,
+        client_name: nextName,
+        client_email: nextEmail,
+        client_phone: nextPhone || "",
+      }
+    })
+    if (editSenderClientId !== client.id) {
+      setEditSenderClientId(client.id)
+    }
+  }
+
+  if (editClientRole === "recipient" || editClientRole === "both") {
+    setEditOrder((prev) => {
+      const nextName = client.name || ""
+      const nextEmail = client.email || ""
+      const nextPhone = client.phone || ""
+      if (
+        prev.recipient_name === nextName &&
+        prev.recipient_email === nextEmail &&
+        (prev.recipient_phone || "") === (nextPhone || "")
+      ) {
+        return prev
+      }
+      return {
+        ...prev,
+        recipient_name: nextName,
+        recipient_email: nextEmail,
+        recipient_phone: nextPhone || "",
+      }
+    })
+    if (editRecipientClientId !== client.id) {
+      setEditRecipientClientId(client.id)
+    }
+  }
+}, [
+  editOrder.customer_id,
+  clients,
+  editClientRole,
+  editSenderClientId,
+  editRecipientClientId,
+])
 
   const fetchOrders = async () => {
     try {
@@ -201,6 +523,25 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Error fetching containers:', error)
       setContainers([])
+    }
+  }
+
+  const fetchClients = async () => {
+    try {
+      const response = await fetch('/api/clients')
+      const result = await response.json()
+      if (result.success && Array.isArray(result.data)) {
+        setClients(
+          result.data.map((client: any) => ({
+            id: client.id,
+            name: client.name,
+            email: client.email || null,
+            phone: client.phone || null,
+          }))
+        )
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error)
     }
   }
 
@@ -271,20 +612,241 @@ export default function OrdersPage() {
     }
   }
 
+  const handleCreateSenderSelect = (value: string) => {
+    setCreateSenderClientId(value)
+    if (value === "custom") {
+      return
+    }
+    const client = clients.find((c) => c.id === value)
+    if (client) {
+      setNewOrder((prev) => ({
+        ...prev,
+        customer_id: useClientForSender ? client.id : prev.customer_id,
+        client_name: client.name || "",
+        client_email: client.email || "",
+        client_phone: client.phone || "",
+      }))
+    }
+  }
+
+  const handleCreateRecipientSelect = (value: string) => {
+    setCreateRecipientClientId(value)
+    if (value === "custom") return
+    const client = clients.find((c) => c.id === value)
+    if (client) {
+      setNewOrder((prev) => ({
+        ...prev,
+        recipient_name: client.name || "",
+        recipient_email: client.email || "",
+        recipient_phone: client.phone || "",
+        recipient_address: prev.recipient_address,
+        recipient_city: prev.recipient_city,
+        recipient_postal_code: prev.recipient_postal_code,
+        recipient_country: prev.recipient_country,
+        customer_id: useClientForRecipient ? client.id : prev.customer_id,
+      }))
+    }
+  }
+
+  const handleCreateOrderClientSelect = (value: string) => {
+    if (value === "custom") {
+      setNewOrder((prev) => ({
+        ...prev,
+        customer_id: "",
+      }))
+      setCreateClientRole("none")
+    setCreateSenderClientId("custom")
+    setCreateRecipientClientId("custom")
+      return
+    }
+    const client = clients.find((c) => c.id === value)
+    const nextRole: ClientRole =
+      createClientRole === "none" || !client ? "sender" : createClientRole
+    const shouldUseSender = nextRole === "sender" || nextRole === "both"
+    const shouldUseRecipient = nextRole === "recipient" || nextRole === "both"
+
+    setNewOrder((prev) => ({
+      ...prev,
+      customer_id: value,
+      ...(shouldUseSender || !prev.client_name
+        ? {
+            client_name: client?.name || "",
+            client_email: client?.email || "",
+            client_phone: client?.phone || "",
+          }
+        : {}),
+      ...(shouldUseRecipient || (!prev.recipient_name && !prev.recipient_email && !prev.recipient_phone)
+        ? {
+            recipient_name: client?.name || "",
+            recipient_email: client?.email || "",
+            recipient_phone: client?.phone || "",
+          }
+        : {}),
+    }))
+    if (shouldUseSender && value !== createSenderClientId) {
+      setCreateSenderClientId(value)
+    }
+    if (shouldUseRecipient && value !== createRecipientClientId) {
+      setCreateRecipientClientId(value)
+    }
+    setCreateClientRole(nextRole)
+  }
+
+const handleCreateClientRoleChange = (role: ClientRole) => {
+  if (!newOrder.customer_id && role !== "none") {
+    setCreateClientRole("none")
+    return
+  }
+  setCreateClientRole(role)
+  if (!newOrder.customer_id) return
+  if ((role === "sender" || role === "both") && createSenderClientId !== newOrder.customer_id) {
+    setCreateSenderClientId(newOrder.customer_id)
+  }
+  if ((role === "recipient" || role === "both") && createRecipientClientId !== newOrder.customer_id) {
+    setCreateRecipientClientId(newOrder.customer_id)
+  }
+  if (role === "none") {
+    setCreateSenderClientId("custom")
+    setCreateRecipientClientId("custom")
+  }
+}
+
+const handleEditOrderClientSelect = (value: string) => {
+  if (value === "custom") {
+    setEditOrder((prev) => ({
+      ...prev,
+      customer_id: "",
+    }))
+    setEditClientRole("none")
+    setEditSenderClientId("custom")
+    setEditRecipientClientId("custom")
+    return
+  }
+  const client = clients.find((c) => c.id === value)
+  const nextRole: ClientRole =
+    editClientRole === "none" || !client ? "sender" : editClientRole
+  setEditOrder((prev) => ({
+    ...prev,
+    customer_id: value,
+  }))
+  if ((nextRole === "sender" || nextRole === "both") && value !== editSenderClientId) {
+    setEditSenderClientId(value)
+  }
+  if ((nextRole === "recipient" || nextRole === "both") && value !== editRecipientClientId) {
+    setEditRecipientClientId(value)
+  }
+  setEditClientRole(nextRole)
+}
+
+const handleEditClientRoleChange = (role: ClientRole) => {
+  if (!editOrder.customer_id && role !== "none") {
+    setEditClientRole("none")
+    return
+  }
+  setEditClientRole(role)
+  if (!editOrder.customer_id) return
+  if ((role === "sender" || role === "both") && editSenderClientId !== editOrder.customer_id) {
+    setEditSenderClientId(editOrder.customer_id)
+  }
+  if ((role === "recipient" || role === "both") && editRecipientClientId !== editOrder.customer_id) {
+    setEditRecipientClientId(editOrder.customer_id)
+  }
+  if (role === "none") {
+    setEditSenderClientId("custom")
+    setEditRecipientClientId("custom")
+  }
+}
+
+  const handleEditSenderSelect = (value: string) => {
+    setEditSenderClientId(value)
+    if (value === "custom") {
+      return
+    }
+    const client = clients.find((c) => c.id === value)
+    if (client) {
+      setEditOrder((prev) => ({
+        ...prev,
+        client_name: client.name || "",
+        client_email: client.email || "",
+        client_phone: client.phone || "",
+        ...(editClientRole === "sender" || editClientRole === "both"
+          ? { customer_id: client.id }
+          : {}),
+      }))
+    }
+  }
+
+  const handleEditRecipientSelect = (value: string) => {
+    setEditRecipientClientId(value)
+    if (value === "custom") return
+    const client = clients.find((c) => c.id === value)
+    if (client) {
+      setEditOrder((prev) => ({
+        ...prev,
+        recipient_name: client.name || "",
+        recipient_email: client.email || "",
+        recipient_phone: client.phone || "",
+        recipient_address: prev.recipient_address,
+        recipient_city: prev.recipient_city,
+        recipient_postal_code: prev.recipient_postal_code,
+        recipient_country: prev.recipient_country,
+        ...(editClientRole === "recipient" || editClientRole === "both"
+          ? { customer_id: client.id }
+          : {}),
+      }))
+    }
+  }
+
+  const handleCreateDialogChange = (open: boolean) => {
+    setIsCreateDialogOpen(open)
+    if (!open) {
+      setCreateSenderClientId("custom")
+      setCreateRecipientClientId("custom")
+      setIsCreateSenderDetailsOpen(false)
+      setIsCreateRecipientDetailsOpen(false)
+      setUseClientForSender(false)
+      setUseClientForRecipient(false)
+      setCreateClientRole("sender")
+    }
+  }
+
   const handleCreateOrder = async (e: React.FormEvent, printQR: boolean = false) => {
     e.preventDefault()
     setError("") // Réinitialiser les erreurs
     
     try {
+      if (!newOrder.client_name.trim() || !newOrder.client_email.trim()) {
+        setError("Renseigne le nom et l’adresse email de l’expéditeur.")
+        return
+      }
+      if (!newOrder.service_type) {
+        setError("Sélectionne un type de service pour la commande.")
+        return
+      }
       const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
+      const recipientName = newOrder.recipient_name?.trim() || newOrder.client_name
+      const recipientEmail = newOrder.recipient_email?.trim() || newOrder.client_email
+      const recipientPhone = newOrder.recipient_phone?.trim() || newOrder.client_phone || ""
+      const recipientAddress = newOrder.recipient_address?.trim() || ""
+      const recipientCity = newOrder.recipient_city?.trim() || ""
+      const recipientPostalCode = newOrder.recipient_postal_code?.trim() || ""
+      const recipientCountry = newOrder.recipient_country?.trim() || ""
       const orderData = {
         ...newOrder,
+      recipient_name: recipientName,
+      recipient_email: recipientEmail,
+      recipient_phone: recipientPhone,
+        recipient_address: recipientAddress || null,
+        recipient_city: recipientCity || null,
+        recipient_postal_code: recipientPostalCode || null,
+        recipient_country: recipientCountry || null,
         weight: newOrder.weight ? parseFloat(newOrder.weight) : null,
         value: newOrder.value ? parseFloat(newOrder.value) : null,
         estimated_delivery: newOrder.estimated_delivery || null,
         container_id: newOrder.container_id || null,
         container_code: selectedContainer?.code || null,
         container_status: selectedContainer?.status || null,
+        customer_id: newOrder.customer_id || null,
       }
 
       // Étape 1: Créer la commande dans la base de données
@@ -312,6 +874,13 @@ export default function OrdersPage() {
         client_name: "",
         client_email: "",
         client_phone: "",
+        recipient_name: "",
+        recipient_email: "",
+        recipient_phone: "",
+        recipient_address: "",
+        recipient_city: "",
+        recipient_postal_code: "",
+        recipient_country: "",
         service_type: "",
         origin: "",
         destination: "",
@@ -319,8 +888,16 @@ export default function OrdersPage() {
         value: "",
         estimated_delivery: "",
         container_id: "",
-        container_code: ""
+        container_code: "",
+        customer_id: "",
       })
+      setCreateSenderClientId("custom")
+      setCreateRecipientClientId("custom")
+      setUseClientForSender(false)
+      setUseClientForRecipient(false)
+      setIsCreateSenderDetailsOpen(false)
+      setIsCreateRecipientDetailsOpen(false)
+      setCreateClientRole("sender")
       setIsCreateDialogOpen(false)
       
       // Étape 3: Rafraîchir la liste des commandes pour afficher la nouvelle commande
@@ -355,6 +932,9 @@ export default function OrdersPage() {
       setSelectedOrder(null)
       setNotifyOrderFeedback({ type: null, message: "" })
       setIsNotifyingOrder(false)
+      setEditSenderClientId("custom")
+      setEditRecipientClientId("custom")
+      setEditClientRole("sender")
     }
   }
 
@@ -363,11 +943,19 @@ export default function OrdersPage() {
     await fetchContainers()
     
     setNotifyOrderFeedback({ type: null, message: "" })
+    setEditClientRole("sender")
     setSelectedOrder(order)
     setEditOrder({
       client_name: order.client_name,
       client_email: order.client_email,
       client_phone: order.client_phone || "",
+      recipient_name: order.recipient_name || order.client_name,
+      recipient_email: order.recipient_email || order.client_email,
+      recipient_phone: order.recipient_phone || order.client_phone || "",
+      recipient_address: order.recipient_address || "",
+      recipient_city: order.recipient_city || "",
+      recipient_postal_code: order.recipient_postal_code || "",
+      recipient_country: order.recipient_country || "",
       service_type: order.service_type,
       origin: order.origin,
       destination: order.destination,
@@ -376,8 +964,15 @@ export default function OrdersPage() {
       estimated_delivery: order.estimated_delivery || "",
       status: order.status,
       container_id: order.container_id || "",
-      container_code: order.container_code || ""
+      container_code: order.container_code || "",
+      customer_id: order.customer_id || "",
     })
+    const senderClientId =
+      order.customer_id || findClientIdByEmail(order.client_email) || "custom"
+    const recipientClientId =
+      findClientIdByEmail(order.recipient_email || order.client_email) || "custom"
+    setEditSenderClientId(senderClientId)
+    setEditRecipientClientId(recipientClientId)
     setIsEditDialogOpen(true)
   }
 
@@ -387,14 +982,29 @@ export default function OrdersPage() {
 
     try {
       const selectedContainer = containers.find((container) => container.id === editOrder.container_id)
+      const recipientName = editOrder.recipient_name?.trim() || editOrder.client_name
+      const recipientEmail = editOrder.recipient_email?.trim() || editOrder.client_email
+      const recipientPhone = editOrder.recipient_phone?.trim() || editOrder.client_phone || ""
+      const recipientAddress = editOrder.recipient_address?.trim() || ""
+      const recipientCity = editOrder.recipient_city?.trim() || ""
+      const recipientPostalCode = editOrder.recipient_postal_code?.trim() || ""
+      const recipientCountry = editOrder.recipient_country?.trim() || ""
       const orderData = {
         ...editOrder,
+        recipient_name: recipientName,
+        recipient_email: recipientEmail,
+        recipient_phone: recipientPhone,
+        recipient_address: recipientAddress || null,
+        recipient_city: recipientCity || null,
+        recipient_postal_code: recipientPostalCode || null,
+        recipient_country: recipientCountry || null,
         weight: editOrder.weight ? parseFloat(editOrder.weight) : null,
         value: editOrder.value ? parseFloat(editOrder.value) : null,
         estimated_delivery: editOrder.estimated_delivery || null,
         container_id: editOrder.container_id || null,
         container_code: selectedContainer?.code || null,
         container_status: selectedContainer?.status || null,
+        customer_id: editOrder.customer_id || null,
       }
 
       const response = await fetch(`/api/orders/${selectedOrder.id}`, {
@@ -426,6 +1036,7 @@ export default function OrdersPage() {
     setIsNotifyingOrder(true)
     setNotifyOrderFeedback({ type: null, message: "" })
     try {
+      const statusToSend = editOrder.status || selectedOrder.status
       const res = await fetch('/api/notifications/order-status', {
         method: 'POST',
         headers: {
@@ -433,7 +1044,7 @@ export default function OrdersPage() {
         },
         body: JSON.stringify({
           order_id: selectedOrder.id,
-          status: editOrder.status || selectedOrder.status,
+          status: statusToSend,
         }),
       })
       const json = await res.json()
@@ -443,10 +1054,27 @@ export default function OrdersPage() {
           message: json.error || 'Échec de l’envoi de la notification.',
         })
       } else {
-        setNotifyOrderFeedback({
-          type: 'success',
-          message: 'Notification envoyée au client.',
-        })
+        if (statusToSend) {
+          const timestamp = new Date().toISOString()
+          setOrderNotificationHistory((prev) => ({
+            ...prev,
+            [selectedOrder.id]: {
+              status: statusToSend,
+              timestamp,
+            },
+          }))
+          setNotifyOrderFeedback({
+            type: 'success',
+            message: `Notification envoyée pour le statut "${getStatusLabel(statusToSend)}" le ${new Date(
+              timestamp
+            ).toLocaleString('fr-FR')}.`,
+          })
+        } else {
+          setNotifyOrderFeedback({
+            type: 'success',
+            message: 'Notification envoyée au client.',
+          })
+        }
       }
     } catch (error) {
       console.error('Failed to notify order client', error)
@@ -465,10 +1093,21 @@ export default function OrdersPage() {
       const data = JSON.parse(qrData)
       
       // Pré-remplir le formulaire avec les données du QR code
+      const senderClientId = data.customer_id || findClientIdByEmail(data.client_email) || "custom"
+      const recipientClientId =
+        findClientIdByEmail(data.recipient_email || data.client_email) || "custom"
+
       setNewOrder({
         client_name: data.client_name || "",
         client_email: data.client_email || "",
         client_phone: data.client_phone || "",
+        recipient_name: data.recipient_name || data.client_name || "",
+        recipient_email: data.recipient_email || data.client_email || "",
+        recipient_phone: data.recipient_phone || data.client_phone || "",
+        recipient_address: data.recipient_address || "",
+        recipient_city: data.recipient_city || "",
+        recipient_postal_code: data.recipient_postal_code || "",
+        recipient_country: data.recipient_country || "",
         service_type: data.service_type || "fret_maritime",
         origin: data.origin || "",
         destination: data.destination || "",
@@ -476,8 +1115,11 @@ export default function OrdersPage() {
         value: data.value || "",
         estimated_delivery: data.estimated_delivery || "",
         container_id: "",
-        container_code: ""
+        container_code: "",
+        customer_id: senderClientId === "custom" ? "" : senderClientId,
       })
+      setCreateSenderClientId(senderClientId)
+      setCreateRecipientClientId(recipientClientId)
       
       // Recharger les conteneurs et ouvrir le dialog de création
       await fetchContainers()
@@ -577,6 +1219,26 @@ export default function OrdersPage() {
     )
   }
 
+const getStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    pending: "En attente",
+    confirmed: "Confirmée",
+    in_progress: "En cours",
+    completed: "Terminée",
+    cancelled: "Annulée",
+  }
+  return labels[status] || status
+}
+
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+
   const getServiceTypeLabel = (type: string) => {
     const types = {
       fret_maritime: "Fret maritime",
@@ -592,7 +1254,9 @@ export default function OrdersPage() {
     const matchesSearch =
       order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.client_email.toLowerCase().includes(searchTerm.toLowerCase())
+      order.client_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.recipient_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.recipient_email || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || order.status === filterStatus
     const matchesContainer =
       filterContainer === "all" ||
@@ -600,6 +1264,32 @@ export default function OrdersPage() {
       order.container_code === filterContainer
     return matchesSearch && matchesStatus && matchesContainer
   })
+
+  const selectedCreateCustomer = newOrder.customer_id
+    ? clients.find((client) => client.id === newOrder.customer_id)
+    : null
+
+const selectedEditCustomer = editOrder.customer_id
+  ? clients.find((client) => client.id === editOrder.customer_id)
+  : null
+
+const clientRoleChoices: Array<{ value: ClientRole; label: string }> = [
+  { value: "sender", label: "Client expéditeur" },
+  { value: "recipient", label: "Client destinataire" },
+  { value: "both", label: "Client expéditeur & destinataire" },
+  { value: "none", label: "Client ni expéditeur ni destinataire" },
+]
+
+  const currentOrderStatusForNotification = selectedOrder
+    ? (editOrder.status || selectedOrder.status || "")
+    : ""
+  const orderNotificationInfo = selectedOrder
+    ? orderNotificationHistory[selectedOrder.id]
+    : undefined
+  const hasNotifiedCurrentStatus =
+    !!orderNotificationInfo &&
+    !!currentOrderStatusForNotification &&
+    orderNotificationInfo.status === currentOrderStatusForNotification
 
   if (isLoading) {
     return (
@@ -626,14 +1316,14 @@ export default function OrdersPage() {
           </div>
           <div className="flex items-center gap-2">
             
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <Dialog open={isCreateDialogOpen} onOpenChange={handleCreateDialogChange}>
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2">
                   <Plus className="h-4 w-4" />
                   Nouvelle commande
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto transition-all duration-300 ease-in-out">
+            <DialogContent className="max-w-4xl w-full sm:w-[92vw] lg:w-[80vw] max-h-[90vh] overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out p-4 sm:p-6">
               <DialogHeader className="pb-4">
                 <DialogTitle className="text-lg sm:text-xl">Créer une nouvelle commande</DialogTitle>
                 <DialogDescription className="text-sm sm:text-base">
@@ -646,54 +1336,232 @@ export default function OrdersPage() {
                 )}
               </DialogHeader>
               <form onSubmit={handleCreateOrder} className="space-y-4 sm:space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <div>
-                    <Label htmlFor="client_name">Nom du client *</Label>
-                    <Input
-                      id="client_name"
-                      value={newOrder.client_name}
-                      onChange={(e) => setNewOrder({...newOrder, client_name: e.target.value})}
-                      required
-                      className="text-base sm:text-sm"
-                    />
+                <div className="space-y-4 sm:space-y-6 rounded-lg border border-orange-100 bg-orange-50/20 p-4">
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)] sm:items-start">
+                    <div className="space-y-2">
+                      <Label htmlFor="order_customer">Client associé</Label>
+                      <Select
+                        value={newOrder.customer_id || "custom"}
+                        onValueChange={handleCreateOrderClientSelect}
+                      >
+                        <SelectTrigger id="order_customer" className="w-full text-left">
+                          <SelectValue placeholder="Associer la commande à un client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="custom">Client personnalisé</SelectItem>
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="rounded-md border border-orange-100 bg-white/80 p-3 text-xs sm:text-sm">
+                      {selectedCreateCustomer ? (
+                        <div className="space-y-1">
+                          <p className="font-medium leading-tight">
+                            {selectedCreateCustomer.name || "Sans nom"}
+                          </p>
+                          {selectedCreateCustomer.email && (
+                            <p className="text-muted-foreground break-words">
+                              {selectedCreateCustomer.email}
+                            </p>
+                          )}
+                          {selectedCreateCustomer.phone && (
+                            <p className="text-muted-foreground">
+                              {selectedCreateCustomer.phone}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          Sélectionne un client pour le lier à cette commande ou laisse “Client personnalisé”.
+                        </p>
+                      )}
+                    </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Rôle du client</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {clientRoleChoices.map((option) => (
+                      <label
+                        key={option.value}
+                        className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs sm:text-sm transition-colors ${
+                          createClientRole === option.value
+                            ? "border-orange-500 bg-orange-50 text-orange-700"
+                            : "border-orange-200 bg-white text-muted-foreground hover:border-orange-300"
+                        } ${!newOrder.customer_id && option.value !== "none" ? "cursor-not-allowed opacity-50" : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          className="h-4 w-4 text-orange-600 focus:ring-orange-500"
+                          value={option.value}
+                          checked={createClientRole === option.value}
+                          onChange={() => handleCreateClientRoleChange(option.value)}
+                          disabled={!newOrder.customer_id && option.value !== "none"}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
                   </div>
-                  <div>
-                    <Label htmlFor="client_email">Email *</Label>
-                    <Input
-                      id="client_email"
-                      type="email"
-                      value={newOrder.client_email}
-                      onChange={(e) => setNewOrder({...newOrder, client_email: e.target.value})}
-                      required
-                      className="text-base sm:text-sm"
-                    />
+                  {!newOrder.customer_id && (
+                    <p className="text-xs text-muted-foreground">
+                      Sélectionne un client avant d’assigner son rôle.
+                    </p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+                <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+                        Expéditeur
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Coordonnées utilisées comme point d'expédition.
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        createClientRole === "sender" || createClientRole === "both"
+                          ? "border-orange-300 bg-orange-50 text-orange-700"
+                          : "border-dashed border-orange-200 text-muted-foreground"
+                      }
+                    >
+                      {createClientRole === "sender" || createClientRole === "both"
+                        ? "Client associé"
+                        : "Formulaire manuel"}
+                    </Badge>
+                  </div>
+                      <div className="space-y-1 rounded-md border border-dashed border-orange-200 bg-orange-50/50 p-3 text-sm">
+                        <p className="font-medium break-words">
+                          {newOrder.client_name || "Non renseigné"}
+                        </p>
+                        <p className="text-muted-foreground break-words">
+                          {newOrder.client_email || "—"}
+                        </p>
+                        {(newOrder.client_phone || "").trim() && (
+                          <p className="text-muted-foreground">{newOrder.client_phone}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => setIsCreateSenderDetailsOpen(true)}
+                        >
+                          Modifier les détails
+                        </Button>
+                        {(createClientRole === "sender" || createClientRole === "both") &&
+                          selectedCreateCustomer && (
+                            <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                              Synchronisé avec {selectedCreateCustomer.name || "le client"}
+                            </Badge>
+                          )}
+                      </div>
+                    </div>
+                <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+                        Destinataire
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Personne qui recevra la commande.
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        createClientRole === "recipient" || createClientRole === "both"
+                          ? "border-orange-300 bg-orange-50 text-orange-700"
+                          : "border-dashed border-orange-200 text-muted-foreground"
+                      }
+                    >
+                      {createClientRole === "recipient" || createClientRole === "both"
+                        ? "Client associé"
+                        : "Formulaire manuel"}
+                    </Badge>
+                  </div>
+                      <div className="space-y-1 rounded-md border border-dashed border-orange-200 bg-orange-50/50 p-3 text-sm">
+                        <p className="font-medium break-words">
+                          {newOrder.recipient_name || newOrder.client_name || "Non renseigné"}
+                        </p>
+                        <p className="text-muted-foreground break-words">
+                          {newOrder.recipient_email || newOrder.client_email || "—"}
+                        </p>
+                        {(newOrder.recipient_phone || newOrder.client_phone) && (
+                          <p className="text-muted-foreground">
+                            {newOrder.recipient_phone || newOrder.client_phone}
+                          </p>
+                        )}
+                        {(newOrder.recipient_address ||
+                          newOrder.recipient_postal_code ||
+                          newOrder.recipient_city ||
+                          newOrder.recipient_country) && (
+                          <div className="space-y-1 pt-2 text-muted-foreground">
+                            {newOrder.recipient_address && (
+                              <p className="break-words">{newOrder.recipient_address}</p>
+                            )}
+                            {(newOrder.recipient_postal_code || newOrder.recipient_city) && (
+                              <p className="break-words">
+                                {[newOrder.recipient_postal_code, newOrder.recipient_city]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              </p>
+                            )}
+                            {newOrder.recipient_country && <p>{newOrder.recipient_country}</p>}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => setIsCreateRecipientDetailsOpen(true)}
+                        >
+                          Modifier les détails
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={copyClientToRecipientForCreate}
+                          className="text-orange-700 hover:text-orange-800"
+                        >
+                          Copier l’expéditeur
+                        </Button>
+                        {(createClientRole === "recipient" || createClientRole === "both") &&
+                          selectedCreateCustomer && (
+                            <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                              Synchronisé avec {selectedCreateCustomer.name || "le client"}
+                            </Badge>
+                          )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <div>
-                    <Label htmlFor="client_phone">Téléphone</Label>
-                    <Input
-                      id="client_phone"
-                      value={newOrder.client_phone}
-                      onChange={(e) => setNewOrder({...newOrder, client_phone: e.target.value})}
-                      className="text-base sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="service_type">Type de service *</Label>
-                    <Select value={newOrder.service_type} onValueChange={(value) => setNewOrder({...newOrder, service_type: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fret_maritime">Fret maritime</SelectItem>
-                        <SelectItem value="fret_aerien">Fret aérien</SelectItem>
-                        <SelectItem value="demenagement">Déménagement</SelectItem>
-                        <SelectItem value="dedouanement">Dédouanement</SelectItem>
-                        <SelectItem value="negoce">Négoce</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label htmlFor="service_type">Type de service *</Label>
+                  <Select
+                    value={newOrder.service_type}
+                    onValueChange={(value) => setNewOrder({ ...newOrder, service_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fret_maritime">Fret maritime</SelectItem>
+                      <SelectItem value="fret_aerien">Fret aérien</SelectItem>
+                      <SelectItem value="demenagement">Déménagement</SelectItem>
+                      <SelectItem value="dedouanement">Dédouanement</SelectItem>
+                      <SelectItem value="negoce">Négoce</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div>
@@ -830,7 +1698,7 @@ export default function OrdersPage() {
                     />
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap md:flex-nowrap md:justify-end gap-2 sm:gap-3 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="w-full sm:w-auto">
                     Annuler
                   </Button>
@@ -849,9 +1717,198 @@ export default function OrdersPage() {
             </DialogContent>
           </Dialog>
 
+        <Dialog
+          modal={false}
+          open={isCreateSenderDetailsOpen}
+          onOpenChange={setIsCreateSenderDetailsOpen}
+        >
+          <DialogContent className="w-full max-w-lg sm:max-w-xl" showCloseButton>
+            <DialogHeader className="pb-2">
+              <DialogTitle>Informations expéditeur</DialogTitle>
+              <DialogDescription>
+                Sélectionne un client existant ou renseigne l’expéditeur manuellement.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-sender-select">Importer depuis un client</Label>
+                <Select value={createSenderClientId} onValueChange={handleCreateSenderSelect}>
+                  <SelectTrigger id="create-sender-select" className="w-full text-left">
+                    <SelectValue placeholder="Choisir un client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="custom">Saisie manuelle</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-4">
+                <div>
+                  <Label htmlFor="modal_client_name">Nom de l’expéditeur</Label>
+                  <Input
+                    id="modal_client_name"
+                    value={newOrder.client_name}
+                    onChange={(e) => setNewOrder({ ...newOrder, client_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_client_email">Email de l’expéditeur</Label>
+                  <Input
+                    id="modal_client_email"
+                    type="email"
+                    value={newOrder.client_email}
+                    onChange={(e) => setNewOrder({ ...newOrder, client_email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_client_phone">Téléphone de l’expéditeur</Label>
+                  <Input
+                    id="modal_client_phone"
+                    value={newOrder.client_phone}
+                    onChange={(e) => setNewOrder({ ...newOrder, client_phone: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateSenderDetailsOpen(false)}
+              >
+                Fermer
+              </Button>
+              <Button type="button" onClick={() => setIsCreateSenderDetailsOpen(false)}>
+                Valider
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          modal={false}
+          open={isCreateRecipientDetailsOpen}
+          onOpenChange={setIsCreateRecipientDetailsOpen}
+        >
+          <DialogContent className="w-full max-w-lg sm:max-w-xl" showCloseButton>
+            <DialogHeader className="pb-2">
+              <DialogTitle>Informations destinataire</DialogTitle>
+              <DialogDescription>
+                Renseigne les coordonnées du destinataire de la commande.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="create-recipient-select">Importer depuis un client</Label>
+                  <Select value={createRecipientClientId} onValueChange={handleCreateRecipientSelect}>
+                    <SelectTrigger id="create-recipient-select" className="w-full text-left">
+                      <SelectValue placeholder="Choisir un client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="custom">Saisie manuelle</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyClientToRecipientForCreate}
+                  className="self-end"
+                >
+                  Copier l’expéditeur
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="modal_recipient_name">Nom du destinataire</Label>
+                  <Input
+                    id="modal_recipient_name"
+                    value={newOrder.recipient_name}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_email">Email du destinataire</Label>
+                  <Input
+                    id="modal_recipient_email"
+                    type="email"
+                    value={newOrder.recipient_email}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_phone">Téléphone du destinataire</Label>
+                  <Input
+                    id="modal_recipient_phone"
+                    value={newOrder.recipient_phone}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_address">Adresse</Label>
+                  <Input
+                    id="modal_recipient_address"
+                    value={newOrder.recipient_address}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_address: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_postal">Code postal</Label>
+                  <Input
+                    id="modal_recipient_postal"
+                    value={newOrder.recipient_postal_code}
+                    onChange={(e) =>
+                      setNewOrder({ ...newOrder, recipient_postal_code: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_city">Ville</Label>
+                  <Input
+                    id="modal_recipient_city"
+                    value={newOrder.recipient_city}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_city: e.target.value })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="modal_recipient_country">Pays</Label>
+                  <Input
+                    id="modal_recipient_country"
+                    value={newOrder.recipient_country}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_country: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateRecipientDetailsOpen(false)}
+              >
+                Fermer
+              </Button>
+              <Button type="button" onClick={() => setIsCreateRecipientDetailsOpen(false)}>
+                Valider
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
           {/* Dialog pour créer un nouveau conteneur */}
           <Dialog open={isCreateContainerDialogOpen} onOpenChange={setIsCreateContainerDialogOpen}>
-            <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl w-full sm:w-[92vw] max-h-[90vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>Créer un nouveau conteneur</DialogTitle>
                 <DialogDescription>
@@ -1039,6 +2096,7 @@ export default function OrdersPage() {
                   <TableRow>
                     <TableHead>Numéro</TableHead>
                     <TableHead>Client</TableHead>
+                    <TableHead>Destinataire</TableHead>
                     <TableHead>Service</TableHead>
                     <TableHead>Trajet</TableHead>
                     <TableHead>Conteneur</TableHead>
@@ -1066,6 +2124,14 @@ export default function OrdersPage() {
                         <div>
                           <div className="font-medium">{order.client_name}</div>
                           <div className="text-sm text-muted-foreground">{order.client_email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{order.recipient_name || order.client_name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {order.recipient_email || order.client_email}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>{getServiceTypeLabel(order.service_type)}</TableCell>
@@ -1191,6 +2257,15 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
+                    {/* Destinataire */}
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Destinataire:</span>
+                      <p className="font-medium">{order.recipient_name || order.client_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {order.recipient_email || order.client_email}
+                      </p>
+                    </div>
+
                     {/* Trajet */}
                     <div className="text-sm">
                       <span className="text-muted-foreground">Trajet:</span>
@@ -1311,6 +2386,38 @@ export default function OrdersPage() {
                     <p>{getServiceTypeLabel(selectedOrder.service_type)}</p>
                   </div>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Destinataire</Label>
+                    <p>{selectedOrder.recipient_name || selectedOrder.client_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedOrder.recipient_email || selectedOrder.client_email}
+                    </p>
+                    {(selectedOrder.recipient_phone || selectedOrder.client_phone) && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.recipient_phone || selectedOrder.client_phone}
+                      </p>
+                    )}
+                    {selectedOrder.recipient_address && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.recipient_address}
+                      </p>
+                    )}
+                    {(selectedOrder.recipient_postal_code || selectedOrder.recipient_city) && (
+                      <p className="text-sm text-muted-foreground">
+                        {[selectedOrder.recipient_postal_code, selectedOrder.recipient_city]
+                          .filter(Boolean)
+                          .join(" ")}
+                      </p>
+                    )}
+                    {selectedOrder.recipient_country && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.recipient_country}
+                      </p>
+                    )}
+                  </div>
+                  <div className="hidden sm:block" />
+                </div>
                 <div>
                   <Label>Trajet</Label>
                   <p>{selectedOrder.origin} → {selectedOrder.destination}</p>
@@ -1347,7 +2454,7 @@ export default function OrdersPage() {
 
         {/* Dialog de modification */}
         <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogChange}>
-          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto transition-all duration-300 ease-in-out">
+          <DialogContent className="max-w-4xl w-full sm:w-[92vw] lg:w-[80vw] max-h-[90vh] overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out p-4 sm:p-6">
             <DialogHeader className="pb-4">
               <DialogTitle className="text-lg sm:text-xl">Modifier la commande {selectedOrder?.order_number}</DialogTitle>
               <DialogDescription className="text-sm sm:text-base">
@@ -1367,12 +2474,115 @@ export default function OrdersPage() {
             )}
 
             <form onSubmit={handleUpdateOrder} className="space-y-4 sm:space-y-6">
+              <div className="space-y-3 rounded-lg border border-orange-100 bg-orange-50/20 p-4">
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)] sm:items-start">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_order_customer">Client associé</Label>
+                    <Select
+                      value={editOrder.customer_id || "custom"}
+                      onValueChange={handleEditOrderClientSelect}
+                    >
+                      <SelectTrigger id="edit_order_customer" className="w-full text-left">
+                        <SelectValue placeholder="Associer la commande à un client" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Client personnalisé</SelectItem>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="rounded-md border border-orange-100 bg-white/80 p-3 text-xs sm:text-sm">
+                    {selectedEditCustomer ? (
+                      <div className="space-y-1">
+                        <p className="font-medium leading-tight">
+                          {selectedEditCustomer.name || "Sans nom"}
+                        </p>
+                        {selectedEditCustomer.email && (
+                          <p className="text-muted-foreground break-words">
+                            {selectedEditCustomer.email}
+                          </p>
+                        )}
+                        {selectedEditCustomer.phone && (
+                          <p className="text-muted-foreground">{selectedEditCustomer.phone}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        Sélectionne un client ou laisse “Client personnalisé”.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Rôle du client</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {clientRoleChoices.map((option) => (
+                      <label
+                        key={option.value}
+                        className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs sm:text-sm transition-colors ${
+                          editClientRole === option.value
+                            ? "border-orange-500 bg-orange-50 text-orange-700"
+                            : "border-orange-200 bg-white text-muted-foreground hover:border-orange-300"
+                        } ${!editOrder.customer_id && option.value !== "none" ? "cursor-not-allowed opacity-50" : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          className="h-4 w-4 text-orange-600 focus:ring-orange-500"
+                          value={option.value}
+                          checked={editClientRole === option.value}
+                          onChange={() => handleEditClientRoleChange(option.value)}
+                          disabled={!editOrder.customer_id && option.value !== "none"}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {!editOrder.customer_id && (
+                    <p className="text-xs text-muted-foreground">
+                      Sélectionne un client avant d’assigner son rôle.
+                    </p>
+                  )}
+                </div>
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* Informations client */}
+                {/* Expéditeur */}
                 <div className="space-y-3 sm:space-y-4 animate-in fade-in-0 slide-in-from-left-2 duration-300">
-                  <h3 className="text-base sm:text-lg font-semibold">Informations client</h3>
+                  <div className="space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <h3 className="text-base sm:text-lg font-semibold">Expéditeur</h3>
+                      <Badge
+                        variant="outline"
+                        className={
+                          editClientRole === "sender" || editClientRole === "both"
+                            ? "border-orange-300 bg-orange-50 text-orange-700"
+                            : "border-dashed border-orange-200 text-muted-foreground"
+                        }
+                      >
+                        {editClientRole === "sender" || editClientRole === "both"
+                          ? "Client associé"
+                          : "Formulaire manuel"}
+                      </Badge>
+                    </div>
+                    <Select value={editSenderClientId} onValueChange={handleEditSenderSelect}>
+                      <SelectTrigger className="w-full sm:w-64">
+                        <SelectValue placeholder="Sélectionner un expéditeur" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Saisie manuelle</SelectItem>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
-                    <Label htmlFor="edit_client_name">Nom du client *</Label>
+                    <Label htmlFor="edit_client_name">Nom de l’expéditeur *</Label>
                     <Input
                       id="edit_client_name"
                       value={editOrder.client_name}
@@ -1382,7 +2592,7 @@ export default function OrdersPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit_client_email">Email *</Label>
+                    <Label htmlFor="edit_client_email">Email de l’expéditeur *</Label>
                     <Input
                       id="edit_client_email"
                       type="email"
@@ -1393,7 +2603,7 @@ export default function OrdersPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit_client_phone">Téléphone</Label>
+                    <Label htmlFor="edit_client_phone">Téléphone de l’expéditeur</Label>
                     <Input
                       id="edit_client_phone"
                       value={editOrder.client_phone}
@@ -1440,6 +2650,117 @@ export default function OrdersPage() {
                         <SelectItem value="cancelled">Annulée</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-md border border-orange-100 bg-orange-50/30 p-4 space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-orange-700">Destinataire</p>
+                    <p className="text-xs text-muted-foreground">
+                      Si le destinataire diffère de l’expéditeur, renseigne ses coordonnées ci-dessous.
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={
+                      editClientRole === "recipient" || editClientRole === "both"
+                        ? "border-orange-300 bg-orange-50 text-orange-700"
+                        : "border-dashed border-orange-200 text-muted-foreground"
+                    }
+                  >
+                    {editClientRole === "recipient" || editClientRole === "both"
+                      ? "Client associé"
+                      : "Formulaire manuel"}
+                  </Badge>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
+                    <Select value={editRecipientClientId} onValueChange={handleEditRecipientSelect}>
+                      <SelectTrigger className="w-full sm:w-64">
+                        <SelectValue placeholder="Sélectionner un destinataire" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Saisie manuelle</SelectItem>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="sm" onClick={copyClientToRecipientForEdit}>
+                      Copier l’expéditeur
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <Label htmlFor="edit_recipient_name">Nom du destinataire</Label>
+                    <Input
+                      id="edit_recipient_name"
+                      value={editOrder.recipient_name}
+                      onChange={(e) => setEditOrder({ ...editOrder, recipient_name: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit_recipient_email">Email du destinataire</Label>
+                    <Input
+                      id="edit_recipient_email"
+                      type="email"
+                      value={editOrder.recipient_email}
+                      onChange={(e) => setEditOrder({ ...editOrder, recipient_email: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <Label htmlFor="edit_recipient_phone">Téléphone du destinataire</Label>
+                    <Input
+                      id="edit_recipient_phone"
+                      value={editOrder.recipient_phone}
+                      onChange={(e) => setEditOrder({ ...editOrder, recipient_phone: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div className="hidden lg:block" />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="lg:col-span-2">
+                    <Label htmlFor="edit_recipient_address">Adresse du destinataire</Label>
+                    <Input
+                      id="edit_recipient_address"
+                      value={editOrder.recipient_address}
+                      onChange={(e) => setEditOrder({ ...editOrder, recipient_address: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit_recipient_postal_code">Code postal du destinataire</Label>
+                    <Input
+                      id="edit_recipient_postal_code"
+                      value={editOrder.recipient_postal_code}
+                      onChange={(e) => setEditOrder({ ...editOrder, recipient_postal_code: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit_recipient_city">Ville du destinataire</Label>
+                    <Input
+                      id="edit_recipient_city"
+                      value={editOrder.recipient_city}
+                      onChange={(e) => setEditOrder({ ...editOrder, recipient_city: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <Label htmlFor="edit_recipient_country">Pays du destinataire</Label>
+                    <Input
+                      id="edit_recipient_country"
+                      value={editOrder.recipient_country}
+                      onChange={(e) => setEditOrder({ ...editOrder, recipient_country: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
                   </div>
                 </div>
               </div>
@@ -1586,8 +2907,8 @@ export default function OrdersPage() {
               </div>
 
 
-              <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-3 pt-4 border-t">
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between pt-4 border-t">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -1613,7 +2934,16 @@ export default function OrdersPage() {
                     Notifier le client
                   </Button>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                {selectedOrder && (
+                  <div className="pt-2 text-xs text-muted-foreground lg:flex-1 lg:max-w-sm">
+                    {hasNotifiedCurrentStatus && orderNotificationInfo
+                      ? `Destinataire déjà notifié pour le statut "${getStatusLabel(currentOrderStatusForNotification)}" le ${formatDateTime(orderNotificationInfo.timestamp)}.`
+                      : orderNotificationInfo
+                      ? `Dernière notification envoyée : statut "${getStatusLabel(orderNotificationInfo.status)}" le ${formatDateTime(orderNotificationInfo.timestamp)}.`
+                      : "Aucune notification envoyée via cette interface pour le moment."}
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
                   <Button 
                     type="button" 
                     variant="outline" 

@@ -44,6 +44,13 @@ export interface Database {
           client_name: string
           client_email: string
           client_phone: string | null
+          recipient_name: string | null
+          recipient_email: string | null
+          recipient_phone: string | null
+          recipient_address: string | null
+          recipient_city: string | null
+          recipient_postal_code: string | null
+          recipient_country: string | null
           service_type: string
           origin: string
           destination: string
@@ -64,6 +71,13 @@ export interface Database {
           client_name: string
           client_email: string
           client_phone?: string | null
+          recipient_name?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          recipient_address?: string | null
+          recipient_city?: string | null
+          recipient_postal_code?: string | null
+          recipient_country?: string | null
           service_type: string
           origin: string
           destination: string
@@ -84,6 +98,13 @@ export interface Database {
           client_name?: string
           client_email?: string
           client_phone?: string | null
+          recipient_name?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          recipient_address?: string | null
+          recipient_city?: string | null
+          recipient_postal_code?: string | null
+          recipient_country?: string | null
           service_type?: string
           origin?: string
           destination?: string

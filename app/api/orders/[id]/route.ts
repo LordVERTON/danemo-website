@@ -41,10 +41,11 @@ export async function GET(
 
     // If it was a QR code lookup, return with related data (like the old [qr] route)
     if (!isId) {
+      const contactEmail = order.recipient_email || order.client_email
       const [container, events, customer] = await Promise.all([
         order.container_id ? containersApi.getById(order.container_id).catch(() => null) : Promise.resolve(null),
         trackingApi.getByOrderId(order.id).catch(() => []),
-        order.client_email ? customersApi.getByEmail(order.client_email).catch(() => null) : Promise.resolve(null),
+        contactEmail ? customersApi.getByEmail(contactEmail).catch(() => null) : Promise.resolve(null),
       ])
 
       return NextResponse.json({
@@ -104,11 +105,75 @@ export async function PUT(
       )
     }
     
-    // Mettre à jour la commande
-    const order = await ordersApi.update(orderId, orderData)
+    const sanitizeRecipient = () => {
+      const updated: typeof orderData = { ...orderData }
+      if ('recipient_name' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_name === 'string'
+            ? orderData.recipient_name.trim()
+            : orderData.recipient_name || null
+        updated.recipient_name =
+          trimmed ||
+          (typeof orderData.client_name === 'string' && orderData.client_name.trim()) ||
+          oldOrder.client_name ||
+          null
+      }
+      if ('recipient_email' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_email === 'string'
+            ? orderData.recipient_email.trim().toLowerCase()
+            : orderData.recipient_email || null
+        updated.recipient_email =
+          trimmed ||
+          (typeof orderData.client_email === 'string' && orderData.client_email.trim().toLowerCase()) ||
+          oldOrder.client_email ||
+          null
+      }
+      if ('recipient_phone' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_phone === 'string'
+            ? orderData.recipient_phone.trim()
+            : orderData.recipient_phone || null
+        updated.recipient_phone = trimmed || orderData.client_phone || oldOrder.client_phone || null
+      }
+      if ('recipient_address' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_address === 'string'
+            ? orderData.recipient_address.trim()
+            : orderData.recipient_address || null
+        updated.recipient_address = trimmed || null
+      }
+      if ('recipient_city' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_city === 'string'
+            ? orderData.recipient_city.trim()
+            : orderData.recipient_city || null
+        updated.recipient_city = trimmed || null
+      }
+      if ('recipient_postal_code' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_postal_code === 'string'
+            ? orderData.recipient_postal_code.trim()
+            : orderData.recipient_postal_code || null
+        updated.recipient_postal_code = trimmed || null
+      }
+      if ('recipient_country' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_country === 'string'
+            ? orderData.recipient_country.trim()
+            : orderData.recipient_country || null
+        updated.recipient_country = trimmed || null
+      }
+      return updated
+    }
 
-    if (orderData.status && orderData.status !== oldOrder.status) {
-      notifyOrderStatusChange(orderId, orderData.status as OrderStatus).catch((error) => {
+    const sanitizedOrderData = sanitizeRecipient()
+    
+    // Mettre à jour la commande
+    const order = await ordersApi.update(orderId, sanitizedOrderData)
+
+    if (sanitizedOrderData.status && sanitizedOrderData.status !== oldOrder.status) {
+      notifyOrderStatusChange(orderId, sanitizedOrderData.status as OrderStatus).catch((error) => {
         console.error('[notifications] Failed to dispatch order status change:', error)
       })
     }

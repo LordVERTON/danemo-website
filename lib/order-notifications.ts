@@ -16,20 +16,30 @@ export async function notifyOrderStatusChange(orderId: string, status: OrderStat
   try {
     const { data: order, error } = await supabase
       .from('orders')
-      .select('id, order_number, client_name, client_email, qr_code, container_code')
+      .select(
+        'id, order_number, client_name, client_email, recipient_name, recipient_email, recipient_address, recipient_city, recipient_postal_code, recipient_country, qr_code, container_code'
+      )
       .eq('id', orderId)
       .single()
 
     if (error) throw error
-    if (!order || !order.client_email) {
-      console.warn('[notifications] Order not found or missing client email', orderId)
+    if (!order) {
+      console.warn('[notifications] Order not found', orderId)
+      return null
+    }
+
+    const targetEmail = order.recipient_email || order.client_email
+    const targetName = order.recipient_name || order.client_name
+
+    if (!targetEmail) {
+      console.warn('[notifications] Missing recipient email', orderId)
       return null
     }
 
     const stage = orderStageLabels[status] || 'en cours de livraison'
 
     const { subject, html } = buildClientStatusEmail({
-      recipientName: order.client_name,
+      recipientName: targetName,
       shipmentReference: order.order_number,
       stageLabel: stage,
       trackingUrl: buildTrackingUrl({
@@ -39,7 +49,7 @@ export async function notifyOrderStatusChange(orderId: string, status: OrderStat
       }),
     })
 
-    await sendEmail(order.client_email, subject, html)
+    await sendEmail(targetEmail, subject, html)
     return { success: true }
   } catch (err) {
     console.error('[notifications] Failed to notify order status change', orderId, err)

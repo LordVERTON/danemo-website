@@ -80,6 +80,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Valider les emails facultatifs
+    if (body.recipient_email && !emailRegex.test(body.recipient_email)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid recipient email format' },
+        { status: 400 }
+      )
+    }
+
     // Validation du type de service
     const validServiceTypes = ['fret_maritime', 'fret_aerien', 'demenagement', 'colis']
     if (!validServiceTypes.includes(body.service_type)) {
@@ -90,10 +98,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Sanitisation des données
+    const sanitizedClientName = body.client_name?.trim().substring(0, 100) || ''
+    const sanitizedClientEmail = body.client_email?.trim().toLowerCase()
+    const sanitizedRecipientName = body.recipient_name
+      ? body.recipient_name.trim().substring(0, 100)
+      : sanitizedClientName
+    const sanitizedRecipientEmail = body.recipient_email
+      ? body.recipient_email.trim().toLowerCase()
+      : sanitizedClientEmail
+
     const sanitizedData = {
-      client_name: body.client_name?.trim().substring(0, 100),
-      client_email: body.client_email?.trim().toLowerCase(),
+      client_name: sanitizedClientName,
+      client_email: sanitizedClientEmail,
       client_phone: body.client_phone?.trim().substring(0, 20),
+      recipient_name: sanitizedRecipientName || null,
+      recipient_email: sanitizedRecipientEmail || null,
+      recipient_phone: body.recipient_phone
+        ? body.recipient_phone.trim().substring(0, 20)
+        : body.client_phone
+        ? body.client_phone.trim().substring(0, 20)
+        : null,
+      recipient_address: body.recipient_address?.trim().substring(0, 200) || null,
+      recipient_city: body.recipient_city?.trim().substring(0, 100) || null,
+      recipient_postal_code: body.recipient_postal_code?.trim().substring(0, 20) || null,
+      recipient_country: body.recipient_country?.trim().substring(0, 100) || null,
       service_type: body.service_type,
       origin: body.origin?.trim().substring(0, 100),
       destination: body.destination?.trim().substring(0, 100),

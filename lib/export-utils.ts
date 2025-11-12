@@ -15,6 +15,7 @@ export interface ExportData {
     id: string
     order_number: string
     client_name: string
+    recipient_name?: string | null
     service_type: string
     status: string
     value?: number
@@ -41,7 +42,7 @@ export const exportToCSV = (data: ExportData) => {
     ['Annulées', data.stats.cancelled],
     [''],
     ['Détail des commandes'],
-    ['Numéro', 'Client', 'Service', 'Statut', 'Valeur', 'Date']
+    ['Numéro', 'Expéditeur', 'Destinataire', 'Service', 'Statut', 'Valeur', 'Date']
   ]
 
   // Ajouter les commandes
@@ -49,6 +50,7 @@ export const exportToCSV = (data: ExportData) => {
     csvData.push([
       order.order_number,
       order.client_name,
+      order.recipient_name || order.client_name,
       order.service_type,
       order.status,
       order.value?.toString() || 'N/A',
@@ -124,8 +126,8 @@ export const exportToPDFSimple = async (data: ExportData) => {
   addText('Détail des commandes', 16, true, '#FF8C00')
   
   // En-têtes du tableau
-  const tableHeaders = ['Numéro', 'Client', 'Service', 'Statut', 'Valeur', 'Date']
-  const colWidths = [30, 40, 30, 30, 25, 30]
+  const tableHeaders = ['Numéro', 'Expéditeur', 'Destinataire', 'Service', 'Statut', 'Valeur', 'Date']
+  const colWidths = [25, 35, 35, 30, 25, 25, 25]
   let xPosition = 20
   
   pdf.setFillColor(240, 240, 240)
@@ -150,6 +152,7 @@ export const exportToPDFSimple = async (data: ExportData) => {
     const rowData = [
       order.order_number,
       order.client_name,
+      order.recipient_name || order.client_name,
       order.service_type,
       order.status,
       order.value?.toString() || 'N/A',
@@ -309,8 +312,8 @@ export const exportToPDF = async (data: ExportData, chartElements: HTMLElement[]
   addText('Détail des commandes', 16, true, '#FF8C00')
   
   // En-têtes du tableau
-  const tableHeaders = ['Numéro', 'Client', 'Service', 'Statut', 'Valeur', 'Date']
-  const colWidths = [30, 40, 30, 30, 25, 30]
+  const tableHeaders = ['Numéro', 'Expéditeur', 'Destinataire', 'Service', 'Statut', 'Valeur', 'Date']
+  const colWidths = [25, 35, 35, 30, 25, 25, 25]
   let xPosition = 20
   
   pdf.setFillColor(240, 240, 240)
@@ -335,6 +338,7 @@ export const exportToPDF = async (data: ExportData, chartElements: HTMLElement[]
     const rowData = [
       order.order_number,
       order.client_name,
+      order.recipient_name || order.client_name,
       order.service_type,
       order.status,
       order.value?.toString() || 'N/A',

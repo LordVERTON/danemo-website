@@ -49,6 +49,7 @@ interface Order {
   status: string
   value?: number
   created_at: string
+  recipient_name?: string | null
 }
 
 export default function AnalyticsPage() {
@@ -429,7 +430,14 @@ export default function AnalyticsPage() {
                     </div>
                     <div>
                       <p className="font-medium">{order.order_number}</p>
-                      <p className="text-sm text-muted-foreground">{order.client_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Expéditeur : {order.client_name}
+                      </p>
+                      {order.recipient_name && order.recipient_name !== order.client_name && (
+                        <p className="text-xs text-muted-foreground">
+                          Destinataire : {order.recipient_name}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">

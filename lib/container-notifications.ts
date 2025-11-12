@@ -43,12 +43,14 @@ export async function notifyContainerStatusChange(
 
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, order_number, client_name, client_email, qr_code')
+      .select('id, order_number, client_name, client_email, recipient_name, recipient_email, qr_code')
       .eq('container_id', containerId)
 
     if (ordersError) throw ordersError
 
-    const filteredOrders = (orders || []).filter((order) => !!order.client_email)
+    const filteredOrders = (orders || []).filter(
+      (order) => !!(order.recipient_email || order.client_email)
+    )
 
     if (filteredOrders.length === 0) {
       console.info('[notifications] No client emails linked to container', container.code)
@@ -60,8 +62,12 @@ export async function notifyContainerStatusChange(
     await Promise.all(
       filteredOrders.map(async (order) => {
         try {
+          const recipientName = order.recipient_name || order.client_name
+          const recipientEmail = order.recipient_email || order.client_email
+          if (!recipientEmail) return
+
           const { subject, html } = buildClientStatusEmail({
-            recipientName: order.client_name,
+            recipientName,
             shipmentReference: order.order_number,
             stageLabel: options.customMessage || containerStageLabels[status],
             trackingUrl: buildTrackingUrl({
@@ -70,7 +76,7 @@ export async function notifyContainerStatusChange(
               qrCode: order.qr_code,
             }),
           })
-          await sendEmail(order.client_email as string, subject, html)
+          await sendEmail(recipientEmail as string, subject, html)
           emailsSent += 1
         } catch (error) {
           console.error('[notifications] Failed to send email for order', order.id, error)

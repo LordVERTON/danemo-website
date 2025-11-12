@@ -123,7 +123,15 @@ export const ordersApi = {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .or(`order_number.ilike.%${query}%,client_name.ilike.%${query}%,client_email.ilike.%${query}%`)
+      .or(
+        [
+          `order_number.ilike.%${query}%`,
+          `client_name.ilike.%${query}%`,
+          `client_email.ilike.%${query}%`,
+          `recipient_name.ilike.%${query}%`,
+          `recipient_email.ilike.%${query}%`,
+        ].join(',')
+      )
       .order('created_at', { ascending: false })
     
     if (error) throw error

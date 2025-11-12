@@ -25,6 +25,27 @@ interface Container {
   created_at?: string
 }
 
+const containerStatusLabels: Record<Container['status'], string> = {
+  planned: "Planifié",
+  departed: "Départ confirmé",
+  in_transit: "En transit",
+  arrived: "Arrivé",
+  delivered: "Livré",
+  delayed: "Retard signalé",
+}
+
+const formatContainerStatus = (status: string) =>
+  containerStatusLabels[status as keyof typeof containerStatusLabels] || status
+
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+
 export default function ContainersPage() {
   const [items, setItems] = useState<Container[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,6 +62,9 @@ export default function ContainersPage() {
   const [notifyLoading, setNotifyLoading] = useState(false)
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const [notifySuccess, setNotifySuccess] = useState<string | null>(null)
+const [containerNotificationHistory, setContainerNotificationHistory] = useState<
+  Record<string, { status: string; timestamp: string }>
+>({})
 
   const fetchContainers = async () => {
     try {
@@ -112,10 +136,19 @@ export default function ContainersPage() {
         setNotifyError(json.error || 'Échec de l’envoi de la notification')
       } else {
         const recipients = json.data?.recipients ?? 0
+        const timestamp = new Date().toISOString()
+        setContainerNotificationHistory((prev) => ({
+          ...prev,
+          [selected.id]: {
+            status: selected.status,
+            timestamp,
+          },
+        }))
+        const baseMessage = `Notification envoyée pour le statut "${formatContainerStatus(selected.status)}" le ${formatDateTime(timestamp)}.`
         setNotifySuccess(
           recipients > 0
-            ? `Notification envoyée à ${recipients} destinataire${recipients > 1 ? 's' : ''}.`
-            : 'Notification envoyée.'
+            ? `${baseMessage} ${recipients} destinataire${recipients > 1 ? 's' : ''} informé${recipients > 1 ? 's' : ''}.`
+            : baseMessage
         )
         setManualMessage('')
       }
@@ -147,6 +180,14 @@ export default function ContainersPage() {
       (c.arrival_port || '').toLowerCase().includes(q),
     )
   }, [items, search])
+
+  const containerNotificationInfo = selected
+    ? containerNotificationHistory[selected.id]
+    : undefined
+  const containerAlreadyNotified =
+    !!containerNotificationInfo &&
+    !!selected &&
+    containerNotificationInfo.status === selected.status
 
   const submit = async () => {
     const payload = {
@@ -332,6 +373,13 @@ export default function ContainersPage() {
                         <AlertDescription>{notifyError}</AlertDescription>
                       </Alert>
                     )}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {containerAlreadyNotified && containerNotificationInfo
+                      ? `Les clients ont déjà été notifiés du statut "${formatContainerStatus(selected.status)}" le ${formatDateTime(containerNotificationInfo.timestamp)}.`
+                      : containerNotificationInfo
+                      ? `Dernière notification envoyée : statut "${formatContainerStatus(containerNotificationInfo.status)}" le ${formatDateTime(containerNotificationInfo.timestamp)}.`
+                      : "Aucune notification envoyée via cette interface pour le moment."}
                   </div>
                 </div>
               )}

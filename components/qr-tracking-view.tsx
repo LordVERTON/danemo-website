@@ -68,6 +68,13 @@ interface OrderPayload {
     client_name: string
     client_email: string
     client_phone: string | null
+    recipient_name: string | null
+    recipient_email: string | null
+    recipient_phone: string | null
+    recipient_address: string | null
+    recipient_city: string | null
+    recipient_postal_code: string | null
+    recipient_country: string | null
     service_type: string
     origin: string
     destination: string
@@ -785,6 +792,45 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                             <p>{(trackingData as OrderPayload).order.client_email}</p>
                             {(trackingData as OrderPayload).order.client_phone && (
                               <p>{(trackingData as OrderPayload).order.client_phone}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Destinataire</h3>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p>
+                              {(trackingData as OrderPayload).order.recipient_name ||
+                                (trackingData as OrderPayload).order.client_name}
+                            </p>
+                            <p>
+                              {(trackingData as OrderPayload).order.recipient_email ||
+                                (trackingData as OrderPayload).order.client_email}
+                            </p>
+                            {((trackingData as OrderPayload).order.recipient_phone ||
+                              (trackingData as OrderPayload).order.client_phone) && (
+                              <p>
+                                {(trackingData as OrderPayload).order.recipient_phone ||
+                                  (trackingData as OrderPayload).order.client_phone}
+                              </p>
+                            )}
+                            {(trackingData as OrderPayload).order.recipient_address && (
+                              <p>{(trackingData as OrderPayload).order.recipient_address}</p>
+                            )}
+                            {(
+                              (trackingData as OrderPayload).order.recipient_postal_code ||
+                              (trackingData as OrderPayload).order.recipient_city
+                            ) && (
+                              <p>
+                                {[
+                                  (trackingData as OrderPayload).order.recipient_postal_code,
+                                  (trackingData as OrderPayload).order.recipient_city,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              </p>
+                            )}
+                            {(trackingData as OrderPayload).order.recipient_country && (
+                              <p>{(trackingData as OrderPayload).order.recipient_country}</p>
                             )}
                           </div>
                         </div>

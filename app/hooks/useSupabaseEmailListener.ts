@@ -24,6 +24,7 @@ export function useSupabaseEmailListener() {
         async (payload) => {
           const { new: newOrder } = payload;
           const recipientEmail =
+            newOrder.recipient_email ||
             newOrder.client_email ||
             newOrder.user_email ||
             newOrder.email ||
@@ -44,6 +45,7 @@ export function useSupabaseEmailListener() {
               body: JSON.stringify({
                 to: recipientEmail,
                 prenom:
+                  newOrder.recipient_name ||
                   newOrder.client_name ||
                   newOrder.user_firstname ||
                   newOrder.full_name ||
