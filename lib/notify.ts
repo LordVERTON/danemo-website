@@ -20,6 +20,21 @@ export function getMailConfig(): MailConfig {
   return { host, port, user, pass, from }
 }
 
+let cachedBaseUrl: string | null = null
+
+export function getAppBaseUrl(): string {
+  if (cachedBaseUrl) return cachedBaseUrl
+  const raw =
+    process.env.APP_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
+    'https://danemo.be'
+
+  cachedBaseUrl = raw.replace(/\/+$/, '')
+  return cachedBaseUrl
+}
+
 export async function sendEmail(to: string, subject: string, html: string) {
   const cfg = getMailConfig()
   const transporter = nodemailer.createTransport({

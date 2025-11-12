@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ordersApi, containersApi, trackingApi, customersApi } from '@/lib/database'
+import { notifyOrderStatusChange } from '@/lib/order-notifications'
 import { supabaseAdmin } from '@/lib/supabase'
+import type { Database } from '@/lib/supabase'
+
+type OrderStatus = Database['public']['Tables']['orders']['Row']['status']
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -102,6 +106,12 @@ export async function PUT(
     
     // Mettre à jour la commande
     const order = await ordersApi.update(orderId, orderData)
+
+    if (orderData.status && orderData.status !== oldOrder.status) {
+      notifyOrderStatusChange(orderId, orderData.status as OrderStatus).catch((error) => {
+        console.error('[notifications] Failed to dispatch order status change:', error)
+      })
+    }
     
     // TODO: Activer l'historique une fois la table order_history créée
     /*

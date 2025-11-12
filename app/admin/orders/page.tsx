@@ -25,12 +25,12 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Eye, 
-  Edit, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Eye,
+  Edit,
   Trash2,
   Package,
   Truck,
@@ -41,7 +41,9 @@ import {
   FileText,
   FileDown,
   FileSpreadsheet,
-  QrCode
+  QrCode,
+  Send,
+  Loader2,
 } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 import { generateInvoice, defaultCompanyData, InvoiceData } from "@/lib/invoice-utils"
@@ -99,6 +101,11 @@ export default function OrdersPage() {
     etd: "",
     eta: "",
     status: "planned" as const
+  })
+  const [isNotifyingOrder, setIsNotifyingOrder] = useState(false)
+  const [notifyOrderFeedback, setNotifyOrderFeedback] = useState<{ type: "success" | "error" | null; message: string }>({
+    type: null,
+    message: "",
   })
 
   // Formulaire de création
@@ -342,10 +349,20 @@ export default function OrdersPage() {
     }
   }
 
+  const handleEditDialogChange = (open: boolean) => {
+    setIsEditDialogOpen(open)
+    if (!open) {
+      setSelectedOrder(null)
+      setNotifyOrderFeedback({ type: null, message: "" })
+      setIsNotifyingOrder(false)
+    }
+  }
+
   const handleEditOrder = async (order: Order) => {
     // Recharger les conteneurs pour s'assurer d'avoir les données à jour
     await fetchContainers()
     
+    setNotifyOrderFeedback({ type: null, message: "" })
     setSelectedOrder(order)
     setEditOrder({
       client_name: order.client_name,
@@ -401,6 +418,44 @@ export default function OrdersPage() {
       }
     } catch (error) {
       console.error('Error updating order:', error)
+    }
+  }
+
+  const triggerOrderNotification = async () => {
+    if (!selectedOrder) return
+    setIsNotifyingOrder(true)
+    setNotifyOrderFeedback({ type: null, message: "" })
+    try {
+      const res = await fetch('/api/notifications/order-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          order_id: selectedOrder.id,
+          status: editOrder.status || selectedOrder.status,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        setNotifyOrderFeedback({
+          type: 'error',
+          message: json.error || 'Échec de l’envoi de la notification.',
+        })
+      } else {
+        setNotifyOrderFeedback({
+          type: 'success',
+          message: 'Notification envoyée au client.',
+        })
+      }
+    } catch (error) {
+      console.error('Failed to notify order client', error)
+      setNotifyOrderFeedback({
+        type: 'error',
+        message: 'Impossible d’envoyer la notification, réessaie plus tard.',
+      })
+    } finally {
+      setIsNotifyingOrder(false)
     }
   }
 
@@ -1291,7 +1346,7 @@ export default function OrdersPage() {
         </Dialog>
 
         {/* Dialog de modification */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogChange}>
           <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto transition-all duration-300 ease-in-out">
             <DialogHeader className="pb-4">
               <DialogTitle className="text-lg sm:text-xl">Modifier la commande {selectedOrder?.order_number}</DialogTitle>
@@ -1304,7 +1359,13 @@ export default function OrdersPage() {
                 </div>
               )}
             </DialogHeader>
-            
+
+            {notifyOrderFeedback.type && (
+              <Alert variant={notifyOrderFeedback.type === 'error' ? 'destructive' : undefined}>
+                <AlertDescription>{notifyOrderFeedback.message}</AlertDescription>
+              </Alert>
+            )}
+
             <form onSubmit={handleUpdateOrder} className="space-y-4 sm:space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Informations client */}
@@ -1526,21 +1587,37 @@ export default function OrdersPage() {
 
 
               <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-3 pt-4 border-t">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => selectedOrder && handleGenerateInvoice(selectedOrder)}
-                  className="w-full sm:w-auto flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden xs:inline">Générer une facture</span>
-                  <span className="xs:hidden">Facture</span>
-                </Button>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={() => setIsEditDialogOpen(false)}
+                    onClick={() => selectedOrder && handleGenerateInvoice(selectedOrder)}
+                    className="w-full sm:w-auto flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="hidden xs:inline">Générer une facture</span>
+                    <span className="xs:hidden">Facture</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={triggerOrderNotification}
+                    disabled={isNotifyingOrder || !selectedOrder}
+                    className="w-full sm:w-auto flex items-center gap-2"
+                  >
+                    {isNotifyingOrder ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Notifier le client
+                  </Button>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => handleEditDialogChange(false)}
                     className="w-full sm:w-auto"
                   >
                     Annuler

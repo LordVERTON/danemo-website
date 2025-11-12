@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { PackageSearch, Plus, MapPin, Clock, BadgeCheck } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { PackageSearch, Plus, MapPin, Clock, BadgeCheck, Loader2, Send } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 
@@ -35,6 +37,10 @@ export default function ContainersPage() {
   const [eventsLoading, setEventsLoading] = useState(false)
   const [linkedInventory, setLinkedInventory] = useState<any[]>([])
   const [inventoryLoading, setInventoryLoading] = useState(false)
+  const [manualMessage, setManualMessage] = useState("")
+  const [notifyLoading, setNotifyLoading] = useState(false)
+  const [notifyError, setNotifyError] = useState<string | null>(null)
+  const [notifySuccess, setNotifySuccess] = useState<string | null>(null)
 
   const fetchContainers = async () => {
     try {
@@ -83,6 +89,51 @@ export default function ContainersPage() {
     } catch {}
     finally {
       setInventoryLoading(false)
+    }
+  }
+
+  const handleNotifySelectedContainer = async () => {
+    if (!selected) return
+    setNotifyLoading(true)
+    setNotifyError(null)
+    setNotifySuccess(null)
+    try {
+      const res = await fetch('/api/notifications/container-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          container_id: selected.id,
+          status: selected.status,
+          message: manualMessage || undefined,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        setNotifyError(json.error || 'Échec de l’envoi de la notification')
+      } else {
+        const recipients = json.data?.recipients ?? 0
+        setNotifySuccess(
+          recipients > 0
+            ? `Notification envoyée à ${recipients} destinataire${recipients > 1 ? 's' : ''}.`
+            : 'Notification envoyée.'
+        )
+        setManualMessage('')
+      }
+    } catch (error) {
+      console.error('Failed to notify container clients', error)
+      setNotifyError('Impossible d’envoyer la notification, réessaie plus tard.')
+    } finally {
+      setNotifyLoading(false)
+    }
+  }
+
+  const handleTrackingDialogChange = (open: boolean) => {
+    setTrackingOpen(open)
+    if (!open) {
+      setSelected(null)
+      setManualMessage('')
+      setNotifyError(null)
+      setNotifySuccess(null)
     }
   }
 
@@ -218,6 +269,9 @@ export default function ContainersPage() {
                               size="sm"
                               onClick={() => {
                                 setSelected(c)
+                                setManualMessage('')
+                                setNotifyError(null)
+                                setNotifySuccess(null)
                                 setTrackingOpen(true)
                                 fetchContainerEvents(c.id)
                                 fetchLinkedInventory(c)
@@ -237,12 +291,51 @@ export default function ContainersPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={trackingOpen} onOpenChange={setTrackingOpen}>
+        <Dialog open={trackingOpen} onOpenChange={handleTrackingDialogChange}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Suivi du conteneur {selected?.code}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {selected && (
+                <div className="space-y-3 rounded-md border border-orange-100 bg-orange-50/60 p-4">
+                  <div>
+                    <Label htmlFor="notification-message">Message de notification (optionnel)</Label>
+                    <Textarea
+                      id="notification-message"
+                      placeholder="Ajoute un mot pour les clients (facultatif)…"
+                      value={manualMessage}
+                      onChange={(e) => setManualMessage(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      onClick={handleNotifySelectedContainer}
+                      disabled={notifyLoading}
+                      className="flex items-center gap-2"
+                    >
+                      {notifyLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                      Notifier les clients
+                    </Button>
+                    {notifySuccess && (
+                      <Alert className="flex-1 min-w-[200px] border-green-200 bg-green-50 text-green-800">
+                        <AlertDescription>{notifySuccess}</AlertDescription>
+                      </Alert>
+                    )}
+                    {notifyError && (
+                      <Alert variant="destructive" className="flex-1 min-w-[200px]">
+                        <AlertDescription>{notifyError}</AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {eventsLoading ? (
                 <div className="text-sm text-muted-foreground">Chargement des événements...</div>
               ) : events.length === 0 ? (

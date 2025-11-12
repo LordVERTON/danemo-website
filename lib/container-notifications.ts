@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/notify'
-import { sendSms } from '@/lib/sms'
+import { buildClientStatusEmail, buildTrackingUrl } from '@/lib/notification-templates'
 
 type ContainerStatus = 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
 
@@ -11,79 +11,16 @@ interface NotificationOptions {
 
 interface NotificationResult {
   emailsSent: number
-  smsSent: number
   recipients: number
 }
 
-const statusDescriptions: Record<ContainerStatus, { label: string; defaultMessage: string }> = {
-  planned: {
-    label: 'Planifié',
-    defaultMessage: "Votre conteneur est planifié. Nous finalisons les préparatifs d'expédition.",
-  },
-  departed: {
-    label: 'Départ confirmé',
-    defaultMessage: 'Votre conteneur a quitté le port de départ et est en route vers sa destination.',
-  },
-  in_transit: {
-    label: 'En transit',
-    defaultMessage: 'Votre conteneur est actuellement en transit. Nous surveillons sa progression.',
-  },
-  arrived: {
-    label: 'Arrivé au port',
-    defaultMessage: 'Votre conteneur est arrivé au port de destination. Les formalités sont en cours.',
-  },
-  delivered: {
-    label: 'Livré',
-    defaultMessage: 'Votre conteneur a été livré. Merci de votre confiance.',
-  },
-  delayed: {
-    label: 'Retard signalé',
-    defaultMessage: "Votre conteneur subit un retard. Nous vous tiendrons informés dès que possible.",
-  },
-}
-
-function buildEmailTemplate({
-  container,
-  status,
-  message,
-}: {
-  container: any
-  status: ContainerStatus
-  message: string
-}) {
-  return `
-    <div style="font-family: Arial, sans-serif; color: #111827;">
-      <h2 style="color:#FF8C00; font-size: 20px;">DANEMO - Mise à jour conteneur ${container.code}</h2>
-      <p style="font-size:14px; line-height:20px;">${message}</p>
-      <div style="margin-top:16px; padding:16px; background:#F9FAFB; border-radius:8px;">
-        <h3 style="margin:0 0 12px 0; font-size:16px;">Détails du conteneur</h3>
-        <ul style="margin:0; padding-left:18px; font-size:13px; line-height:20px;">
-          <li><strong>Statut:</strong> ${statusDescriptions[status].label}</li>
-          <li><strong>Navire:</strong> ${container.vessel || 'Non communiqué'}</li>
-          <li><strong>Port de départ:</strong> ${container.departure_port || 'Non communiqué'}</li>
-          <li><strong>Port d'arrivée:</strong> ${container.arrival_port || 'Non communiqué'}</li>
-          <li><strong>ETD:</strong> ${container.etd ? new Date(container.etd).toLocaleDateString('fr-FR') : 'Non communiqué'}</li>
-          <li><strong>ETA:</strong> ${container.eta ? new Date(container.eta).toLocaleDateString('fr-FR') : 'Non communiqué'}</li>
-        </ul>
-      </div>
-      <p style="margin-top:24px; font-size:12px; color:#6B7280;">
-        Pour toute question, contactez-nous à <a href="mailto:info@danemo.be">info@danemo.be</a> ou par téléphone au +33 4 88 64 51 83.
-      </p>
-    </div>
-  `
-}
-
-function buildSmsTemplate({
-  container,
-  status,
-  message,
-}: {
-  container: any
-  status: ContainerStatus
-  message: string
-}) {
-  const base = `[Danemo] Conteneur ${container.code}: ${statusDescriptions[status].label}.`
-  return `${base} ${message.replace(/\s+/g, ' ').trim()}`
+const containerStageLabels: Record<ContainerStatus, string> = {
+  planned: 'en préparation',
+  departed: 'en cours de livraison',
+  in_transit: 'en cours de livraison',
+  arrived: 'arrivée dans votre région',
+  delivered: 'entre les mains du transporteur',
+  delayed: 'en cours de livraison (avec un léger retard)',
 }
 
 export async function notifyContainerStatusChange(
@@ -104,60 +41,47 @@ export async function notifyContainerStatusChange(
       return null
     }
 
-    const { data: packages, error: packagesError } = await supabase
-      .from('packages')
-      .select('client_id')
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('id, order_number, client_name, client_email, qr_code')
       .eq('container_id', containerId)
 
-    if (packagesError) throw packagesError
+    if (ordersError) throw ordersError
 
-    const clientIds = Array.from(new Set((packages || []).map((p) => p.client_id).filter(Boolean))) as string[]
+    const filteredOrders = (orders || []).filter((order) => !!order.client_email)
 
-    if (clientIds.length === 0) {
-      console.info('[notifications] No clients linked to container', container.code)
-      return { emailsSent: 0, smsSent: 0, recipients: 0 }
+    if (filteredOrders.length === 0) {
+      console.info('[notifications] No client emails linked to container', container.code)
+      return { emailsSent: 0, recipients: 0 }
     }
 
-    const { data: clients, error: clientsError } = await supabase
-      .from('clients')
-      .select('id, name, email, phone')
-      .in('id', clientIds)
-
-    if (clientsError) throw clientsError
-
-    const message = options.customMessage || statusDescriptions[status].defaultMessage
-
-    const subject = `Conteneur ${container.code} - ${statusDescriptions[status].label}`
-    const emailHtml = buildEmailTemplate({ container, status, message })
-    const smsText = buildSmsTemplate({ container, status, message })
-
     let emailsSent = 0
-    let smsSent = 0
 
     await Promise.all(
-      (clients || []).map(async (client) => {
-        if (client.email) {
-          try {
-            await sendEmail(client.email, subject, emailHtml)
-            emailsSent += 1
-          } catch (error) {
-            console.error('[notifications] Failed to send email to', client.email, error)
-          }
-        }
-        if (client.phone) {
-          const result = await sendSms(client.phone, smsText)
-          if (result.success) {
-            smsSent += 1
-          }
+      filteredOrders.map(async (order) => {
+        try {
+          const { subject, html } = buildClientStatusEmail({
+            recipientName: order.client_name,
+            shipmentReference: order.order_number,
+            stageLabel: options.customMessage || containerStageLabels[status],
+            trackingUrl: buildTrackingUrl({
+              orderNumber: order.order_number,
+              containerCode: container.code,
+              qrCode: order.qr_code,
+            }),
+          })
+          await sendEmail(order.client_email as string, subject, html)
+          emailsSent += 1
+        } catch (error) {
+          console.error('[notifications] Failed to send email for order', order.id, error)
         }
       }),
     )
 
-    return { emailsSent, smsSent, recipients: clients?.length || 0 }
+    return { emailsSent, recipients: filteredOrders.length }
   } catch (error) {
     console.error('[notifications] Error while notifying container status change:', error)
     return null
   }
 }
-
 

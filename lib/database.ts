@@ -1,4 +1,5 @@
 import { supabase, supabaseAdmin } from './supabase'
+import { notifyOrderStatusChange } from './order-notifications'
 import type { Database } from './supabase'
 
 type Order = Database['public']['Tables']['orders']['Row']
@@ -301,6 +302,12 @@ export const trackingApi = {
 
   // Mettre à jour le statut d'une commande et ajouter un événement
   async updateOrderStatus(orderId: string, status: string, eventData: Partial<TrackingEventInsert>): Promise<void> {
+    const { data: existingOrder } = await supabase
+      .from('orders')
+      .select('status')
+      .eq('id', orderId)
+      .single()
+
     // Mettre à jour le statut de la commande
     await supabase
       .from('orders')
@@ -315,6 +322,12 @@ export const trackingApi = {
         status,
         ...eventData
       })
+
+    if (!existingOrder || existingOrder.status !== status) {
+      notifyOrderStatusChange(orderId, status as Order['status']).catch((error) => {
+        console.error('[notifications] Failed to dispatch order status change from tracking update:', error)
+      })
+    }
   }
 }
 

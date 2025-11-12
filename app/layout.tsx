@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Playfair_Display, Bona_Nova as Proxima_Nova } from "next/font/google"
 import "./globals.css"
 import { I18nProvider } from "@/lib/i18n"
+import { SupabaseRealtimeListener } from "@/app/components/SupabaseRealtimeListener"
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
@@ -37,7 +38,9 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${playfairDisplay.variable} ${proximaNova.variable}`}>
       <body className="font-sans antialiased">
-        <I18nProvider>{children}</I18nProvider>
+        <SupabaseRealtimeListener>
+          <I18nProvider>{children}</I18nProvider>
+        </SupabaseRealtimeListener>
       </body>
     </html>
   )
