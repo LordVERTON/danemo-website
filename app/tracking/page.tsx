@@ -22,6 +22,7 @@ import {
   ExternalLink,
   PackageSearch,
 } from "lucide-react"
+import { useI18n } from "@/lib/i18n"
 
 interface Order {
   id: string
@@ -65,16 +66,18 @@ interface Container {
   updated_at: string
 }
 
-const containerStatusLabels: Record<string, string> = {
-  planned: "Planifié",
-  departed: "Départ confirmé",
-  in_transit: "En transit",
-  arrived: "Arrivé",
-  delivered: "Livré",
-  delayed: "Retard",
-}
-
 export default function TrackingPage() {
+  const { messages } = useI18n()
+  const tracking = messages.tracking
+  const containerStatusLabels: Record<string, string> = {
+    planned: tracking.containerStatus.planned,
+    departed: tracking.containerStatus.departed,
+    in_transit: tracking.containerStatus.in_transit,
+    arrived: tracking.containerStatus.arrived,
+    delivered: tracking.containerStatus.delivered,
+    delayed: tracking.containerStatus.delayed,
+  }
+
   const [trackingNumber, setTrackingNumber] = useState("")
   const [order, setOrder] = useState<Order | null>(null)
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([])
@@ -113,10 +116,10 @@ export default function TrackingPage() {
         setOrder(null)
         setTrackingEvents([])
         setContainer(null)
-        setError("Aucune commande trouvée avec ce numéro de suivi")
+        setError(tracking.errors.notFound)
       }
     } catch (error) {
-      setError("Erreur lors de la recherche")
+      setError(tracking.errors.generic)
       setOrder(null)
       setTrackingEvents([])
       setContainer(null)
@@ -165,11 +168,11 @@ export default function TrackingPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { label: "En attente", variant: "outline" as const, icon: Clock, color: "text-yellow-600" },
-      confirmed: { label: "Confirmée", variant: "secondary" as const, icon: CheckCircle, color: "text-blue-600" },
-      in_progress: { label: "En cours", variant: "default" as const, icon: Truck, color: "text-orange-600" },
-      completed: { label: "Terminée", variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
-      cancelled: { label: "Annulée", variant: "destructive" as const, icon: AlertCircle, color: "text-red-600" },
+      pending: { label: tracking.status.pending, variant: "outline" as const, icon: Clock, color: "text-yellow-600" },
+      confirmed: { label: tracking.status.confirmed, variant: "secondary" as const, icon: CheckCircle, color: "text-blue-600" },
+      in_progress: { label: tracking.status.in_progress, variant: "default" as const, icon: Truck, color: "text-orange-600" },
+      completed: { label: tracking.status.completed, variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
+      cancelled: { label: tracking.status.cancelled, variant: "destructive" as const, icon: AlertCircle, color: "text-red-600" },
     }
     const config = statusConfig[status as keyof typeof statusConfig]
     const Icon = config.icon
@@ -225,10 +228,8 @@ export default function TrackingPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Suivi de colis</h1>
-          <p className="text-xl text-gray-600">
-            Suivez votre expédition en temps réel avec votre numéro de suivi
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{tracking.title}</h1>
+          <p className="text-xl text-gray-600">{tracking.subtitle}</p>
         </div>
 
         {/* Formulaire de recherche */}
@@ -236,27 +237,27 @@ export default function TrackingPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
-              Rechercher votre commande
+              {tracking.search.label}
             </CardTitle>
-            <CardDescription>
-              Entrez votre numéro de suivi pour voir l'état de votre expédition
-            </CardDescription>
+            <CardDescription>{tracking.subtitle}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSearch} className="flex gap-4">
               <div className="flex-1">
-                <Label htmlFor="tracking" className="sr-only">Numéro de suivi</Label>
+                <Label htmlFor="tracking" className="sr-only">
+                  {tracking.search.label}
+                </Label>
                 <Input
                   id="tracking"
                   type="text"
-                  placeholder="Ex: DN2024001234"
+                  placeholder={tracking.search.placeholder}
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   className="text-lg"
                 />
               </div>
               <Button type="submit" disabled={isLoading || !trackingNumber.trim()}>
-                {isLoading ? "Recherche..." : "Rechercher"}
+                {isLoading ? "..." : tracking.search.button}
               </Button>
             </form>
           </CardContent>
@@ -278,15 +279,13 @@ export default function TrackingPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <PackageSearch className="h-5 w-5 text-orange-600" />
-                    Conteneur associé
+                    {tracking.container.title}
                   </CardTitle>
-                  <CardDescription>
-                    Informations sur le conteneur affecté à votre expédition.
-                  </CardDescription>
+                  <CardDescription>{tracking.container.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {isLoadingContainer ? (
-                    <div className="text-sm text-gray-500">Chargement des informations du conteneur...</div>
+                    <div className="text-sm text-gray-500">Chargement...</div>
                   ) : container ? (
                     <>
                       <div className="flex flex-wrap items-center gap-3">
@@ -303,7 +302,7 @@ export default function TrackingPage() {
                           className="flex items-center gap-2"
                         >
                           <Copy className="h-4 w-4" />
-                          Copier
+                          {tracking.container.copy}
                         </Button>
                         <Button
                           variant="outline"
@@ -312,23 +311,27 @@ export default function TrackingPage() {
                           className="flex items-center gap-2"
                         >
                           <ExternalLink className="h-4 w-4" />
-                          Suivre le conteneur
+                          {tracking.container.follow}
                         </Button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                         <div>
-                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">{tracking.container.vessel}</h4>
                           <p className="font-medium text-gray-800">{container.vessel || "Non communiqué"}</p>
                         </div>
                         <div>
-                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">{tracking.container.departure}</h4>
                           <p>{container.departure_port || "Non communiqué"}</p>
-                          <p className="text-xs text-gray-500">ETD: {formatDate(container.etd)}</p>
+                          <p className="text-xs text-gray-500">
+                            {tracking.container.etd} {formatDate(container.etd)}
+                          </p>
                         </div>
                         <div>
-                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
+                          <h4 className="text-xs uppercase tracking-wide text-gray-500">{tracking.container.arrival}</h4>
                           <p>{container.arrival_port || "Non communiqué"}</p>
-                          <p className="text-xs text-gray-500">ETA: {formatDate(container.eta)}</p>
+                          <p className="text-xs text-gray-500">
+                            {tracking.container.eta} {formatDate(container.eta)}
+                          </p>
                         </div>
                       </div>
                     </>
@@ -337,14 +340,10 @@ export default function TrackingPage() {
                       <Badge variant="outline" className="font-mono text-xs px-2 py-1">
                         {order.container_code}
                       </Badge>
-                      <span className="text-muted-foreground">
-                        Ce conteneur est en cours de synchronisation avec nos systèmes.
-                      </span>
+                      <span className="text-muted-foreground">En cours de synchronisation...</span>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">
-                      Aucun conteneur n&apos;est actuellement associé à cette commande.
-                    </p>
+                    <p className="text-sm text-gray-500">Aucun conteneur associé.</p>
                   )}
                 </CardContent>
               </Card>
@@ -355,7 +354,7 @@ export default function TrackingPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   {getServiceTypeIcon(order.service_type)}
-                  Commande {order.order_number}
+                  {tracking.order.title} {order.order_number}
                 </CardTitle>
                 <CardDescription>
                   {getServiceTypeLabel(order.service_type)} • {order.origin} → {order.destination}
@@ -364,12 +363,12 @@ export default function TrackingPage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Informations client</h3>
+                    <h3 className="font-semibold text-gray-900 mb-2">{tracking.order.clientInfo}</h3>
                     <p className="text-sm text-gray-600">{order.client_name}</p>
                     <p className="text-sm text-gray-600">{order.client_email}</p>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Détails de l'expédition</h3>
+                    <h3 className="font-semibold text-gray-900 mb-2">{tracking.order.shipmentDetails}</h3>
                     <p className="text-sm text-gray-600">
                       <strong>Poids:</strong> {order.weight ? `${order.weight} kg` : 'Non spécifié'}
                     </p>
@@ -381,10 +380,10 @@ export default function TrackingPage() {
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Statut actuel</h3>
+                    <h3 className="font-semibold text-gray-900 mb-2">{tracking.order.currentStatus}</h3>
                     <div className="mb-2">{getStatusBadge(order.status)}</div>
                     <p className="text-sm text-gray-600">
-                      <strong>Dernière mise à jour:</strong> {new Date(order.updated_at).toLocaleDateString('fr-FR')}
+                      <strong>{tracking.order.lastUpdate}:</strong> {new Date(order.updated_at).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
                 </div>
@@ -396,11 +395,9 @@ export default function TrackingPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
-                  Historique des événements
+                  {tracking.events.title}
                 </CardTitle>
-                <CardDescription>
-                  Suivi détaillé de votre expédition
-                </CardDescription>
+                <CardDescription>{tracking.events.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 {trackingEvents.length > 0 ? (
@@ -438,7 +435,7 @@ export default function TrackingPage() {
                 ) : (
                   <div className="text-center py-8">
                     <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Aucun événement de suivi disponible pour cette commande</p>
+                    <p className="text-gray-500">{tracking.events.empty}</p>
                   </div>
                 )}
               </CardContent>
@@ -452,14 +449,9 @@ export default function TrackingPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Comment utiliser le suivi</h3>
-                <p className="text-gray-600 mb-4">
-                  Entrez votre numéro de suivi dans le champ ci-dessus pour voir l'état de votre expédition.
-                </p>
-                <div className="text-sm text-gray-500">
-                  <p>Votre numéro de suivi se trouve sur votre facture ou dans l'email de confirmation.</p>
-                  <p>Exemple de format: DN2024001234</p>
-                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{tracking.help.title}</h3>
+                <p className="text-gray-600 mb-4">{tracking.help.description}</p>
+                <div className="text-sm text-gray-500 whitespace-pre-line">{tracking.help.example}</div>
               </div>
             </CardContent>
           </Card>

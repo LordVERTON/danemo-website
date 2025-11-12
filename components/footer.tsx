@@ -1,6 +1,11 @@
+'use client'
+
 import Image from "next/image"
+import { useI18n } from "@/lib/i18n"
 
 export default function Footer() {
+  const { messages } = useI18n()
+
   return (
     <footer className="relative bg-gray-900 text-white py-12">
       {/* Background Image with Overlay */}
@@ -11,7 +16,7 @@ export default function Footer() {
 
       <div className="relative max-w-7xl mx-auto px-4">
         <div className="text-center">
-          <p className="text-sm">© 2025 Danemo Srl. Tous droits réservés.</p>
+          <p className="text-sm">{messages.footer.copyright}</p>
         </div>
       </div>
     </footer>

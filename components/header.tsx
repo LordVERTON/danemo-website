@@ -5,9 +5,12 @@ import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, Phone, Mail, Clock } from "lucide-react"
 import LanguageSwitcher from "@/components/language-switcher"
+import { useI18n } from "@/lib/i18n"
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { messages } = useI18n()
+  const header = messages.header
 
   return (
     <header className="relative">
@@ -17,20 +20,20 @@ export default function Header() {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <Clock className="w-4 h-4 text-gray-600" />
-              <span className="font-semibold">Nous sommes ouverts du Lun - Sam 9h- 18h</span>
+              <span className="font-semibold">{header.openHours}</span>
             </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <Mail className="w-4 h-4 text-gray-600" />
-              <a href="mailto:info@danemo.be" className="hover:text-orange-500">
-                info@danemo.be
+              <a href={`mailto:${header.contact.email}`} className="hover:text-orange-500">
+                {header.contact.email}
               </a>
             </div>
             <div className="flex items-center space-x-1">
               <Phone className="w-4 h-4 text-gray-600" />
-              <a href="tel:+32488645183" className="hover:text-orange-500">
-                +32488645183
+              <a href={`tel:${header.contact.phone}`} className="hover:text-orange-500">
+                {header.contact.phone}
               </a>
             </div>
             <div className="md:hidden">
@@ -55,25 +58,25 @@ export default function Header() {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-8">
               <Link href="/" className="text-gray-700 hover:text-orange-500 font-medium transition-colors">
-                Accueil
+                {header.nav.home}
               </Link>
               <Link href="/services" className="text-gray-700 hover:text-orange-500 font-medium transition-colors">
-                Services
+                {header.nav.services}
               </Link>
               <Link href="/tarifs" className="text-gray-700 hover:text-orange-500 font-medium transition-colors">
-                Tarifs
+                {header.nav.rates}
               </Link>
               <Link
                 href="/contactez-nous"
                 className="text-gray-700 hover:text-orange-500 font-medium transition-colors"
               >
-                Contactez-nous
+                {header.nav.contact}
               </Link>
               <Link href="/tracking" className="text-gray-700 hover:text-orange-500 font-medium transition-colors">
-                Tracking
+                {header.nav.tracking}
               </Link>
               <Link href="/blog" className="text-gray-700 hover:text-orange-500 font-medium transition-colors">
-                Blog
+                {header.nav.blog}
               </Link>
             </nav>
 
@@ -93,22 +96,22 @@ export default function Header() {
             <nav className="md:hidden mt-4 pb-4 border-t pt-4">
               <div className="flex flex-col space-y-4">
                 <Link href="/" className="text-gray-700 hover:text-orange-500 font-medium">
-                  Accueil
+                  {header.nav.home}
                 </Link>
                 <Link href="/services" className="text-gray-700 hover:text-orange-500 font-medium">
-                  Services
+                  {header.nav.services}
                 </Link>
                 <Link href="/tarifs" className="text-gray-700 hover:text-orange-500 font-medium">
-                  Tarifs
+                  {header.nav.rates}
                 </Link>
                 <Link href="/contactez-nous" className="text-gray-700 hover:text-orange-500 font-medium">
-                  Contactez-nous
+                  {header.nav.contact}
                 </Link>
                 <Link href="/tracking" className="text-gray-700 hover:text-orange-500 font-medium">
-                  Tracking
+                  {header.nav.tracking}
                 </Link>
                 <Link href="/blog" className="text-gray-700 hover:text-orange-500 font-medium">
-                  Blog
+                  {header.nav.blog}
                 </Link>
                 <div className="pt-4 border-t">
                   <LanguageSwitcher />

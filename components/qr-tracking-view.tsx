@@ -428,6 +428,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                   }
                   title="Scanner un QR Danemo"
                   description="Pointez la caméra vers le QR code du colis pour obtenir les informations."
+                  keepOpenAfterScan={true}
                 />
               </div>
             </form>

@@ -6,8 +6,11 @@ import { useState } from "react"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/lib/i18n"
 
 export default function ContactPage() {
+  const { messages } = useI18n()
+  const { title, subtitle, form, info } = messages.contactForm
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -36,10 +39,8 @@ export default function ContactPage() {
 
       <main className="py-16">
         <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-4xl font-bold text-center mb-4">Contactez-nous</h1>
-          <p className="text-center text-gray-600 text-lg mb-12 italic font-semibold">
-            N'hésitez pas à nous contacter pour tout renseignement complémentaire
-          </p>
+          <h1 className="text-4xl font-bold text-center mb-4">{title}</h1>
+          <p className="text-center text-gray-600 text-lg mb-12 italic font-semibold">{subtitle}</p>
 
           <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
             {/* Contact Info and Map */}
@@ -53,29 +54,26 @@ export default function ContactPage() {
               ></iframe>
 
               <div className="space-y-4">
-                <p className="font-semibold">
-                  Nous serons heureux de répondre à toutes vos questions. Contactez-nous par téléphone ou par mail et
-                  n'hésitez pas à venir nous rendre visite dans nos entrepôts.
-                </p>
+                <p className="font-semibold">{info.description}</p>
                 <div>
                   <p>
-                    <strong>Horaires :</strong> Lun - Sam : 09h - 18h
+                    <strong>{info.hours}</strong>
                   </p>
                 </div>
                 <div>
                   <p>
-                    <strong>Entrepôt :</strong> Avenue du port 108 - 110, 1000 Bruxelles, kai 299 - porte 2.60
+                    <strong>{info.warehouse}</strong>
                   </p>
                 </div>
                 <div>
                   <p>
-                    <strong>Tél :</strong>{" "}
+                    <strong>{info.phone}</strong>{" "}
                     <a href="tel:+32488645183" className="text-orange-500 hover:underline">
                       +32488645183
                     </a>
                   </p>
                   <p>
-                    <strong>Mail :</strong>{" "}
+                    <strong>{info.email}</strong>{" "}
                     <a href="mailto:info@danemo.be" className="text-orange-500 hover:underline">
                       info@danemo.be
                     </a>
@@ -86,10 +84,10 @@ export default function ContactPage() {
 
             {/* Contact Form */}
             <div>
-              <h2 className="text-2xl font-bold text-center mb-6">Message</h2>
+              <h2 className="text-2xl font-bold text-center mb-6">{info.title}</h2>
               <form onSubmit={handleSubmit} className="space-y-6 max-w-md mx-auto">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Votre nom et prénom :</label>
+                  <label className="block text-sm font-medium mb-2">{form.name}</label>
                   <input
                     type="text"
                     name="nom"
@@ -101,7 +99,7 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Adresse e-mail :</label>
+                  <label className="block text-sm font-medium mb-2">{form.email}</label>
                   <input
                     type="email"
                     name="email"
@@ -113,7 +111,7 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Sujet :</label>
+                  <label className="block text-sm font-medium mb-2">{form.subject}</label>
                   <input
                     type="text"
                     name="sujet"
@@ -125,7 +123,7 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Message :</label>
+                  <label className="block text-sm font-medium mb-2">{form.message}</label>
                   <textarea
                     name="message"
                     value={formData.message}
@@ -140,7 +138,7 @@ export default function ContactPage() {
                   type="submit"
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-md transition-colors"
                 >
-                  Soumettre
+                  {form.submit}
                 </Button>
               </form>
             </div>
