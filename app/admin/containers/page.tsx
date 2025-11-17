@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -23,6 +23,20 @@ interface Container {
   status: 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
   client_id?: string | null
   created_at?: string
+}
+
+interface ContainerOrder {
+  id: string
+  order_number: string
+  client_name: string
+  client_email?: string | null
+  service_type: string
+  origin: string
+  destination: string
+  status: string
+  value?: number | null
+  weight?: number | null
+  created_at: string
 }
 
 const containerStatusLabels: Record<Container['status'], string> = {
@@ -56,7 +70,7 @@ export default function ContainersPage() {
   const [selected, setSelected] = useState<Container | null>(null)
   const [events, setEvents] = useState<any[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
-  const [linkedInventory, setLinkedInventory] = useState<any[]>([])
+  const [linkedOrders, setLinkedOrders] = useState<ContainerOrder[]>([])
   const [inventoryLoading, setInventoryLoading] = useState(false)
   const [manualMessage, setManualMessage] = useState("")
   const [notifyLoading, setNotifyLoading] = useState(false)
@@ -102,16 +116,16 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
   const fetchLinkedInventory = async (container: Container) => {
     try {
       setInventoryLoading(true)
-      const res = await fetch('/api/inventory')
-      const json = await res.json()
-      if (json.success) {
-        const items = (json.data as any[]).filter(
-          (it) => it.container_id === container.id || it.container_code === container.code,
-        )
-        setLinkedInventory(items)
+      const response = await fetch(`/api/containers/${container.id}/inventory`)
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || "Impossible de charger les articles")
       }
-    } catch {}
-    finally {
+      setLinkedOrders(result.data || [])
+    } catch (error) {
+      console.error('Error fetching linked inventory', error)
+      setLinkedOrders([])
+    } finally {
       setInventoryLoading(false)
     }
   }
@@ -188,6 +202,18 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
     !!containerNotificationInfo &&
     !!selected &&
     containerNotificationInfo.status === selected.status
+
+  const ordersByClient = useMemo(() => {
+    const groups = new Map<string, ContainerOrder[]>()
+    linkedOrders.forEach((order) => {
+      const key = order.client_name?.trim() || "Client non renseigné"
+      if (!groups.has(key)) {
+        groups.set(key, [])
+      }
+      groups.get(key)!.push(order)
+    })
+    return Array.from(groups.entries())
+  }, [linkedOrders])
 
   const submit = async () => {
     const payload = {
@@ -333,53 +359,102 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
         </Card>
 
         <Dialog open={trackingOpen} onOpenChange={handleTrackingDialogChange}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-4xl w-full sm:w-[92vw] lg:w-[80vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle>Suivi du conteneur {selected?.code}</DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">Suivi du conteneur {selected?.code}</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                Consulte l’avancement, notifie les clients et visualise les commandes liées.
+              </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 sm:space-y-6">
               {selected && (
-                <div className="space-y-3 rounded-md border border-orange-100 bg-orange-50/60 p-4">
-                  <div>
-                    <Label htmlFor="notification-message">Message de notification (optionnel)</Label>
-                    <Textarea
-                      id="notification-message"
-                      placeholder="Ajoute un mot pour les clients (facultatif)…"
-                      value={manualMessage}
-                      onChange={(e) => setManualMessage(e.target.value)}
-                      rows={3}
-                    />
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-gray-100 bg-white/80 p-4 space-y-2">
+                      <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Informations conteneur</p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Code</p>
+                          <p className="font-semibold text-base">{selected.code}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Statut</p>
+                          <p className="font-semibold capitalize">{selected.status.replace("_", " ")}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Navire</p>
+                          <p className="font-medium">{selected.vessel || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Client assigné</p>
+                          <p className="font-medium">{selected.client_id ? "Client associé" : "Non défini"}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-gray-100 bg-white/80 p-4 space-y-2">
+                      <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Trajet & planning</p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Départ</p>
+                          <p className="font-medium">{selected.departure_port || "—"}</p>
+                          <p className="text-xs text-muted-foreground">{selected.etd || "Date inconnue"}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Arrivée</p>
+                          <p className="font-medium">{selected.arrival_port || "—"}</p>
+                          <p className="text-xs text-muted-foreground">{selected.eta || "Date inconnue"}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Button
-                      onClick={handleNotifySelectedContainer}
-                      disabled={notifyLoading}
-                      className="flex items-center gap-2"
-                    >
-                      {notifyLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                      Notifier les clients
-                    </Button>
-                    {notifySuccess && (
-                      <Alert className="flex-1 min-w-[200px] border-green-200 bg-green-50 text-green-800">
-                        <AlertDescription>{notifySuccess}</AlertDescription>
-                      </Alert>
-                    )}
-                    {notifyError && (
-                      <Alert variant="destructive" className="flex-1 min-w-[200px]">
-                        <AlertDescription>{notifyError}</AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {containerAlreadyNotified && containerNotificationInfo
-                      ? `Les clients ont déjà été notifiés du statut "${formatContainerStatus(selected.status)}" le ${formatDateTime(containerNotificationInfo.timestamp)}.`
-                      : containerNotificationInfo
-                      ? `Dernière notification envoyée : statut "${formatContainerStatus(containerNotificationInfo.status)}" le ${formatDateTime(containerNotificationInfo.timestamp)}.`
-                      : "Aucune notification envoyée via cette interface pour le moment."}
+
+                  <div className="space-y-3 rounded-lg border border-orange-100 bg-orange-50/60 p-4">
+                    <div>
+                      <Label htmlFor="notification-message" className="text-sm font-medium">
+                        Message de notification (optionnel)
+                      </Label>
+                      <Textarea
+                        id="notification-message"
+                        placeholder="Ajoute un mot pour les clients (facultatif)…"
+                        value={manualMessage}
+                        onChange={(e) => setManualMessage(e.target.value)}
+                        rows={3}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                      <div className="flex flex-wrap items-center gap-3 flex-1">
+                        <Button
+                          onClick={handleNotifySelectedContainer}
+                          disabled={notifyLoading}
+                          className="flex items-center gap-2"
+                        >
+                          {notifyLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                          Notifier les clients
+                        </Button>
+                        {notifySuccess && (
+                          <Alert className="flex-1 min-w-[200px] border-green-200 bg-green-50 text-green-800">
+                            <AlertDescription>{notifySuccess}</AlertDescription>
+                          </Alert>
+                        )}
+                        {notifyError && (
+                          <Alert variant="destructive" className="flex-1 min-w-[200px]">
+                            <AlertDescription>{notifyError}</AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {containerAlreadyNotified && containerNotificationInfo
+                          ? `Clients notifiés du statut "${formatContainerStatus(selected.status)}" le ${formatDateTime(containerNotificationInfo.timestamp)}.`
+                          : containerNotificationInfo
+                          ? `Dernière notification : "${formatContainerStatus(containerNotificationInfo.status)}" le ${formatDateTime(containerNotificationInfo.timestamp)}.`
+                          : "Aucune notification envoyée pour ce conteneur pour l’instant."}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -389,7 +464,7 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
               ) : events.length === 0 ? (
                 <div className="text-sm text-muted-foreground">Aucun événement</div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 rounded-lg border border-gray-100 bg-white/70 p-3 max-h-[320px] overflow-y-auto">
                   {events.map((ev, idx) => (
                     <div key={ev.id || idx} className="p-3 border rounded-md">
                       <div className="flex items-center gap-2 text-sm">
@@ -412,38 +487,55 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
                 </div>
               )}
 
-              <div className="pt-2">
-                <h3 className="text-base font-semibold mb-2">Articles liés</h3>
+              <div className="pt-2 space-y-3">
+                <h3 className="text-base font-semibold">Commandes liées</h3>
                 {inventoryLoading ? (
-                  <div className="text-sm text-muted-foreground">Chargement des articles...</div>
-                ) : linkedInventory.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Aucun article assigné à ce conteneur</div>
+                  <div className="text-sm text-muted-foreground">Chargement des commandes...</div>
+                ) : ordersByClient.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Aucune commande assignée à ce conteneur</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Référence</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Client</TableHead>
-                          <TableHead>Statut</TableHead>
-                          <TableHead>Localisation</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {linkedInventory.map((it) => (
-                          <TableRow key={it.id}>
-                            <TableCell className="font-mono text-xs">{it.reference}</TableCell>
-                            <TableCell className="capitalize">{it.type}</TableCell>
-                            <TableCell>{it.client}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{it.status}</Badge>
-                            </TableCell>
-                            <TableCell className="max-w-xs truncate">{it.location}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-4">
+                    {ordersByClient.map(([clientName, orders]) => (
+                      <div key={clientName} className="rounded-lg border border-gray-100 bg-gray-50/60 p-3 space-y-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold">{clientName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {orders.length} commande{orders.length > 1 ? "s" : ""} liée{orders.length > 1 ? "s" : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <Table className="w-full text-sm">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Numéro</TableHead>
+                                <TableHead>Service</TableHead>
+                                <TableHead>Trajet</TableHead>
+                                <TableHead>Statut</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {orders.map((order) => (
+                                <TableRow key={order.id}>
+                                  <TableCell className="font-mono text-xs">{order.order_number}</TableCell>
+                                  <TableCell className="capitalize">{order.service_type.replace("_", " ")}</TableCell>
+                                  <TableCell className="text-xs">
+                                    <div>{order.origin}</div>
+                                    <div className="text-muted-foreground">→ {order.destination}</div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="capitalize">
+                                      {order.status.replace("_", " ")}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

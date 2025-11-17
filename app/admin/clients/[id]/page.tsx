@@ -20,6 +20,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -47,13 +48,15 @@ import {
   Plus,
   QrCode,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 import { generateInvoice, defaultCompanyData, InvoiceData } from "@/lib/invoice-utils"
 import { generateProformaDocx, generateProformaPdf } from "@/lib/proforma-utils"
 import { generateQRPrintPDF } from "@/lib/qr-print-utils"
 import QRCode from "qrcode"
+import { supabase } from "@/lib/supabaseClient"
 
 interface Order {
   id: string
@@ -61,6 +64,17 @@ interface Order {
   client_name: string
   client_email: string
   client_phone?: string
+  client_address?: string
+  client_city?: string
+  client_postal_code?: string
+  client_country?: string
+  recipient_name?: string
+  recipient_email?: string
+  recipient_phone?: string
+  recipient_address?: string
+  recipient_city?: string
+  recipient_postal_code?: string
+  recipient_country?: string
   service_type: string
   origin: string
   destination: string
@@ -93,6 +107,41 @@ interface Customer {
   created_at: string
   qr_code?: string | null
 }
+
+interface ClientSummary {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  address: string | null
+  city: string | null
+  postal_code: string | null
+  country: string | null
+}
+
+type ClientRole = "sender" | "recipient" | "both" | "none"
+
+const getDefaultNewOrderData = (customer: Customer | null) => ({
+  client_name: customer?.name || "",
+  client_email: customer?.email || "",
+  client_phone: customer?.phone || "",
+  recipient_name: customer?.name || "",
+  recipient_email: customer?.email || "",
+  recipient_phone: customer?.phone || "",
+  recipient_address: customer?.address || "",
+  recipient_city: customer?.city || "",
+  recipient_postal_code: customer?.postal_code || "",
+  recipient_country: customer?.country || "",
+  service_type: "",
+  origin: "",
+  destination: "",
+  weight: "",
+  value: "",
+  estimated_delivery: "",
+  container_id: "",
+  container_code: "",
+  customer_id: customer?.id || "",
+})
 
 // Composant pour afficher le QR code
 function QRCodeDisplay({ value }: { value: string }) {
@@ -149,6 +198,7 @@ export default function ClientDetailPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [error, setError] = useState("")
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  const [isGeneratingClientInvoice, setIsGeneratingClientInvoice] = useState(false)
   const [containers, setContainers] = useState<Array<{ 
     id: string; 
     code: string; 
@@ -171,15 +221,23 @@ export default function ClientDetailPage() {
   })
   
   // Formulaire de création de commande
-  const [newOrder, setNewOrder] = useState({
-    service_type: "",
-    origin: "",
-    destination: "",
-    weight: "",
-    value: "",
-    estimated_delivery: "",
-    container_id: "",
-  })
+  const [newOrder, setNewOrder] = useState(getDefaultNewOrderData(null))
+  const [clients, setClients] = useState<ClientSummary[]>([])
+  const [isClientsLoading, setIsClientsLoading] = useState(false)
+  const [clientsError, setClientsError] = useState<string | null>(null)
+  const [createSenderClientId, setCreateSenderClientId] = useState<string>("custom")
+  const [createRecipientClientId, setCreateRecipientClientId] = useState<string>("custom")
+  const [isCreateSenderDetailsOpen, setIsCreateSenderDetailsOpen] = useState(false)
+  const [isCreateRecipientDetailsOpen, setIsCreateRecipientDetailsOpen] = useState(false)
+  const [useClientForSender, setUseClientForSender] = useState(false)
+  const [useClientForRecipient, setUseClientForRecipient] = useState(false)
+  const [createClientRole, setCreateClientRole] = useState<ClientRole>("sender")
+
+  const findClientIdByEmail = (email?: string | null) => {
+    if (!email) return undefined
+    const normalized = email.toLowerCase()
+    return clients.find((client) => client.email?.toLowerCase() === normalized)?.id
+  }
 
   // Formulaire de modification
   const [editOrder, setEditOrder] = useState({
@@ -203,6 +261,133 @@ export default function ClientDetailPage() {
       fetchContainers()
     }
   }, [customerId])
+
+  useEffect(() => {
+    fetchClients()
+  }, [])
+
+  useEffect(() => {
+    if (customer) {
+      setNewOrder(getDefaultNewOrderData(customer))
+      setCreateSenderClientId(customer.id)
+      setUseClientForSender(true)
+      setUseClientForRecipient(false)
+      setCreateRecipientClientId("custom")
+      setCreateClientRole("sender")
+    } else {
+      setNewOrder(getDefaultNewOrderData(null))
+      setCreateSenderClientId("custom")
+      setCreateRecipientClientId("custom")
+      setUseClientForSender(false)
+      setUseClientForRecipient(false)
+      setCreateClientRole("sender")
+    }
+  }, [customer])
+
+  useEffect(() => {
+    if (createSenderClientId !== "custom" || clients.length === 0) return
+    if (!newOrder.customer_id) return
+    if (clients.some((client) => client.id === newOrder.customer_id)) {
+      setCreateSenderClientId(newOrder.customer_id)
+    }
+  }, [clients, newOrder.customer_id, createSenderClientId])
+
+  useEffect(() => {
+    if (createRecipientClientId !== "custom" || clients.length === 0) return
+    const match = findClientIdByEmail(newOrder.recipient_email)
+    if (match) {
+      setCreateRecipientClientId(match)
+    }
+  }, [clients, newOrder.recipient_email, createRecipientClientId])
+
+  useEffect(() => {
+    if (!newOrder.customer_id) {
+      if (useClientForSender) setUseClientForSender(false)
+      if (useClientForRecipient) setUseClientForRecipient(false)
+      return
+    }
+    const shouldSender = createClientRole === "sender" || createClientRole === "both"
+    const shouldRecipient = createClientRole === "recipient" || createClientRole === "both"
+    if (useClientForSender !== shouldSender) {
+      setUseClientForSender(shouldSender)
+    }
+    if (useClientForRecipient !== shouldRecipient) {
+      setUseClientForRecipient(shouldRecipient)
+    }
+  }, [createClientRole, newOrder.customer_id, useClientForSender, useClientForRecipient])
+
+  useEffect(() => {
+    if (!newOrder.customer_id) return
+    const client = clients.find((c) => c.id === newOrder.customer_id)
+    if (!client) return
+
+    if (useClientForSender) {
+      setNewOrder((prev) => {
+        const nextName = client.name || ""
+        const nextEmail = client.email || ""
+        const nextPhone = client.phone || ""
+        if (
+          prev.client_name === nextName &&
+          prev.client_email === nextEmail &&
+          (prev.client_phone || "") === (nextPhone || "")
+        ) {
+          return prev
+        }
+        return {
+          ...prev,
+          client_name: nextName,
+          client_email: nextEmail,
+          client_phone: nextPhone || "",
+        }
+      })
+      if (createSenderClientId !== client.id) {
+        setCreateSenderClientId(client.id)
+      }
+    }
+
+    if (useClientForRecipient) {
+      setNewOrder((prev) => {
+        const nextName = client.name || ""
+        const nextEmail = client.email || ""
+        const nextPhone = client.phone || ""
+        const nextAddress = client.address || ""
+        const nextCity = client.city || ""
+        const nextPostal = client.postal_code || ""
+        const nextCountry = client.country || ""
+        if (
+          prev.recipient_name === nextName &&
+          prev.recipient_email === nextEmail &&
+          (prev.recipient_phone || "") === (nextPhone || "") &&
+          (prev.recipient_address || "") === (nextAddress || "") &&
+          (prev.recipient_city || "") === (nextCity || "") &&
+          (prev.recipient_postal_code || "") === (nextPostal || "") &&
+          (prev.recipient_country || "") === (nextCountry || "")
+        ) {
+          return prev
+        }
+        return {
+          ...prev,
+          recipient_name: nextName,
+          recipient_email: nextEmail,
+          recipient_phone: nextPhone || "",
+          recipient_address: nextAddress,
+          recipient_city: nextCity,
+          recipient_postal_code: nextPostal,
+          recipient_country: nextCountry,
+        }
+      })
+      if (createRecipientClientId !== client.id) {
+        setCreateRecipientClientId(client.id)
+      }
+    }
+  }, [
+    clients,
+    createSenderClientId,
+    createRecipientClientId,
+    newOrder.customer_id,
+    useClientForSender,
+    useClientForRecipient,
+  ])
 
   const fetchCustomer = async () => {
     try {
@@ -248,6 +433,37 @@ export default function ClientDetailPage() {
     } catch (error) {
       console.error('Error fetching containers:', error)
       setContainers([])
+    }
+  }
+
+  const fetchClients = async () => {
+    try {
+      setIsClientsLoading(true)
+      setClientsError(null)
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id,name,email,phone,address,city,postal_code,country,status')
+        .order('name', { ascending: true })
+      if (error) throw error
+      const normalized = (data || [])
+        .filter((customer) => customer.status !== 'archived')
+        .map((customer) => ({
+          id: customer.id,
+          name: customer.name,
+          email: customer.email || null,
+          phone: customer.phone || null,
+          address: customer.address || null,
+          city: customer.city || null,
+          postal_code: customer.postal_code || null,
+          country: customer.country || null,
+        }))
+      setClients(normalized)
+    } catch (error) {
+      console.error('Error fetching clients:', error)
+      setClients([])
+      setClientsError("Impossible de charger la liste des clients.")
+    } finally {
+      setIsClientsLoading(false)
     }
   }
 
@@ -312,6 +528,168 @@ export default function ClientDetailPage() {
     } catch (error) {
       console.error('Error creating container:', error)
       setError('Erreur de connexion')
+    }
+  }
+
+  const copyClientToRecipientForCreate = () => {
+    const fallbackCustomer: ClientSummary | null = customer
+      ? {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone || null,
+          address: customer.address || null,
+          city: customer.city || null,
+          postal_code: customer.postal_code || null,
+          country: customer.country || null,
+        }
+      : null
+    const senderClient =
+      clients.find((client) => client.id === createSenderClientId) ||
+      selectedCreateCustomer ||
+      fallbackCustomer
+    setNewOrder((prev) => ({
+      ...prev,
+      recipient_name: prev.client_name,
+      recipient_email: prev.client_email,
+      recipient_phone: prev.client_phone,
+      recipient_address: senderClient?.address || prev.recipient_address,
+      recipient_city: senderClient?.city || prev.recipient_city,
+      recipient_postal_code: senderClient?.postal_code || prev.recipient_postal_code,
+      recipient_country: senderClient?.country || prev.recipient_country,
+    }))
+    setCreateRecipientClientId(createSenderClientId)
+    if (newOrder.customer_id) {
+      setCreateClientRole("both")
+    }
+  }
+
+  const handleCreateOrderClientSelect = (value: string) => {
+    if (value === "custom") {
+      setNewOrder((prev) => ({
+        ...prev,
+        customer_id: "",
+      }))
+      setCreateClientRole("none")
+      setCreateSenderClientId("custom")
+      setCreateRecipientClientId("custom")
+      return
+    }
+    const client = clients.find((c) => c.id === value)
+    const nextRole: ClientRole =
+      createClientRole === "none" || !client ? "sender" : createClientRole
+    const shouldUseSender = nextRole === "sender" || nextRole === "both"
+    const shouldUseRecipient = nextRole === "recipient" || nextRole === "both"
+
+    setNewOrder((prev) => ({
+      ...prev,
+      customer_id: value,
+      ...(shouldUseSender || !prev.client_name
+        ? {
+            client_name: client?.name || "",
+            client_email: client?.email || "",
+            client_phone: client?.phone || "",
+          }
+        : {}),
+      ...(shouldUseRecipient || (!prev.recipient_name && !prev.recipient_email && !prev.recipient_phone)
+        ? {
+            recipient_name: client?.name || "",
+            recipient_email: client?.email || "",
+            recipient_phone: client?.phone || "",
+            recipient_address: client?.address || "",
+            recipient_city: client?.city || "",
+            recipient_postal_code: client?.postal_code || "",
+            recipient_country: client?.country || "",
+          }
+        : {}),
+    }))
+    if (shouldUseSender && value !== createSenderClientId) {
+      setCreateSenderClientId(value)
+    }
+    if (shouldUseRecipient && value !== createRecipientClientId) {
+      setCreateRecipientClientId(value)
+    }
+    setCreateClientRole(nextRole)
+  }
+
+  const handleCreateClientRoleChange = (role: ClientRole) => {
+    if (!newOrder.customer_id && role !== "none") {
+      setCreateClientRole("none")
+      return
+    }
+    setCreateClientRole(role)
+    if (!newOrder.customer_id) return
+    if ((role === "sender" || role === "both") && createSenderClientId !== newOrder.customer_id) {
+      setCreateSenderClientId(newOrder.customer_id)
+    }
+    if ((role === "recipient" || role === "both") && createRecipientClientId !== newOrder.customer_id) {
+      setCreateRecipientClientId(newOrder.customer_id)
+    }
+    if (role === "none") {
+      setCreateSenderClientId("custom")
+      setCreateRecipientClientId("custom")
+    }
+  }
+
+  const handleCreateSenderSelect = (value: string) => {
+    setCreateSenderClientId(value)
+    if (value === "custom") {
+      return
+    }
+    const client = clients.find((c) => c.id === value)
+    if (client) {
+      setNewOrder((prev) => ({
+        ...prev,
+        client_name: client.name || "",
+        client_email: client.email || "",
+        client_phone: client.phone || "",
+        ...(createClientRole === "sender" || createClientRole === "both"
+          ? { customer_id: client.id }
+          : {}),
+      }))
+    }
+  }
+
+  const handleCreateRecipientSelect = (value: string) => {
+    setCreateRecipientClientId(value)
+    if (value === "custom") return
+    const client = clients.find((c) => c.id === value)
+    if (client) {
+      setNewOrder((prev) => ({
+        ...prev,
+        recipient_name: client.name || "",
+        recipient_email: client.email || "",
+        recipient_phone: client.phone || "",
+        recipient_address: client.address || "",
+        recipient_city: client.city || "",
+        recipient_postal_code: client.postal_code || "",
+        recipient_country: client.country || "",
+        ...(createClientRole === "recipient" || createClientRole === "both"
+          ? { customer_id: client.id }
+          : {}),
+      }))
+    }
+  }
+
+  const handleCreateDialogChange = (open: boolean) => {
+    setIsCreateOrderDialogOpen(open)
+    if (!open) {
+      if (customer) {
+        setNewOrder(getDefaultNewOrderData(customer))
+        setCreateSenderClientId(customer.id)
+        setUseClientForSender(true)
+        setUseClientForRecipient(false)
+        setCreateRecipientClientId("custom")
+      } else {
+        setNewOrder(getDefaultNewOrderData(null))
+        setCreateSenderClientId("custom")
+        setCreateRecipientClientId("custom")
+        setUseClientForSender(false)
+        setUseClientForRecipient(false)
+      }
+      setCreateClientRole("sender")
+      setIsCreateSenderDetailsOpen(false)
+      setIsCreateRecipientDetailsOpen(false)
     }
   }
 
@@ -406,30 +784,52 @@ export default function ClientDetailPage() {
 
   const handleCreateOrder = async (e: React.FormEvent, printQR: boolean = false) => {
     e.preventDefault()
-    if (!customer) return
     setError("")
     
     try {
-      // Étape 1: Créer la commande dans la base de données
+      if (!newOrder.client_name.trim() || !newOrder.client_email.trim()) {
+        setError("Renseigne le nom et l’adresse email de l’expéditeur.")
+        return
+      }
+      if (!newOrder.service_type) {
+        setError("Sélectionne un type de service pour la commande.")
+        return
+      }
+      const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
+      const recipientName = newOrder.recipient_name?.trim() || newOrder.client_name
+      const recipientEmail = newOrder.recipient_email?.trim() || newOrder.client_email
+      const recipientPhone = newOrder.recipient_phone?.trim() || newOrder.client_phone || ""
+      const recipientAddress = newOrder.recipient_address?.trim() || ""
+      const recipientCity = newOrder.recipient_city?.trim() || ""
+      const recipientPostalCode = newOrder.recipient_postal_code?.trim() || ""
+      const recipientCountry = newOrder.recipient_country?.trim() || ""
+      const orderData = {
+        ...newOrder,
+        client_name: newOrder.client_name.trim(),
+        client_email: newOrder.client_email.trim(),
+        client_phone: newOrder.client_phone?.trim() || "",
+        recipient_name: recipientName,
+        recipient_email: recipientEmail,
+        recipient_phone: recipientPhone,
+        recipient_address: recipientAddress || null,
+        recipient_city: recipientCity || null,
+        recipient_postal_code: recipientPostalCode || null,
+        recipient_country: recipientCountry || null,
+        weight: newOrder.weight ? parseFloat(newOrder.weight) : null,
+        value: newOrder.value ? parseFloat(newOrder.value) : null,
+        estimated_delivery: newOrder.estimated_delivery || null,
+        container_id: newOrder.container_id || null,
+        container_code: selectedContainer?.code || null,
+        container_status: selectedContainer?.status || null,
+        customer_id: newOrder.customer_id || customer?.id || null,
+      }
+
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          client_name: customer.name,
-          client_email: customer.email,
-          client_phone: customer.phone || null,
-          service_type: newOrder.service_type,
-          origin: newOrder.origin,
-          destination: newOrder.destination,
-          weight: newOrder.weight ? parseFloat(newOrder.weight) : null,
-          value: newOrder.value ? parseFloat(newOrder.value) : null,
-          estimated_delivery: newOrder.estimated_delivery || null,
-          container_id: newOrder.container_id || null,
-          container_code: containers.find(c => c.id === newOrder.container_id)?.code || null,
-          customer_id: customer.id,
-        }),
+        body: JSON.stringify(orderData),
       })
 
       const result = await response.json()
@@ -439,25 +839,17 @@ export default function ClientDetailPage() {
         return
       }
 
-      // La commande a été créée avec succès
       const createdOrder = result.data
-      
-      // Étape 2: Réinitialiser le formulaire et fermer la modal
-      setNewOrder({
-        service_type: "",
-        origin: "",
-        destination: "",
-        weight: "",
-        value: "",
-        estimated_delivery: "",
-        container_id: "",
-      })
+      setNewOrder(getDefaultNewOrderData(customer || null))
+      setCreateSenderClientId(customer?.id || "custom")
+      setCreateRecipientClientId("custom")
+      setCreateClientRole("sender")
+      setUseClientForSender(!!customer)
+      setUseClientForRecipient(false)
       setIsCreateOrderDialogOpen(false)
       
-      // Étape 3: Rafraîchir les données du client pour afficher la nouvelle commande
       await fetchCustomer()
       
-      // Étape 4: Générer et imprimer le QR code si demandé (après le rafraîchissement)
       if (printQR && createdOrder?.qr_code) {
         try {
           await generateQRPrintPDF({
@@ -470,7 +862,6 @@ export default function ClientDetailPage() {
           })
         } catch (error) {
           console.error('Erreur lors de la génération du QR code:', error)
-          // Ne pas bloquer - la commande est déjà créée et affichée
           setError('Commande créée avec succès, mais erreur lors de l\'impression du QR code')
         }
       }
@@ -479,6 +870,108 @@ export default function ClientDetailPage() {
       setError('Erreur de connexion lors de la création de la commande')
     }
   }
+
+  const handleGenerateClientInvoice = async () => {
+    if (!customer) {
+      setError("Impossible de retrouver ce client.")
+      return
+    }
+    if (orders.length === 0) {
+      setError("Ce client n’a pas encore de commande à facturer.")
+      return
+    }
+
+    try {
+      setIsGeneratingClientInvoice(true)
+      setError("")
+
+      const ordersForInvoice = [...orders].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
+      const referenceOrder = ordersForInvoice[0]
+      const totalValue = ordersForInvoice.reduce((sum, order) => sum + (Number(order.value) || 0), 0)
+      const totalWeight = ordersForInvoice.reduce((sum, order) => sum + (Number(order.weight) || 0), 0)
+      const invoiceNumber = `INV-${customer.id}-${Date.now()}`
+
+      const syntheticOrder: Order = {
+        ...referenceOrder,
+        id: `bulk-${customer.id}`,
+        order_number: invoiceNumber,
+        client_name: customer.name,
+        client_email: customer.email,
+        client_phone: customer.phone || undefined,
+        client_address: customer.address ?? undefined,
+        client_city: customer.city ?? undefined,
+        client_postal_code: customer.postal_code ?? undefined,
+        client_country: customer.country ?? undefined,
+        recipient_name: customer.name,
+        recipient_email: customer.email,
+        recipient_phone: customer.phone || undefined,
+        recipient_address: customer.address ?? undefined,
+        recipient_city: customer.city ?? undefined,
+        recipient_postal_code: customer.postal_code ?? undefined,
+        recipient_country: customer.country ?? undefined,
+        service_type: ordersForInvoice.length > 1 ? "Services multiples" : referenceOrder.service_type,
+        origin: ordersForInvoice.length > 1 ? "Multiples" : referenceOrder.origin,
+        destination: ordersForInvoice.length > 1 ? "Multiples" : referenceOrder.destination,
+        weight: totalWeight || referenceOrder.weight,
+        value: totalValue,
+        status: referenceOrder.status,
+        created_at: referenceOrder.created_at,
+        updated_at: referenceOrder.updated_at,
+        container_id: referenceOrder.container_id,
+        container_code: referenceOrder.container_code,
+        container_status: referenceOrder.container_status,
+        qr_code: referenceOrder.qr_code,
+      }
+
+      const items = ordersForInvoice.map((order) => ({
+        description: `${order.order_number} • ${getServiceTypeLabel(order.service_type)} • ${order.origin} → ${order.destination}`,
+        quantity: 1,
+        unitPrice: Number(order.value) || 0,
+        total: Number(order.value) || 0,
+      }))
+
+      await generateInvoice({
+        order: syntheticOrder,
+        company: defaultCompanyData,
+        invoiceNumber,
+        issueDate: new Date().toISOString(),
+        billingAddress: {
+          name: customer.name,
+          address: customer.address || undefined,
+          postal_code: customer.postal_code || undefined,
+          city: customer.city || undefined,
+          country: customer.country || undefined,
+        },
+        shippingAddress: {
+          name: customer.name,
+          address: customer.address || undefined,
+          postal_code: customer.postal_code || undefined,
+          city: customer.city || undefined,
+          country: customer.country || undefined,
+        },
+        paymentMethod: "Paiement groupé - voir référence facture",
+        items,
+      })
+    } catch (error) {
+      console.error('Error generating client invoice:', error)
+      setError("Erreur lors de la génération de la facture globale.")
+    } finally {
+      setIsGeneratingClientInvoice(false)
+    }
+  }
+
+  const selectedCreateCustomer = newOrder.customer_id
+    ? clients.find((client) => client.id === newOrder.customer_id)
+    : null
+
+  const clientRoleChoices: Array<{ value: ClientRole; label: string }> = [
+    { value: "sender", label: "Client expéditeur" },
+    { value: "recipient", label: "Client destinataire" },
+    { value: "both", label: "Client expéditeur & destinataire" },
+    { value: "none", label: "Client ni expéditeur ni destinataire" },
+  ]
 
   const handleGenerateInvoice = async (order: Order) => {
     try {
@@ -710,7 +1203,7 @@ export default function ClientDetailPage() {
         </Card>
 
         {/* Statistiques */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Commandes</CardTitle>
@@ -734,8 +1227,8 @@ export default function ClientDetailPage() {
         {/* Filtres */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="w-full flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
@@ -746,10 +1239,13 @@ export default function ClientDetailPage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Filter className="h-4 w-4 text-muted-foreground" />
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Filter className="h-4 w-4" />
+                  <span className="font-medium sm:hidden">Filtrer</span>
+                </div>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filtrer par statut" />
                   </SelectTrigger>
                   <SelectContent>
@@ -769,7 +1265,7 @@ export default function ClientDetailPage() {
         {/* Table des commandes */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
                 Commandes ({filteredOrders.length})
@@ -777,14 +1273,15 @@ export default function ClientDetailPage() {
               <Button onClick={async () => {
                 await fetchContainers()
                 setIsCreateOrderDialogOpen(true)
-              }}>
+              }} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Ajouter une commande
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
+            <div className="w-full overflow-x-auto">
+            <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Numéro</TableHead>
@@ -889,6 +1386,30 @@ export default function ClientDetailPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
+            <div className="mt-4 border-t pt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <p className="text-sm text-muted-foreground">
+                Génère une facture récapitulative pour toutes les commandes de ce client.
+              </p>
+              <Button
+                type="button"
+                className="w-full sm:w-auto flex items-center gap-2"
+                onClick={handleGenerateClientInvoice}
+                disabled={isGeneratingClientInvoice || orders.length === 0}
+              >
+                {isGeneratingClientInvoice ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    Générer facture
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -1205,177 +1726,672 @@ export default function ClientDetailPage() {
         </Dialog>
 
         {/* Dialog de création de commande */}
-        <Dialog open={isCreateOrderDialogOpen} onOpenChange={setIsCreateOrderDialogOpen}>
-          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Ajouter une commande</DialogTitle>
-              <DialogDescription>
-                Créez une nouvelle commande pour {customer?.name}
+        <Dialog open={isCreateOrderDialogOpen} onOpenChange={handleCreateDialogChange}>
+          <DialogContent className="max-w-4xl w-full sm:w-[92vw] lg:w-[80vw] max-h-[90vh] overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out p-4 sm:p-6">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="text-lg sm:text-xl">Créer une nouvelle commande</DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
+                Remplissez les informations pour créer une nouvelle commande
               </DialogDescription>
+              {currentUser && (
+                <div className="mt-2 text-xs sm:text-sm text-muted-foreground">
+                  Créé par : <span className="font-medium">{currentUser.name}</span>
+                </div>
+              )}
             </DialogHeader>
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="mb-4">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <form onSubmit={handleCreateOrder} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="new_service_type">Type de service *</Label>
-                  <Select
-                    value={newOrder.service_type}
-                    onValueChange={(value) => setNewOrder({ ...newOrder, service_type: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fret_maritime">Fret maritime</SelectItem>
-                      <SelectItem value="fret_aerien">Fret aérien</SelectItem>
-                      <SelectItem value="demenagement">Déménagement</SelectItem>
-                      <SelectItem value="colis">Colis</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="new_container_id">Conteneur</Label>
-                  <Select
-                    value={newOrder.container_id || "none"}
-                    onValueChange={(value) => setNewOrder({ ...newOrder, container_id: value === "none" ? "" : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Aucun" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Aucun</SelectItem>
-                      {containers.length === 0 ? (
-                        <SelectItem value="no-containers" disabled>
-                          Aucun conteneur disponible
-                        </SelectItem>
-                      ) : (
-                        containers.map((container) => (
-                          <SelectItem key={container.id} value={container.id}>
-                            {container.code} {container.status && `(${container.status.replace(/_/g, " ")})`}
+            <form onSubmit={handleCreateOrder} className="space-y-4 sm:space-y-6">
+              <div className="space-y-4 sm:space-y-6 rounded-lg border border-orange-100 bg-orange-50/20 p-4">
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)] sm:items-start">
+                  <div className="space-y-2">
+                    <Label htmlFor="order_customer">Client associé</Label>
+                    <Select
+                      value={newOrder.customer_id || "custom"}
+                      onValueChange={handleCreateOrderClientSelect}
+                    >
+                      <SelectTrigger id="order_customer" className="w-full text-left">
+                        <SelectValue placeholder="Associer la commande à un client" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Client personnalisé</SelectItem>
+                        {isClientsLoading && (
+                          <SelectItem value="loading" disabled>
+                            Chargement...
                           </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 w-full"
-                    onClick={() => setIsCreateContainerDialogOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Créer un nouveau conteneur
-                  </Button>
-                  {newOrder.container_id && (() => {
-                    const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
-                    return (
-                      <div className="mt-2 p-2 bg-muted rounded-md">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {selectedContainer?.code || "N/A"}
-                          </Badge>
-                          {selectedContainer?.status && (
-                            <Badge variant="secondary" className="text-xs">
-                              {selectedContainer.status.replace(/_/g, " ")}
-                            </Badge>
-                          )}
-                        </div>
-                        {selectedContainer && (
-                          <div className="text-xs text-muted-foreground space-y-0.5">
-                            {selectedContainer.vessel && (
-                              <div>Navire: <span className="font-medium">{selectedContainer.vessel}</span></div>
-                            )}
-                            {selectedContainer.departure_port && (
-                              <div>Départ: <span className="font-medium">{selectedContainer.departure_port}</span></div>
-                            )}
-                            {selectedContainer.arrival_port && (
-                              <div>Arrivée: <span className="font-medium">{selectedContainer.arrival_port}</span></div>
-                            )}
-                          </div>
                         )}
+                        {clientsError && !isClientsLoading && (
+                          <SelectItem value="error" disabled>
+                            {clientsError}
+                          </SelectItem>
+                        )}
+                        {!isClientsLoading && !clientsError && clients.length === 0 && (
+                          <SelectItem value="empty" disabled>
+                            Aucun client disponible
+                          </SelectItem>
+                        )}
+                        {!isClientsLoading && !clientsError &&
+                          clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                      {clientsError && (
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-destructive">
+                          {clientsError}
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="px-0 text-orange-700 hover:text-orange-800"
+                            onClick={fetchClients}
+                          >
+                            Réessayer
+                          </Button>
+                        </div>
+                      )}
+                  </div>
+                  <div className="rounded-md border border-orange-100 bg-white/80 p-3 text-xs sm:text-sm">
+                    {selectedCreateCustomer ? (
+                      <div className="space-y-1">
+                        <p className="font-medium leading-tight">
+                          {selectedCreateCustomer.name || "Sans nom"}
+                        </p>
+                        {selectedCreateCustomer.email && (
+                          <p className="text-muted-foreground break-words">
+                            {selectedCreateCustomer.email}
+                          </p>
+                        )}
+                        {selectedCreateCustomer.phone && (
+                          <p className="text-muted-foreground">
+                            {selectedCreateCustomer.phone}
+                          </p>
+                        )}
+                      {(selectedCreateCustomer.address ||
+                        selectedCreateCustomer.city ||
+                        selectedCreateCustomer.postal_code ||
+                        selectedCreateCustomer.country) && (
+                        <p className="text-muted-foreground text-xs">
+                          {[selectedCreateCustomer.address, selectedCreateCustomer.postal_code, selectedCreateCustomer.city, selectedCreateCustomer.country]
+                            .filter(Boolean)
+                            .join(" • ")}
+                        </p>
+                      )}
                       </div>
-                    )
-                  })()}
-                  {containers.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {containers.length} conteneur{containers.length > 1 ? 's' : ''} disponible{containers.length > 1 ? 's' : ''}
+                    ) : (
+                      <p className="text-muted-foreground">
+                        Sélectionne un client pour le lier à cette commande ou laisse “Client personnalisé”.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Rôle du client</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {clientRoleChoices.map((option) => (
+                      <label
+                        key={option.value}
+                        className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs sm:text-sm transition-colors ${
+                          createClientRole === option.value
+                            ? "border-orange-500 bg-orange-50 text-orange-700"
+                            : "border-orange-200 bg-white text-muted-foreground hover:border-orange-300"
+                        } ${!newOrder.customer_id && option.value !== "none" ? "cursor-not-allowed opacity-50" : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          className="h-4 w-4 text-orange-600 focus:ring-orange-500"
+                          value={option.value}
+                          checked={createClientRole === option.value}
+                          onChange={() => handleCreateClientRoleChange(option.value)}
+                          disabled={!newOrder.customer_id && option.value !== "none"}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {!newOrder.customer_id && (
+                    <p className="text-xs text-muted-foreground">
+                      Sélectionne un client avant d’assigner son rôle.
                     </p>
                   )}
                 </div>
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+                  <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+                          Expéditeur
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Coordonnées utilisées comme point d'expédition.
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          createClientRole === "sender" || createClientRole === "both"
+                            ? "border-orange-300 bg-orange-50 text-orange-700"
+                            : "border-dashed border-orange-200 text-muted-foreground"
+                        }
+                      >
+                        {createClientRole === "sender" || createClientRole === "both"
+                          ? "Client associé"
+                          : "Formulaire manuel"}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1 rounded-md border border-dashed border-orange-200 bg-orange-50/50 p-3 text-sm">
+                      <p className="font-medium break-words">
+                        {newOrder.client_name || "Non renseigné"}
+                      </p>
+                      <p className="text-muted-foreground break-words">
+                        {newOrder.client_email || "—"}
+                      </p>
+                      {(newOrder.client_phone || "").trim() && (
+                        <p className="text-muted-foreground">{newOrder.client_phone}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => setIsCreateSenderDetailsOpen(true)}
+                      >
+                        Modifier les détails
+                      </Button>
+                      {(createClientRole === "sender" || createClientRole === "both") &&
+                        selectedCreateCustomer && (
+                          <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                            Synchronisé avec {selectedCreateCustomer.name || "le client"}
+                          </Badge>
+                        )}
+                    </div>
+                  </div>
+                  <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+                          Destinataire
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Personne qui recevra la commande.
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          createClientRole === "recipient" || createClientRole === "both"
+                            ? "border-orange-300 bg-orange-50 text-orange-700"
+                            : "border-dashed border-orange-200 text-muted-foreground"
+                        }
+                      >
+                        {createClientRole === "recipient" || createClientRole === "both"
+                          ? "Client associé"
+                          : "Formulaire manuel"}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1 rounded-md border border-dashed border-orange-200 bg-orange-50/50 p-3 text-sm">
+                      <p className="font-medium break-words">
+                        {newOrder.recipient_name || newOrder.client_name || "Non renseigné"}
+                      </p>
+                      <p className="text-muted-foreground break-words">
+                        {newOrder.recipient_email || newOrder.client_email || "—"}
+                      </p>
+                      {(newOrder.recipient_phone || newOrder.client_phone) && (
+                        <p className="text-muted-foreground">
+                          {newOrder.recipient_phone || newOrder.client_phone}
+                        </p>
+                      )}
+                      {(newOrder.recipient_address ||
+                        newOrder.recipient_postal_code ||
+                        newOrder.recipient_city ||
+                        newOrder.recipient_country) && (
+                        <div className="space-y-1 pt-2 text-muted-foreground">
+                          {newOrder.recipient_address && (
+                            <p className="break-words">{newOrder.recipient_address}</p>
+                          )}
+                          {(newOrder.recipient_postal_code || newOrder.recipient_city) && (
+                            <p className="break-words">
+                              {[newOrder.recipient_postal_code, newOrder.recipient_city]
+                                .filter(Boolean)
+                                .join(" ")}
+                            </p>
+                          )}
+                          {newOrder.recipient_country && <p>{newOrder.recipient_country}</p>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => setIsCreateRecipientDetailsOpen(true)}
+                      >
+                        Modifier les détails
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyClientToRecipientForCreate}
+                        className="text-orange-700 hover:text-orange-800"
+                      >
+                        Copier l’expéditeur
+                      </Button>
+                      {(createClientRole === "recipient" || createClientRole === "both") &&
+                        selectedCreateCustomer && (
+                          <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                            Synchronisé avec {selectedCreateCustomer.name || "le client"}
+                          </Badge>
+                        )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="service_type">Type de service *</Label>
+                <Select
+                  value={newOrder.service_type}
+                  onValueChange={(value) => setNewOrder({ ...newOrder, service_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fret_maritime">Fret maritime</SelectItem>
+                    <SelectItem value="fret_aerien">Fret aérien</SelectItem>
+                    <SelectItem value="demenagement">Déménagement</SelectItem>
+                    <SelectItem value="dedouanement">Dédouanement</SelectItem>
+                    <SelectItem value="negoce">Négoce</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <div>
-                  <Label htmlFor="new_origin">Origine *</Label>
+                  <Label htmlFor="origin">Origine *</Label>
                   <Input
-                    id="new_origin"
+                    id="origin"
                     value={newOrder.origin}
                     onChange={(e) => setNewOrder({ ...newOrder, origin: e.target.value })}
                     required
+                    className="text-base sm:text-sm"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="new_destination">Destination *</Label>
+                  <Label htmlFor="destination">Destination *</Label>
                   <Input
-                    id="new_destination"
+                    id="destination"
                     value={newOrder.destination}
                     onChange={(e) => setNewOrder({ ...newOrder, destination: e.target.value })}
                     required
+                    className="text-base sm:text-sm"
                   />
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="container_id">Conteneur</Label>
+                <Select
+                  value={newOrder.container_id || "none"}
+                  onValueChange={(value) => {
+                    if (value === "none") {
+                      setNewOrder({
+                        ...newOrder,
+                        container_id: "",
+                        container_code: "",
+                      })
+                    } else {
+                      const selected = containers.find((container) => container.id === value)
+                      setNewOrder({
+                        ...newOrder,
+                        container_id: value,
+                        container_code: selected?.code || "",
+                      })
+                    }
+                  }}
+                >
+                  <SelectTrigger className="text-base sm:text-sm">
+                    <SelectValue placeholder="Aucun conteneur assigné" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun</SelectItem>
+                    {containers.length === 0 ? (
+                      <SelectItem value="no-containers" disabled>
+                        Aucun conteneur disponible
+                      </SelectItem>
+                    ) : (
+                      containers.map((container) => (
+                        <SelectItem key={container.id} value={container.id}>
+                          {container.code} {container.status && `(${container.status.replace(/_/g, " ")})`}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => setIsCreateContainerDialogOpen(true)}
+                >
+                  + Créer un nouveau conteneur
+                </Button>
+                {newOrder.container_id && (() => {
+                  const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
+                  return (
+                    <div className="mt-2 p-2 bg-muted rounded-md">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {selectedContainer?.code || newOrder.container_code || "N/A"}
+                        </Badge>
+                        {selectedContainer?.status && (
+                          <Badge variant="secondary" className="text-xs">
+                            {selectedContainer.status.replace(/_/g, " ")}
+                          </Badge>
+                        )}
+                      </div>
+                      {selectedContainer && (
+                        <div className="text-xs text-muted-foreground space-y-0.5">
+                          {selectedContainer.vessel && (
+                            <div>Navire: <span className="font-medium">{selectedContainer.vessel}</span></div>
+                          )}
+                          {selectedContainer.departure_port && (
+                            <div>Départ: <span className="font-medium">{selectedContainer.departure_port}</span></div>
+                          )}
+                          {selectedContainer.arrival_port && (
+                            <div>Arrivée: <span className="font-medium">{selectedContainer.arrival_port}</span></div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 <div>
-                  <Label htmlFor="new_weight">Poids (kg)</Label>
+                  <Label htmlFor="weight">Poids (kg)</Label>
                   <Input
-                    id="new_weight"
+                    id="weight"
                     type="number"
                     step="0.01"
                     value={newOrder.weight}
                     onChange={(e) => setNewOrder({ ...newOrder, weight: e.target.value })}
+                    className="text-base sm:text-sm"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="new_value">Valeur (€)</Label>
+                  <Label htmlFor="value">Valeur (€)</Label>
                   <Input
-                    id="new_value"
+                    id="value"
                     type="number"
                     step="0.01"
                     value={newOrder.value}
                     onChange={(e) => setNewOrder({ ...newOrder, value: e.target.value })}
+                    className="text-base sm:text-sm"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="new_estimated_delivery">Livraison estimée</Label>
+                  <Label htmlFor="estimated_delivery">Livraison estimée</Label>
                   <Input
-                    id="new_estimated_delivery"
+                    id="estimated_delivery"
                     type="date"
                     value={newOrder.estimated_delivery}
                     onChange={(e) => setNewOrder({ ...newOrder, estimated_delivery: e.target.value })}
+                    className="text-base sm:text-sm"
                   />
                 </div>
               </div>
-              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsCreateOrderDialogOpen(false)}
-                >
+              <div className="flex flex-col sm:flex-row sm:flex-wrap md:flex-nowrap md:justify-end gap-2 sm:gap-3 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => handleCreateDialogChange(false)} className="w-full sm:w-auto">
                   Annuler
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={(e) => handleCreateOrder(e, true)} 
-                  className="flex items-center gap-2"
+                  className="w-full sm:w-auto flex items-center gap-2"
                 >
                   <QrCode className="h-4 w-4" />
                   Créer et imprimer QR
                 </Button>
-                <Button type="submit">Créer la commande</Button>
+                <Button type="submit" className="w-full sm:w-auto">Créer la commande</Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          modal={false}
+          open={isCreateSenderDetailsOpen}
+          onOpenChange={setIsCreateSenderDetailsOpen}
+        >
+          <DialogContent className="w-full max-w-lg sm:max-w-xl" showCloseButton>
+            <DialogHeader className="pb-2">
+              <DialogTitle>Informations expéditeur</DialogTitle>
+              <DialogDescription>
+                Sélectionne un client existant ou renseigne l’expéditeur manuellement.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-sender-select">Importer depuis un client</Label>
+                <Select value={createSenderClientId} onValueChange={handleCreateSenderSelect}>
+                  <SelectTrigger id="create-sender-select" className="w-full text-left">
+                    <SelectValue placeholder="Choisir un client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="custom">Saisie manuelle</SelectItem>
+                    {isClientsLoading && (
+                      <SelectItem value="loading" disabled>
+                        Chargement...
+                      </SelectItem>
+                    )}
+                    {clientsError && !isClientsLoading && (
+                      <SelectItem value="error" disabled>
+                        {clientsError}
+                      </SelectItem>
+                    )}
+                    {!isClientsLoading && !clientsError && clients.length === 0 && (
+                      <SelectItem value="empty" disabled>
+                        Aucun client disponible
+                      </SelectItem>
+                    )}
+                    {!isClientsLoading && !clientsError &&
+                      clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {clientsError && (
+                  <p className="text-xs text-destructive">
+                    {clientsError}
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-4">
+                <div>
+                  <Label htmlFor="modal_client_name">Nom de l’expéditeur</Label>
+                  <Input
+                    id="modal_client_name"
+                    value={newOrder.client_name}
+                    onChange={(e) => setNewOrder({ ...newOrder, client_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_client_email">Email de l’expéditeur</Label>
+                  <Input
+                    id="modal_client_email"
+                    type="email"
+                    value={newOrder.client_email}
+                    onChange={(e) => setNewOrder({ ...newOrder, client_email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_client_phone">Téléphone de l’expéditeur</Label>
+                  <Input
+                    id="modal_client_phone"
+                    value={newOrder.client_phone}
+                    onChange={(e) => setNewOrder({ ...newOrder, client_phone: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateSenderDetailsOpen(false)}
+              >
+                Fermer
+              </Button>
+              <Button type="button" onClick={() => setIsCreateSenderDetailsOpen(false)}>
+                Valider
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          modal={false}
+          open={isCreateRecipientDetailsOpen}
+          onOpenChange={setIsCreateRecipientDetailsOpen}
+        >
+          <DialogContent className="w-full max-w-lg sm:max-w-xl" showCloseButton>
+            <DialogHeader className="pb-2">
+              <DialogTitle>Informations destinataire</DialogTitle>
+              <DialogDescription>
+                Renseigne les coordonnées du destinataire de la commande.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="create-recipient-select">Importer depuis un client</Label>
+                  <Select value={createRecipientClientId} onValueChange={handleCreateRecipientSelect}>
+                    <SelectTrigger id="create-recipient-select" className="w-full text-left">
+                      <SelectValue placeholder="Choisir un client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="custom">Saisie manuelle</SelectItem>
+                      {isClientsLoading && (
+                        <SelectItem value="loading" disabled>
+                          Chargement...
+                        </SelectItem>
+                      )}
+                      {clientsError && !isClientsLoading && (
+                        <SelectItem value="error" disabled>
+                          {clientsError}
+                        </SelectItem>
+                      )}
+                      {!isClientsLoading && !clientsError && clients.length === 0 && (
+                        <SelectItem value="empty" disabled>
+                          Aucun client disponible
+                        </SelectItem>
+                      )}
+                      {!isClientsLoading && !clientsError &&
+                        clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name || "Sans nom"} {client.email ? `– ${client.email}` : ""}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                {clientsError && (
+                  <p className="text-xs text-destructive">
+                    {clientsError}
+                  </p>
+                )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyClientToRecipientForCreate}
+                  className="self-end"
+                >
+                  Copier l’expéditeur
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="modal_recipient_name">Nom du destinataire</Label>
+                  <Input
+                    id="modal_recipient_name"
+                    value={newOrder.recipient_name}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_email">Email du destinataire</Label>
+                  <Input
+                    id="modal_recipient_email"
+                    type="email"
+                    value={newOrder.recipient_email}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_phone">Téléphone du destinataire</Label>
+                  <Input
+                    id="modal_recipient_phone"
+                    value={newOrder.recipient_phone}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_address">Adresse du destinataire</Label>
+                  <Textarea
+                    id="modal_recipient_address"
+                    value={newOrder.recipient_address}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_address: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_city">Ville du destinataire</Label>
+                  <Input
+                    id="modal_recipient_city"
+                    value={newOrder.recipient_city}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_city: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="modal_recipient_postal">Code postal du destinataire</Label>
+                  <Input
+                    id="modal_recipient_postal"
+                    value={newOrder.recipient_postal_code}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_postal_code: e.target.value })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="modal_recipient_country">Pays du destinataire</Label>
+                  <Input
+                    id="modal_recipient_country"
+                    value={newOrder.recipient_country}
+                    onChange={(e) => setNewOrder({ ...newOrder, recipient_country: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateRecipientDetailsOpen(false)}
+              >
+                Fermer
+              </Button>
+              <Button type="button" onClick={() => setIsCreateRecipientDetailsOpen(false)}>
+                Valider
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
