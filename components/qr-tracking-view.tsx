@@ -434,7 +434,6 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                   }
                   title="Scanner un QR Danemo"
                   description="Pointez la caméra vers le QR code du colis pour obtenir les informations."
-                  keepOpenAfterScan={true}
                 />
               </div>
             </form>
@@ -482,7 +481,6 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
               <TabsList>
                 {trackingData?.container && <TabsTrigger value="container">Conteneur</TabsTrigger>}
                 <TabsTrigger value="tracking">Suivi</TabsTrigger>
-                <TabsTrigger value="raw">Contenu brut</TabsTrigger>
               </TabsList>
               {container && (
                 <TabsContent value="container" className="mt-4">
@@ -554,71 +552,458 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                 </TabsContent>
               )}
               <TabsContent value="tracking" className="mt-4">
-                {trackingData && timeline.length > 0 ? (
-                  <div className="space-y-4">
-                    {timeline.map((event) => (
-                      <Card key={event.id}>
-                        <CardContent className="pt-6">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                            <div className="flex items-center gap-2">
-                              {renderStatusBadge(event.status, isOrder)}
+                {trackingData ? (
+                  <div className="space-y-6">
+                    {isOrder ? (
+                      <Card>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle className="flex items-center gap-2">
+                                <Truck className="h-5 w-5 text-orange-500" />
+                                Commande {(trackingData as OrderPayload).order.order_number}
+                              </CardTitle>
+                              <CardDescription>Statut détaillé de la commande scannée</CardDescription>
                             </div>
-                            <span className="text-sm text-gray-500">{formatDateTime(event.event_date)}</span>
+                            {isOrder && (
+                              <Button
+                                variant={isEditing ? "outline" : "default"}
+                                onClick={() => {
+                                  if (isEditing) {
+                                    setIsEditing(false)
+                                    setEditLocation("")
+                                    setEditDescription("")
+                                    setEditOperator("")
+                                  } else {
+                                    setIsEditing(true)
+                                    const order = (trackingData as OrderPayload).order
+                                    setEditStatus(order.status)
+                                  }
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                {isEditing ? (
+                                  <>
+                                    <X className="h-4 w-4" />
+                                    Annuler
+                                  </>
+                                ) : (
+                                  <>
+                                    <Edit className="h-4 w-4" />
+                                    Modifier le suivi
+                                  </>
+                                )}
+                              </Button>
+                            )}
                           </div>
-                          {event.location && (
-                            <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-                              <MapPin className="h-4 w-4" />
-                              {event.location}
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {isEditing ? (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="status">Statut</Label>
+                                  <Select value={editStatus} onValueChange={setEditStatus}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="pending">En attente</SelectItem>
+                                      <SelectItem value="confirmed">Confirmée</SelectItem>
+                                      <SelectItem value="in_progress">En cours</SelectItem>
+                                      <SelectItem value="completed">Terminée</SelectItem>
+                                      <SelectItem value="cancelled">Annulée</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="location">Localisation</Label>
+                                  <Input
+                                    id="location"
+                                    value={editLocation}
+                                    onChange={(e) => setEditLocation(e.target.value)}
+                                    placeholder="Ex: Port de Douala"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea
+                                  id="description"
+                                  value={editDescription}
+                                  onChange={(e) => setEditDescription(e.target.value)}
+                                  placeholder="Détails de l'événement..."
+                                  rows={3}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="operator">Opérateur</Label>
+                                <Input
+                                  id="operator"
+                                  value={editOperator}
+                                  onChange={(e) => setEditOperator(e.target.value)}
+                                  placeholder="Nom de l'opérateur"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <Button onClick={handleSaveTracking} disabled={isSaving} className="flex items-center gap-2">
+                                  <Save className="h-4 w-4" />
+                                  {isSaving ? "Enregistrement..." : "Enregistrer"}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setIsEditing(false)
+                                    setEditLocation("")
+                                    setEditDescription("")
+                                    setEditOperator("")
+                                  }}
+                                >
+                                  Annuler
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              <div className="space-y-2">
+                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations commande</h3>
+                                <div className="text-sm text-gray-600">
+                                  <p>
+                                    <span className="font-semibold">Numéro:</span> {(trackingData as OrderPayload).order.order_number}
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold">Service:</span> {(trackingData as OrderPayload).order.service_type}
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold">Origine:</span> {(trackingData as OrderPayload).order.origin}
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold">Destination:</span> {(trackingData as OrderPayload).order.destination}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Statut</h3>
+                                <div className="flex flex-col gap-2">
+                                  {renderStatusBadge((trackingData as OrderPayload).order.status, true)}
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-semibold">Mis à jour:</span>{" "}
+                                    {formatDateTime((trackingData as OrderPayload).order.updated_at)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client</h3>
+                                <div className="text-sm text-gray-600 space-y-1">
+                                  <p>{(trackingData as OrderPayload).order.client_name}</p>
+                                  <p>{(trackingData as OrderPayload).order.client_email}</p>
+                                  {(trackingData as OrderPayload).order.client_phone && (
+                                    <p>{(trackingData as OrderPayload).order.client_phone}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Destinataire</h3>
+                                <div className="text-sm text-gray-600 space-y-1">
+                                  <p>
+                                    {(trackingData as OrderPayload).order.recipient_name ||
+                                      (trackingData as OrderPayload).order.client_name}
+                                  </p>
+                                  <p>
+                                    {(trackingData as OrderPayload).order.recipient_email ||
+                                      (trackingData as OrderPayload).order.client_email}
+                                  </p>
+                                  {((trackingData as OrderPayload).order.recipient_phone ||
+                                    (trackingData as OrderPayload).order.client_phone) && (
+                                    <p>
+                                      {(trackingData as OrderPayload).order.recipient_phone ||
+                                        (trackingData as OrderPayload).order.client_phone}
+                                    </p>
+                                  )}
+                                  {(trackingData as OrderPayload).order.recipient_address && (
+                                    <p>{(trackingData as OrderPayload).order.recipient_address}</p>
+                                  )}
+                                  {(
+                                    (trackingData as OrderPayload).order.recipient_postal_code ||
+                                    (trackingData as OrderPayload).order.recipient_city
+                                  ) && (
+                                    <p>
+                                      {[
+                                        (trackingData as OrderPayload).order.recipient_postal_code,
+                                        (trackingData as OrderPayload).order.recipient_city,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                    </p>
+                                  )}
+                                  {(trackingData as OrderPayload).order.recipient_country && (
+                                    <p>{(trackingData as OrderPayload).order.recipient_country}</p>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           )}
-                          {event.description && (
-                            <p className="mt-2 text-sm text-gray-700 leading-6">{event.description}</p>
-                          )}
-                          {event.operator && (
-                            <p className="mt-2 text-xs text-gray-500">
-                              Opérateur: <span className="font-medium">{event.operator}</span>
-                            </p>
+
+                          {container && (
+                            <div className="rounded-lg border bg-gray-50 p-6">
+                              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                                    {container.code}
+                                  </Badge>
+                                  <Badge variant="secondary">
+                                    {containerStatusMap[container.status] || container.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => navigator.clipboard.writeText(container.code)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                    Copier
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.push(`/tracking?code=${container.code}`)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                    Suivre ce conteneur
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                <div>
+                                  <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
+                                  <p className="font-medium text-gray-800">
+                                    {container.vessel || "Non communiqué"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
+                                  <p>
+                                    {container.departure_port || "Non communiqué"}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    ETD: {formatDate(container.etd)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
+                                  <p>
+                                    {container.arrival_port || "Non communiqué"}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    ETA: {formatDate(container.eta)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
-                ) : trackingData ? (
-                  <div className="py-12 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <AlertTriangle className="h-8 w-8 text-gray-400" />
-                      <p className="text-sm font-medium text-gray-700">
-                        {isOrder ? "Aucun événement de suivi" : "Aucun événement de suivi disponible"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {isOrder 
-                          ? "Aucun événement de suivi n'a été enregistré pour cette commande pour le moment."
-                          : "Aucun événement de suivi disponible pour le moment."
-                        }
-                      </p>
-                    </div>
+                    ) : (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Truck className="h-5 w-5 text-orange-500" />
+                            Colis {(trackingData as PackagePayload).package.reference}
+                          </CardTitle>
+                          <CardDescription>Statut détaillé du colis scanné</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations colis</h3>
+                              <div className="text-sm text-gray-600">
+                                <p>
+                                  <span className="font-semibold">Identifiant:</span> {(trackingData as PackagePayload).package.id}
+                                </p>
+                                <p>
+                                  <span className="font-semibold">QR:</span> {(trackingData as PackagePayload).package.qr_code}
+                                </p>
+                                <p>
+                                  <span className="font-semibold">Dernier scan:</span>{" "}
+                                  {formatDateTime((trackingData as PackagePayload).package.last_scan_at)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Statut</h3>
+                              <div className="flex flex-col gap-2">
+                                {renderStatusBadge((trackingData as PackagePayload).package.status)}
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-semibold">Mis à jour:</span>{" "}
+                                  {formatDateTime((trackingData as PackagePayload).package.updated_at)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client</h3>
+                              {(trackingData as PackagePayload).client ? (
+                                <div className="text-sm text-gray-600 space-y-1">
+                                  <p>{(trackingData as PackagePayload).client!.name}</p>
+                                  {(trackingData as PackagePayload).client!.email && <p>{(trackingData as PackagePayload).client!.email}</p>}
+                                  {(trackingData as PackagePayload).client!.phone && <p>{(trackingData as PackagePayload).client!.phone}</p>}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-500">Aucun client associé</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {container && (
+                            <div className="rounded-lg border bg-gray-50 p-6">
+                              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline" className="font-mono text-xs px-2 py-1">
+                                    {container.code}
+                                  </Badge>
+                                  <Badge variant="secondary">
+                                    {containerStatusMap[container.status] || container.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => navigator.clipboard.writeText(container.code)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                    Copier
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.push(`/tracking?code=${container.code}`)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                    Suivre ce conteneur
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                <div>
+                                  <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
+                                  <p className="font-medium text-gray-800">
+                                    {container.vessel || "Non communiqué"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
+                                  <p>
+                                    {container.departure_port || "Non communiqué"}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    ETD: {formatDate(container.etd)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
+                                  <p>
+                                    {container.arrival_port || "Non communiqué"}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    ETA: {formatDate(container.eta)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {(trackingData as PackagePayload).package.description && (
+                            <div className="text-sm text-gray-600">
+                              <span className="font-semibold">Description:</span> {(trackingData as PackagePayload).package.description}
+                            </div>
+                          )}
+                          {((trackingData as PackagePayload).package.weight || (trackingData as PackagePayload).package.value) && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+                              {(trackingData as PackagePayload).package.weight && (
+                                <div>
+                                  <span className="font-semibold">Poids:</span> {(trackingData as PackagePayload).package.weight} kg
+                                </div>
+                              )}
+                              {(trackingData as PackagePayload).package.value && (
+                                <div>
+                                  <span className="font-semibold">Valeur:</span>{" "}
+                                  €{((trackingData as PackagePayload).package.value || 0).toLocaleString("fr-FR")}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <MapPin className="h-5 w-5 text-orange-500" />
+                          Historique des événements
+                        </CardTitle>
+                        <CardDescription>
+                          {isOrder 
+                            ? "Événements de suivi de la commande (le plus récent en premier)."
+                            : "Événements remontés depuis le conteneur associé (le plus récent en premier)."
+                          }
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {timeline.length > 0 ? (
+                          <div className="space-y-4">
+                            {timeline.map((event) => (
+                              <div key={event.id} className="rounded-lg border p-4 bg-white shadow-sm">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                  {renderStatusBadge(event.status, isOrder)}
+                                  <span className="text-sm text-gray-500">{formatDateTime(event.event_date)}</span>
+                                </div>
+                                {event.location && (
+                                  <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                                    <MapPin className="h-4 w-4" />
+                                    {event.location}
+                                  </div>
+                                )}
+                                {event.description && (
+                                  <p className="mt-2 text-sm text-gray-700 leading-6">{event.description}</p>
+                                )}
+                                {event.operator && (
+                                  <p className="mt-2 text-xs text-gray-500">
+                                    Opérateur: <span className="font-medium">{event.operator}</span>
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="py-12 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <AlertTriangle className="h-8 w-8 text-gray-400" />
+                              <p className="text-sm font-medium text-gray-700">
+                                {isOrder ? "Aucun événement de suivi" : "Aucun événement de suivi disponible"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {isOrder 
+                                  ? "Aucun événement de suivi n'a été enregistré pour cette commande pour le moment."
+                                  : "Aucun événement de suivi disponible pour ce conteneur pour le moment."
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </div>
                 ) : (
                   <div className="text-sm text-gray-500">
                     Le suivi affiche les informations du colis lié au QR et les événements associés au conteneur.
                   </div>
                 )}
-              </TabsContent>
-              <TabsContent value="raw" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-semibold">Payload décodé</CardTitle>
-                    <CardDescription>
-                      Valeur brute interprétée depuis le QR (JSON, URL ou jeton). Vous pouvez copier et partager avec le
-                      support.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-md text-xs overflow-auto max-h-72">
-                      {decoded.decoded || "(vide)"}
-                    </pre>
-                  </CardContent>
-                </Card>
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -639,461 +1024,6 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {trackingData && (
-          <div className="space-y-6">
-            {isOrder ? (
-              // Affichage pour une commande
-              <>
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <Truck className="h-5 w-5 text-orange-500" />
-                          Commande {(trackingData as OrderPayload).order.order_number}
-                        </CardTitle>
-                        <CardDescription>Statut détaillé de la commande scannée</CardDescription>
-                      </div>
-                      {isOrder && (
-                        <Button
-                          variant={isEditing ? "outline" : "default"}
-                          onClick={() => {
-                            if (isEditing) {
-                              setIsEditing(false)
-                              setEditLocation("")
-                              setEditDescription("")
-                              setEditOperator("")
-                            } else {
-                              setIsEditing(true)
-                              const order = (trackingData as OrderPayload).order
-                              setEditStatus(order.status)
-                            }
-                          }}
-                          className="flex items-center gap-2"
-                        >
-                          {isEditing ? (
-                            <>
-                              <X className="h-4 w-4" />
-                              Annuler
-                            </>
-                          ) : (
-                            <>
-                              <Edit className="h-4 w-4" />
-                              Modifier le suivi
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {isEditing ? (
-                      // Formulaire d'édition
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="status">Statut</Label>
-                            <Select value={editStatus} onValueChange={setEditStatus}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">En attente</SelectItem>
-                                <SelectItem value="confirmed">Confirmée</SelectItem>
-                                <SelectItem value="in_progress">En cours</SelectItem>
-                                <SelectItem value="completed">Terminée</SelectItem>
-                                <SelectItem value="cancelled">Annulée</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="location">Localisation</Label>
-                            <Input
-                              id="location"
-                              value={editLocation}
-                              onChange={(e) => setEditLocation(e.target.value)}
-                              placeholder="Ex: Port de Douala"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea
-                            id="description"
-                            value={editDescription}
-                            onChange={(e) => setEditDescription(e.target.value)}
-                            placeholder="Détails de l'événement..."
-                            rows={3}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="operator">Opérateur</Label>
-                          <Input
-                            id="operator"
-                            value={editOperator}
-                            onChange={(e) => setEditOperator(e.target.value)}
-                            placeholder="Nom de l'opérateur"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button onClick={handleSaveTracking} disabled={isSaving} className="flex items-center gap-2">
-                            <Save className="h-4 w-4" />
-                            {isSaving ? "Enregistrement..." : "Enregistrer"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setIsEditing(false)
-                              setEditLocation("")
-                              setEditDescription("")
-                              setEditOperator("")
-                            }}
-                          >
-                            Annuler
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // Affichage des informations de la commande
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations commande</h3>
-                          <div className="text-sm text-gray-600">
-                            <p>
-                              <span className="font-semibold">Numéro:</span> {(trackingData as OrderPayload).order.order_number}
-                            </p>
-                            <p>
-                              <span className="font-semibold">Service:</span> {(trackingData as OrderPayload).order.service_type}
-                            </p>
-                            <p>
-                              <span className="font-semibold">Origine:</span> {(trackingData as OrderPayload).order.origin}
-                            </p>
-                            <p>
-                              <span className="font-semibold">Destination:</span> {(trackingData as OrderPayload).order.destination}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Statut</h3>
-                          <div className="flex flex-col gap-2">
-                            {renderStatusBadge((trackingData as OrderPayload).order.status, true)}
-                            <p className="text-sm text-gray-600">
-                              <span className="font-semibold">Mis à jour:</span>{" "}
-                              {formatDateTime((trackingData as OrderPayload).order.updated_at)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client</h3>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <p>{(trackingData as OrderPayload).order.client_name}</p>
-                            <p>{(trackingData as OrderPayload).order.client_email}</p>
-                            {(trackingData as OrderPayload).order.client_phone && (
-                              <p>{(trackingData as OrderPayload).order.client_phone}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Destinataire</h3>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <p>
-                              {(trackingData as OrderPayload).order.recipient_name ||
-                                (trackingData as OrderPayload).order.client_name}
-                            </p>
-                            <p>
-                              {(trackingData as OrderPayload).order.recipient_email ||
-                                (trackingData as OrderPayload).order.client_email}
-                            </p>
-                            {((trackingData as OrderPayload).order.recipient_phone ||
-                              (trackingData as OrderPayload).order.client_phone) && (
-                              <p>
-                                {(trackingData as OrderPayload).order.recipient_phone ||
-                                  (trackingData as OrderPayload).order.client_phone}
-                              </p>
-                            )}
-                            {(trackingData as OrderPayload).order.recipient_address && (
-                              <p>{(trackingData as OrderPayload).order.recipient_address}</p>
-                            )}
-                            {(
-                              (trackingData as OrderPayload).order.recipient_postal_code ||
-                              (trackingData as OrderPayload).order.recipient_city
-                            ) && (
-                              <p>
-                                {[
-                                  (trackingData as OrderPayload).order.recipient_postal_code,
-                                  (trackingData as OrderPayload).order.recipient_city,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" ")}
-                              </p>
-                            )}
-                            {(trackingData as OrderPayload).order.recipient_country && (
-                              <p>{(trackingData as OrderPayload).order.recipient_country}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {container && (
-                      <div className="rounded-lg border bg-gray-50 p-6">
-                        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="font-mono text-xs px-2 py-1">
-                              {container.code}
-                            </Badge>
-                            <Badge variant="secondary">
-                              {containerStatusMap[container.status] || container.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigator.clipboard.writeText(container.code)}
-                              className="flex items-center gap-2"
-                            >
-                              <Copy className="h-4 w-4" />
-                              Copier
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => router.push(`/tracking?code=${container.code}`)}
-                              className="flex items-center gap-2"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                              Suivre ce conteneur
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                          <div>
-                            <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
-                            <p className="font-medium text-gray-800">
-                              {container.vessel || "Non communiqué"}
-                            </p>
-                          </div>
-                          <div>
-                            <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
-                            <p>
-                              {container.departure_port || "Non communiqué"}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              ETD: {formatDate(container.etd)}
-                            </p>
-                          </div>
-                          <div>
-                            <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
-                            <p>
-                              {container.arrival_port || "Non communiqué"}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              ETA: {formatDate(container.eta)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </>
-            ) : (
-              // Affichage pour un package
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Truck className="h-5 w-5 text-orange-500" />
-                    Colis {(trackingData as PackagePayload).package.reference}
-                  </CardTitle>
-                  <CardDescription>Statut détaillé du colis scanné</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations colis</h3>
-                      <div className="text-sm text-gray-600">
-                        <p>
-                          <span className="font-semibold">Identifiant:</span> {(trackingData as PackagePayload).package.id}
-                        </p>
-                        <p>
-                          <span className="font-semibold">QR:</span> {(trackingData as PackagePayload).package.qr_code}
-                        </p>
-                        <p>
-                          <span className="font-semibold">Dernier scan:</span>{" "}
-                          {formatDateTime((trackingData as PackagePayload).package.last_scan_at)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Statut</h3>
-                      <div className="flex flex-col gap-2">
-                        {renderStatusBadge((trackingData as PackagePayload).package.status)}
-                        <p className="text-sm text-gray-600">
-                          <span className="font-semibold">Mis à jour:</span>{" "}
-                          {formatDateTime((trackingData as PackagePayload).package.updated_at)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client</h3>
-                      {(trackingData as PackagePayload).client ? (
-                        <div className="text-sm text-gray-600 space-y-1">
-                          <p>{(trackingData as PackagePayload).client!.name}</p>
-                          {(trackingData as PackagePayload).client!.email && <p>{(trackingData as PackagePayload).client!.email}</p>}
-                          {(trackingData as PackagePayload).client!.phone && <p>{(trackingData as PackagePayload).client!.phone}</p>}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500">Aucun client associé</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {container && (
-                    <div className="rounded-lg border bg-gray-50 p-6">
-                      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="font-mono text-xs px-2 py-1">
-                            {container.code}
-                          </Badge>
-                          <Badge variant="secondary">
-                            {containerStatusMap[container.status] || container.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigator.clipboard.writeText(container.code)}
-                            className="flex items-center gap-2"
-                          >
-                            <Copy className="h-4 w-4" />
-                            Copier
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => router.push(`/tracking?code=${container.code}`)}
-                            className="flex items-center gap-2"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Suivre ce conteneur
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                        <div>
-                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Navire</h4>
-                          <p className="font-medium text-gray-800">
-                            {container.vessel || "Non communiqué"}
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Départ</h4>
-                          <p>
-                            {container.departure_port || "Non communiqué"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            ETD: {formatDate(container.etd)}
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-xs uppercase tracking-wide text-gray-500">Arrivée</h4>
-                          <p>
-                            {container.arrival_port || "Non communiqué"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            ETA: {formatDate(container.eta)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {(trackingData as PackagePayload).package.description && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-semibold">Description:</span> {(trackingData as PackagePayload).package.description}
-                    </div>
-                  )}
-                  {((trackingData as PackagePayload).package.weight || (trackingData as PackagePayload).package.value) && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
-                      {(trackingData as PackagePayload).package.weight && (
-                        <div>
-                          <span className="font-semibold">Poids:</span> {(trackingData as PackagePayload).package.weight} kg
-                        </div>
-                      )}
-                      {(trackingData as PackagePayload).package.value && (
-                        <div>
-                          <span className="font-semibold">Valeur:</span>{" "}
-                          €{((trackingData as PackagePayload).package.value || 0).toLocaleString("fr-FR")}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-orange-500" />
-                  Historique des événements
-                </CardTitle>
-                <CardDescription>
-                  {isOrder 
-                    ? "Événements de suivi de la commande (le plus récent en premier)."
-                    : "Événements remontés depuis le conteneur associé (le plus récent en premier)."
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {timeline.length > 0 ? (
-                  <div className="space-y-4">
-                    {timeline.map((event) => (
-                      <div key={event.id} className="rounded-lg border p-4 bg-white shadow-sm">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          {renderStatusBadge(event.status, isOrder)}
-                          <span className="text-sm text-gray-500">{formatDateTime(event.event_date)}</span>
-                        </div>
-                        {event.location && (
-                          <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-                            <MapPin className="h-4 w-4" />
-                            {event.location}
-                          </div>
-                        )}
-                        {event.description && (
-                          <p className="mt-2 text-sm text-gray-700 leading-6">{event.description}</p>
-                        )}
-                        {event.operator && (
-                          <p className="mt-2 text-xs text-gray-500">
-                            Opérateur: <span className="font-medium">{event.operator}</span>
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-12 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <AlertTriangle className="h-8 w-8 text-gray-400" />
-                      <p className="text-sm font-medium text-gray-700">
-                        {isOrder ? "Aucun événement de suivi" : "Aucun événement de suivi disponible"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {isOrder 
-                          ? "Aucun événement de suivi n'a été enregistré pour cette commande pour le moment."
-                          : "Aucun événement de suivi disponible pour ce conteneur pour le moment."
-                        }
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
         )}
 
         {!trackingData && !isLoading && !error && (

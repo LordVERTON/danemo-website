@@ -383,7 +383,7 @@ export default function ClientsPage() {
                   </div>
 
         {/* Statistiques */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
@@ -400,15 +400,6 @@ export default function ClientsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalOrders}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valeur Totale</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">€{totalValue.toLocaleString()}</div>
             </CardContent>
           </Card>
                   </div>
@@ -467,7 +458,6 @@ export default function ClientsPage() {
                     <TableHead>Contact</TableHead>
                     <TableHead>Entreprise</TableHead>
                     <TableHead>Commandes</TableHead>
-                    <TableHead>Valeur Totale</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
@@ -475,7 +465,6 @@ export default function ClientsPage() {
                 <TableBody>
                   {customers.map((customer) => {
                     const ordersCount = customer.orders?.length || 0
-                    const customerValue = customer.orders?.reduce((sum, order) => sum + (order.value || 0), 0) || 0
                     
                     return (
                       <TableRow 
@@ -527,11 +516,6 @@ export default function ClientsPage() {
                                 {ordersCount === 1 ? 'commande' : 'commandes'}
                               </span>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">
-                            {customerValue > 0 ? `€${customerValue.toLocaleString()}` : '-'}
                           </div>
                         </TableCell>
                         <TableCell>

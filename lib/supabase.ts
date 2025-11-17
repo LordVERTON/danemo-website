@@ -44,6 +44,10 @@ export interface Database {
           client_name: string
           client_email: string
           client_phone: string | null
+          client_address: string | null
+          client_city: string | null
+          client_postal_code: string | null
+          client_country: string | null
           recipient_name: string | null
           recipient_email: string | null
           recipient_phone: string | null
@@ -64,6 +68,7 @@ export interface Database {
           container_id: string | null
           container_code: string | null
           container_status: string | null
+          customer_id: string | null
         }
         Insert: {
           id?: string
@@ -71,6 +76,10 @@ export interface Database {
           client_name: string
           client_email: string
           client_phone?: string | null
+          client_address?: string | null
+          client_city?: string | null
+          client_postal_code?: string | null
+          client_country?: string | null
           recipient_name?: string | null
           recipient_email?: string | null
           recipient_phone?: string | null
@@ -91,6 +100,7 @@ export interface Database {
           container_id?: string | null
           container_code?: string | null
           container_status?: string | null
+          customer_id?: string | null
         }
         Update: {
           id?: string
@@ -98,6 +108,10 @@ export interface Database {
           client_name?: string
           client_email?: string
           client_phone?: string | null
+          client_address?: string | null
+          client_city?: string | null
+          client_postal_code?: string | null
+          client_country?: string | null
           recipient_name?: string | null
           recipient_email?: string | null
           recipient_phone?: string | null
@@ -118,6 +132,7 @@ export interface Database {
           container_id?: string | null
           container_code?: string | null
           container_status?: string | null
+          customer_id?: string | null
         }
       }
       tracking_events: {

@@ -125,6 +125,10 @@ const getDefaultNewOrderData = (customer: Customer | null) => ({
   client_name: customer?.name || "",
   client_email: customer?.email || "",
   client_phone: customer?.phone || "",
+  client_address: customer?.address || "",
+  client_city: customer?.city || "",
+  client_postal_code: customer?.postal_code || "",
+  client_country: customer?.country || "",
   recipient_name: customer?.name || "",
   recipient_email: customer?.email || "",
   recipient_phone: customer?.phone || "",
@@ -244,6 +248,17 @@ export default function ClientDetailPage() {
     client_name: "",
     client_email: "",
     client_phone: "",
+    client_address: "",
+    client_city: "",
+    client_postal_code: "",
+    client_country: "",
+    recipient_name: "",
+    recipient_email: "",
+    recipient_phone: "",
+    recipient_address: "",
+    recipient_city: "",
+    recipient_postal_code: "",
+    recipient_country: "",
     service_type: "",
     origin: "",
     destination: "",
@@ -326,10 +341,18 @@ export default function ClientDetailPage() {
         const nextName = client.name || ""
         const nextEmail = client.email || ""
         const nextPhone = client.phone || ""
+        const nextAddress = client.address || ""
+        const nextCity = client.city || ""
+        const nextPostal = client.postal_code || ""
+        const nextCountry = client.country || ""
         if (
           prev.client_name === nextName &&
           prev.client_email === nextEmail &&
-          (prev.client_phone || "") === (nextPhone || "")
+          (prev.client_phone || "") === (nextPhone || "") &&
+          (prev.client_address || "") === (nextAddress || "") &&
+          (prev.client_city || "") === (nextCity || "") &&
+          (prev.client_postal_code || "") === (nextPostal || "") &&
+          (prev.client_country || "") === (nextCountry || "")
         ) {
           return prev
         }
@@ -338,6 +361,10 @@ export default function ClientDetailPage() {
           client_name: nextName,
           client_email: nextEmail,
           client_phone: nextPhone || "",
+          client_address: nextAddress,
+          client_city: nextCity,
+          client_postal_code: nextPostal,
+          client_country: nextCountry,
         }
       })
       if (createSenderClientId !== client.id) {
@@ -531,38 +558,35 @@ export default function ClientDetailPage() {
     }
   }
 
-  const copyClientToRecipientForCreate = () => {
-    const fallbackCustomer: ClientSummary | null = customer
-      ? {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone || null,
-          address: customer.address || null,
-          city: customer.city || null,
-          postal_code: customer.postal_code || null,
-          country: customer.country || null,
-        }
-      : null
-    const senderClient =
-      clients.find((client) => client.id === createSenderClientId) ||
-      selectedCreateCustomer ||
-      fallbackCustomer
-    setNewOrder((prev) => ({
-      ...prev,
-      recipient_name: prev.client_name,
-      recipient_email: prev.client_email,
-      recipient_phone: prev.client_phone,
-      recipient_address: senderClient?.address || prev.recipient_address,
-      recipient_city: senderClient?.city || prev.recipient_city,
-      recipient_postal_code: senderClient?.postal_code || prev.recipient_postal_code,
-      recipient_country: senderClient?.country || prev.recipient_country,
-    }))
+const copyClientToRecipientForCreate = () => {
+  setNewOrder((prev) => ({
+    ...prev,
+    recipient_name: prev.client_name,
+    recipient_email: prev.client_email,
+    recipient_phone: prev.client_phone,
+    recipient_address: prev.client_address,
+    recipient_city: prev.client_city,
+    recipient_postal_code: prev.client_postal_code,
+    recipient_country: prev.client_country,
+  }))
     setCreateRecipientClientId(createSenderClientId)
     if (newOrder.customer_id) {
       setCreateClientRole("both")
     }
   }
+
+const copyClientToRecipientForEdit = () => {
+  setEditOrder((prev) => ({
+    ...prev,
+    recipient_name: prev.client_name,
+    recipient_email: prev.client_email,
+    recipient_phone: prev.client_phone,
+    recipient_address: prev.client_address || "",
+    recipient_city: prev.client_city || "",
+    recipient_postal_code: prev.client_postal_code || "",
+    recipient_country: prev.client_country || "",
+  }))
+}
 
   const handleCreateOrderClientSelect = (value: string) => {
     if (value === "custom") {
@@ -589,6 +613,10 @@ export default function ClientDetailPage() {
             client_name: client?.name || "",
             client_email: client?.email || "",
             client_phone: client?.phone || "",
+            client_address: client?.address || "",
+            client_city: client?.city || "",
+            client_postal_code: client?.postal_code || "",
+            client_country: client?.country || "",
           }
         : {}),
       ...(shouldUseRecipient || (!prev.recipient_name && !prev.recipient_email && !prev.recipient_phone)
@@ -643,6 +671,10 @@ export default function ClientDetailPage() {
         client_name: client.name || "",
         client_email: client.email || "",
         client_phone: client.phone || "",
+        client_address: client.address || "",
+        client_city: client.city || "",
+        client_postal_code: client.postal_code || "",
+        client_country: client.country || "",
         ...(createClientRole === "sender" || createClientRole === "both"
           ? { customer_id: client.id }
           : {}),
@@ -702,6 +734,17 @@ export default function ClientDetailPage() {
       client_name: order.client_name,
       client_email: order.client_email,
       client_phone: order.client_phone || "",
+    client_address: order.client_address || "",
+    client_city: order.client_city || "",
+    client_postal_code: order.client_postal_code || "",
+    client_country: order.client_country || "",
+    recipient_name: order.recipient_name || "",
+    recipient_email: order.recipient_email || "",
+    recipient_phone: order.recipient_phone || "",
+    recipient_address: order.recipient_address || "",
+    recipient_city: order.recipient_city || "",
+    recipient_postal_code: order.recipient_postal_code || "",
+    recipient_country: order.recipient_country || "",
       service_type: order.service_type,
       origin: order.origin,
       destination: order.destination,
@@ -1203,7 +1246,7 @@ export default function ClientDetailPage() {
         </Card>
 
         {/* Statistiques */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Commandes</CardTitle>
@@ -1211,15 +1254,6 @@ export default function ClientDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{orders.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valeur Totale</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">€{totalValue.toLocaleString()}</div>
             </CardContent>
           </Card>
         </div>
@@ -1576,7 +1610,166 @@ export default function ClientDetailPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-orange-100 pb-3">
                 <div>
+                      <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+                        Expéditeur
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Coordonnées utilisées comme point d'expédition.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="edit_client_name">Nom</Label>
+                      <Input
+                        id="edit_client_name"
+                        value={editOrder.client_name}
+                        onChange={(e) => setEditOrder({ ...editOrder, client_name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_client_email">Email</Label>
+                      <Input
+                        id="edit_client_email"
+                        value={editOrder.client_email}
+                        onChange={(e) => setEditOrder({ ...editOrder, client_email: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="edit_client_phone">Téléphone</Label>
+                      <Input
+                        id="edit_client_phone"
+                        value={editOrder.client_phone}
+                        onChange={(e) => setEditOrder({ ...editOrder, client_phone: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_client_country">Pays</Label>
+                      <Input
+                        id="edit_client_country"
+                        value={editOrder.client_country || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, client_country: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="sm:col-span-3">
+                      <Label htmlFor="edit_client_address">Adresse complète</Label>
+                      <Textarea
+                        id="edit_client_address"
+                        value={editOrder.client_address || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, client_address: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_client_postal_code">Code postal</Label>
+                      <Input
+                        id="edit_client_postal_code"
+                        value={editOrder.client_postal_code || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, client_postal_code: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_client_city">Ville</Label>
+                      <Input
+                        id="edit_client_city"
+                        value={editOrder.client_city || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, client_city: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-orange-100 pb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+                        Destinataire
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Personne qui recevra la commande.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyClientToRecipientForEdit}
+                      className="text-orange-700 hover:text-orange-800"
+                    >
+                      Copier l'expéditeur
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <Label htmlFor="edit_recipient_name">Nom</Label>
+                      <Input
+                        id="edit_recipient_name"
+                        value={editOrder.recipient_name || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, recipient_name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_recipient_email">Email</Label>
+                      <Input
+                        id="edit_recipient_email"
+                        type="email"
+                        value={editOrder.recipient_email || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, recipient_email: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_recipient_phone">Téléphone</Label>
+                      <Input
+                        id="edit_recipient_phone"
+                        value={editOrder.recipient_phone || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, recipient_phone: e.target.value })}
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <Label htmlFor="edit_recipient_address">Adresse complète</Label>
+                      <Textarea
+                        id="edit_recipient_address"
+                        value={editOrder.recipient_address || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, recipient_address: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_recipient_city">Ville</Label>
+                      <Input
+                        id="edit_recipient_city"
+                        value={editOrder.recipient_city || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, recipient_city: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_recipient_postal_code">Code postal</Label>
+                      <Input
+                        id="edit_recipient_postal_code"
+                        value={editOrder.recipient_postal_code || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, recipient_postal_code: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_recipient_country">Pays</Label>
+                      <Input
+                        id="edit_recipient_country"
+                        value={editOrder.recipient_country || ""}
+                        onChange={(e) => setEditOrder({ ...editOrder, recipient_country: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Label htmlFor="edit_container_id">Conteneur</Label>
                   <Select
                     value={editOrder.container_id || "none"}
@@ -1860,159 +2053,177 @@ export default function ClientDetailPage() {
                     </p>
                   )}
                 </div>
-                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-                  <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
-                          Expéditeur
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Coordonnées utilisées comme point d'expédition.
-                        </p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          createClientRole === "sender" || createClientRole === "both"
-                            ? "border-orange-300 bg-orange-50 text-orange-700"
-                            : "border-dashed border-orange-200 text-muted-foreground"
-                        }
-                      >
-                        {createClientRole === "sender" || createClientRole === "both"
-                          ? "Client associé"
-                          : "Formulaire manuel"}
-                      </Badge>
+              </div>
+              <div className="space-y-4">
+                <div className="rounded-md border border-orange-100 bg-white p-4 shadow-sm space-y-4">
+                <div>
+                    <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Expéditeur</p>
+                    <p className="text-xs text-muted-foreground">Coordonnées utilisées comme point d'expédition.</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="new_client_name">Nom</Label>
+                      <Input
+                        id="new_client_name"
+                        value={newOrder.client_name}
+                        onChange={(e) => setNewOrder({ ...newOrder, client_name: e.target.value })}
+                      />
                     </div>
-                    <div className="space-y-1 rounded-md border border-dashed border-orange-200 bg-orange-50/50 p-3 text-sm">
-                      <p className="font-medium break-words">
-                        {newOrder.client_name || "Non renseigné"}
-                      </p>
-                      <p className="text-muted-foreground break-words">
-                        {newOrder.client_email || "—"}
-                      </p>
-                      {(newOrder.client_phone || "").trim() && (
-                        <p className="text-muted-foreground">{newOrder.client_phone}</p>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        onClick={() => setIsCreateSenderDetailsOpen(true)}
-                      >
-                        Modifier les détails
-                      </Button>
-                      {(createClientRole === "sender" || createClientRole === "both") &&
-                        selectedCreateCustomer && (
-                          <Badge variant="secondary" className="bg-orange-100 text-orange-700">
-                            Synchronisé avec {selectedCreateCustomer.name || "le client"}
-                          </Badge>
-                        )}
+                    <div>
+                      <Label htmlFor="new_client_email">Email</Label>
+                      <Input
+                        id="new_client_email"
+                        type="email"
+                        value={newOrder.client_email}
+                        onChange={(e) => setNewOrder({ ...newOrder, client_email: e.target.value })}
+                      />
                     </div>
                   </div>
-                  <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
-                          Destinataire
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Personne qui recevra la commande.
-                        </p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          createClientRole === "recipient" || createClientRole === "both"
-                            ? "border-orange-300 bg-orange-50 text-orange-700"
-                            : "border-dashed border-orange-200 text-muted-foreground"
-                        }
-                      >
-                        {createClientRole === "recipient" || createClientRole === "both"
-                          ? "Client associé"
-                          : "Formulaire manuel"}
-                      </Badge>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="new_client_phone">Téléphone</Label>
+                      <Input
+                        id="new_client_phone"
+                        value={newOrder.client_phone}
+                        onChange={(e) => setNewOrder({ ...newOrder, client_phone: e.target.value })}
+                      />
                     </div>
-                    <div className="space-y-1 rounded-md border border-dashed border-orange-200 bg-orange-50/50 p-3 text-sm">
-                      <p className="font-medium break-words">
-                        {newOrder.recipient_name || newOrder.client_name || "Non renseigné"}
-                      </p>
-                      <p className="text-muted-foreground break-words">
-                        {newOrder.recipient_email || newOrder.client_email || "—"}
-                      </p>
-                      {(newOrder.recipient_phone || newOrder.client_phone) && (
-                        <p className="text-muted-foreground">
-                          {newOrder.recipient_phone || newOrder.client_phone}
-                        </p>
-                      )}
-                      {(newOrder.recipient_address ||
-                        newOrder.recipient_postal_code ||
-                        newOrder.recipient_city ||
-                        newOrder.recipient_country) && (
-                        <div className="space-y-1 pt-2 text-muted-foreground">
-                          {newOrder.recipient_address && (
-                            <p className="break-words">{newOrder.recipient_address}</p>
-                          )}
-                          {(newOrder.recipient_postal_code || newOrder.recipient_city) && (
-                            <p className="break-words">
-                              {[newOrder.recipient_postal_code, newOrder.recipient_city]
-                                .filter(Boolean)
-                                .join(" ")}
-                            </p>
-                          )}
-                          {newOrder.recipient_country && <p>{newOrder.recipient_country}</p>}
-                        </div>
-                      )}
+                    <div>
+                      <Label htmlFor="new_client_country">Pays</Label>
+                      <Input
+                        id="new_client_country"
+                        value={newOrder.client_country}
+                        onChange={(e) => setNewOrder({ ...newOrder, client_country: e.target.value })}
+                      />
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        onClick={() => setIsCreateRecipientDetailsOpen(true)}
-                      >
-                        Modifier les détails
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={copyClientToRecipientForCreate}
-                        className="text-orange-700 hover:text-orange-800"
-                      >
-                        Copier l’expéditeur
-                      </Button>
-                      {(createClientRole === "recipient" || createClientRole === "both") &&
-                        selectedCreateCustomer && (
-                          <Badge variant="secondary" className="bg-orange-100 text-orange-700">
-                            Synchronisé avec {selectedCreateCustomer.name || "le client"}
-                          </Badge>
-                        )}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="sm:col-span-3">
+                      <Label htmlFor="new_client_address">Adresse</Label>
+                      <Textarea
+                        id="new_client_address"
+                        value={newOrder.client_address}
+                        onChange={(e) => setNewOrder({ ...newOrder, client_address: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new_client_postal_code">Code postal</Label>
+                      <Input
+                        id="new_client_postal_code"
+                        value={newOrder.client_postal_code}
+                        onChange={(e) => setNewOrder({ ...newOrder, client_postal_code: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new_client_city">Ville</Label>
+                      <Input
+                        id="new_client_city"
+                        value={newOrder.client_city}
+                        onChange={(e) => setNewOrder({ ...newOrder, client_city: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-md border border-orange-100 bg-white p-4 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Destinataire</p>
+                      <p className="text-xs text-muted-foreground">Coordonnées utilisées pour la livraison.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyClientToRecipientForCreate}
+                      className="text-orange-700 hover:text-orange-800"
+                    >
+                      Copier l’expéditeur
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="new_recipient_name">Nom</Label>
+                      <Input
+                        id="new_recipient_name"
+                        value={newOrder.recipient_name}
+                        onChange={(e) => setNewOrder({ ...newOrder, recipient_name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new_recipient_email">Email</Label>
+                      <Input
+                        id="new_recipient_email"
+                        type="email"
+                        value={newOrder.recipient_email}
+                        onChange={(e) => setNewOrder({ ...newOrder, recipient_email: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="new_recipient_phone">Téléphone</Label>
+                      <Input
+                        id="new_recipient_phone"
+                        value={newOrder.recipient_phone}
+                        onChange={(e) => setNewOrder({ ...newOrder, recipient_phone: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new_recipient_country">Pays</Label>
+                      <Input
+                        id="new_recipient_country"
+                        value={newOrder.recipient_country}
+                        onChange={(e) => setNewOrder({ ...newOrder, recipient_country: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="sm:col-span-3">
+                      <Label htmlFor="new_recipient_address">Adresse</Label>
+                      <Textarea
+                        id="new_recipient_address"
+                        value={newOrder.recipient_address}
+                        onChange={(e) => setNewOrder({ ...newOrder, recipient_address: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new_recipient_postal_code">Code postal</Label>
+                      <Input
+                        id="new_recipient_postal_code"
+                        value={newOrder.recipient_postal_code}
+                        onChange={(e) => setNewOrder({ ...newOrder, recipient_postal_code: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new_recipient_city">Ville</Label>
+                      <Input
+                        id="new_recipient_city"
+                        value={newOrder.recipient_city}
+                        onChange={(e) => setNewOrder({ ...newOrder, recipient_city: e.target.value })}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
               <div>
                 <Label htmlFor="service_type">Type de service *</Label>
-                <Select
-                  value={newOrder.service_type}
-                  onValueChange={(value) => setNewOrder({ ...newOrder, service_type: value })}
-                >
-                  <SelectTrigger>
+                  <Select
+                    value={newOrder.service_type}
+                    onValueChange={(value) => setNewOrder({ ...newOrder, service_type: value })}
+                  >
+                    <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fret_maritime">Fret maritime</SelectItem>
-                    <SelectItem value="fret_aerien">Fret aérien</SelectItem>
-                    <SelectItem value="demenagement">Déménagement</SelectItem>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fret_maritime">Fret maritime</SelectItem>
+                      <SelectItem value="fret_aerien">Fret aérien</SelectItem>
+                      <SelectItem value="demenagement">Déménagement</SelectItem>
                     <SelectItem value="dedouanement">Dédouanement</SelectItem>
                     <SelectItem value="negoce">Négoce</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    </SelectContent>
+                  </Select>
+                </div>
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="origin">Origine *</Label>
                   <Input
@@ -2036,8 +2247,8 @@ export default function ClientDetailPage() {
               </div>
               <div>
                 <Label htmlFor="container_id">Conteneur</Label>
-                <Select
-                  value={newOrder.container_id || "none"}
+                  <Select
+                    value={newOrder.container_id || "none"}
                   onValueChange={(value) => {
                     if (value === "none") {
                       setNewOrder({
@@ -2057,62 +2268,62 @@ export default function ClientDetailPage() {
                 >
                   <SelectTrigger className="text-base sm:text-sm">
                     <SelectValue placeholder="Aucun conteneur assigné" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun</SelectItem>
-                    {containers.length === 0 ? (
-                      <SelectItem value="no-containers" disabled>
-                        Aucun conteneur disponible
-                      </SelectItem>
-                    ) : (
-                      containers.map((container) => (
-                        <SelectItem key={container.id} value={container.id}>
-                          {container.code} {container.status && `(${container.status.replace(/_/g, " ")})`}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun</SelectItem>
+                      {containers.length === 0 ? (
+                        <SelectItem value="no-containers" disabled>
+                          Aucun conteneur disponible
                         </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 w-full"
-                  onClick={() => setIsCreateContainerDialogOpen(true)}
-                >
+                      ) : (
+                        containers.map((container) => (
+                          <SelectItem key={container.id} value={container.id}>
+                            {container.code} {container.status && `(${container.status.replace(/_/g, " ")})`}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={() => setIsCreateContainerDialogOpen(true)}
+                  >
                   + Créer un nouveau conteneur
-                </Button>
-                {newOrder.container_id && (() => {
-                  const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
-                  return (
-                    <div className="mt-2 p-2 bg-muted rounded-md">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="font-mono text-xs">
+                  </Button>
+                  {newOrder.container_id && (() => {
+                    const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
+                    return (
+                      <div className="mt-2 p-2 bg-muted rounded-md">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="font-mono text-xs">
                           {selectedContainer?.code || newOrder.container_code || "N/A"}
-                        </Badge>
-                        {selectedContainer?.status && (
-                          <Badge variant="secondary" className="text-xs">
-                            {selectedContainer.status.replace(/_/g, " ")}
                           </Badge>
-                        )}
-                      </div>
-                      {selectedContainer && (
-                        <div className="text-xs text-muted-foreground space-y-0.5">
-                          {selectedContainer.vessel && (
-                            <div>Navire: <span className="font-medium">{selectedContainer.vessel}</span></div>
-                          )}
-                          {selectedContainer.departure_port && (
-                            <div>Départ: <span className="font-medium">{selectedContainer.departure_port}</span></div>
-                          )}
-                          {selectedContainer.arrival_port && (
-                            <div>Arrivée: <span className="font-medium">{selectedContainer.arrival_port}</span></div>
+                          {selectedContainer?.status && (
+                            <Badge variant="secondary" className="text-xs">
+                              {selectedContainer.status.replace(/_/g, " ")}
+                            </Badge>
                           )}
                         </div>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
+                        {selectedContainer && (
+                          <div className="text-xs text-muted-foreground space-y-0.5">
+                            {selectedContainer.vessel && (
+                              <div>Navire: <span className="font-medium">{selectedContainer.vessel}</span></div>
+                            )}
+                            {selectedContainer.departure_port && (
+                              <div>Départ: <span className="font-medium">{selectedContainer.departure_port}</span></div>
+                            )}
+                            {selectedContainer.arrival_port && (
+                              <div>Arrivée: <span className="font-medium">{selectedContainer.arrival_port}</span></div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 <div>
                   <Label htmlFor="weight">Poids (kg)</Label>
@@ -2517,4 +2728,5 @@ export default function ClientDetailPage() {
     </AdminLayout>
   )
 }
+
 

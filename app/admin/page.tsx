@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Package, Truck, BarChart3, Users, LogOut, ShoppingCart } from "lucide-react"
+import { Package, Truck, BarChart3, Users, LogOut } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminDashboard() {
@@ -136,14 +136,14 @@ export default function AdminDashboard() {
             </Card>
           </Link>
 
-          <Link href="/admin/inventory">
+          <Link href="/admin/containers">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5 text-orange-600" />
-                  Gestion des stocks
+                  Gestion des conteneurs
                 </CardTitle>
-                <CardDescription>Gérez l'inventaire des colis, véhicules et marchandises</CardDescription>
+                <CardDescription>Suivez les conteneurs et leurs statuts</CardDescription>
               </CardHeader>
             </Card>
           </Link>
@@ -175,6 +175,42 @@ export default function AdminDashboard() {
           )}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
+        <div className="flex items-center justify-around py-2 px-2">
+          <Link
+            href="/admin/clients"
+            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
+          >
+            <Users className="h-5 w-5" />
+            <span className="text-xs">Clients</span>
+          </Link>
+          <Link
+            href="/admin/containers"
+            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
+          >
+            <Package className="h-5 w-5" />
+            <span className="text-xs">Conteneurs</span>
+          </Link>
+          <Link
+            href="/admin/tracking"
+            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
+          >
+            <Truck className="h-5 w-5" />
+            <span className="text-xs">Suivi</span>
+          </Link>
+          {role !== 'operator' && (
+            <Link
+              href="/admin/analytics"
+              className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
+            >
+              <BarChart3 className="h-5 w-5" />
+              <span className="text-xs">Analyses</span>
+            </Link>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

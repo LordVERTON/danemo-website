@@ -107,10 +107,19 @@ export async function POST(request: NextRequest) {
       ? body.recipient_email.trim().toLowerCase()
       : sanitizedClientEmail
 
+    const sanitizedClientAddress = body.client_address?.trim().substring(0, 200) || null
+    const sanitizedClientCity = body.client_city?.trim().substring(0, 100) || null
+    const sanitizedClientPostalCode = body.client_postal_code?.trim().substring(0, 20) || null
+    const sanitizedClientCountry = body.client_country?.trim().substring(0, 100) || null
+
     const sanitizedData = {
       client_name: sanitizedClientName,
       client_email: sanitizedClientEmail,
       client_phone: body.client_phone?.trim().substring(0, 20),
+      client_address: sanitizedClientAddress,
+      client_city: sanitizedClientCity,
+      client_postal_code: sanitizedClientPostalCode,
+      client_country: sanitizedClientCountry,
       recipient_name: sanitizedRecipientName || null,
       recipient_email: sanitizedRecipientEmail || null,
       recipient_phone: body.recipient_phone
