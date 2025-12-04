@@ -344,13 +344,38 @@ export const utils = {
   // Générer un numéro de commande unique
   async generateOrderNumber(): Promise<string> {
     const year = new Date().getFullYear()
-    const { count } = await supabase
+
+    // On récupère le plus grand numéro existant pour l'année courante,
+    // plutôt que de se baser sur un simple COUNT (qui peut être faux si des lignes sont supprimées)
+    const { data, error } = await supabase
       .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', `${year}-01-01`)
-    
-    const nextNumber = (count || 0) + 1
-    return `DN${year}${nextNumber.toString().padStart(6, '0')}`
+      .select('order_number')
+      .like('order_number', `DN${year}%`)
+      .order('order_number', { ascending: false })
+      .limit(1)
+
+    if (error) {
+      console.error('[utils.generateOrderNumber] Failed to fetch last order_number:', error)
+      // Fallback très défensif pour ne pas bloquer la création
+      const fallback = `DN${year}${'000001'}`
+      return fallback
+    }
+
+    const last = data && data.length > 0 ? data[0].order_number : null
+
+    if (!last) {
+      // Première commande de l’année
+      return `DN${year}000001`
+    }
+
+    // Extraire la partie séquentielle (6 derniers chiffres)
+    const suffix = last.slice(-6)
+    const lastNumber = Number.parseInt(suffix, 10)
+
+    const nextNumber = Number.isNaN(lastNumber) ? 1 : lastNumber + 1
+    const padded = nextNumber.toString().padStart(6, '0')
+
+    return `DN${year}${padded}`
   },
 
   // Obtenir les statistiques

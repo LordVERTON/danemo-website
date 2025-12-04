@@ -141,17 +141,50 @@ export async function POST(request: NextRequest) {
       container_code: body.container_code && body.container_code !== '' ? body.container_code.trim().substring(0, 50) : null,
       customer_id: body.customer_id && body.customer_id !== '' ? body.customer_id : null
     }
-    
-    // Générer un numéro de commande unique
-    const orderNumber = await utils.generateOrderNumber()
-    
-    const orderData = {
-      ...sanitizedData,
-      order_number: orderNumber,
-      status: 'pending' as const
+        
+    // Générer un numéro de commande unique et gérer les collisions éventuelles
+    // (très rare, mais possible en cas de requêtes concurrentes)
+    let order
+    const maxAttempts = 5
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const orderNumber = await utils.generateOrderNumber()
+
+      const orderData = {
+        ...sanitizedData,
+        order_number: orderNumber,
+        status: 'pending' as const
+      }
+
+      try {
+        order = await ordersApi.create(orderData)
+        break
+      } catch (err: any) {
+        // Collision sur la contrainte d'unicité de order_number → on retente
+        if (err?.code === '23505' || err?.message?.includes('orders_order_number_key')) {
+          if (attempt === maxAttempts) {
+            console.error('Too many collisions when generating order_number', err)
+            return NextResponse.json(
+              { success: false, error: "Impossible de générer un numéro de commande unique. Merci de réessayer." },
+              { status: 503 }
+            )
+          }
+          // on boucle pour régénérer un nouveau numéro
+          continue
+        }
+
+        // Autre erreur (non liée à l'unicité) → on la relance
+        throw err
+      }
     }
 
-    const order = await ordersApi.create(orderData)
+    if (!order) {
+      // Garde-fou, ne devrait jamais arriver si la boucle est correcte
+      return NextResponse.json(
+        { success: false, error: "Impossible de créer la commande pour le moment. Merci de réessayer." },
+        { status: 503 }
+      )
+    }
     
     return NextResponse.json({ success: true, data: order }, { status: 201 })
   } catch (error) {
