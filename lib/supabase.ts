@@ -17,7 +17,7 @@ let supabaseAdminInstance: ReturnType<typeof createClient> | null = null
 if (isServer) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {
-    throw new Error('Missing SupABase env: SUPABASE_SERVICE_ROLE_KEY')
+    throw new Error('Missing Supabase env: SUPABASE_SERVICE_ROLE_KEY')
   }
   supabaseAdminInstance = createClient(
     supabaseUrl,
