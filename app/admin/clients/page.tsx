@@ -70,7 +70,19 @@ export default function ClientsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
-  const [editCustomer, setEditCustomer] = useState({
+  const [editCustomer, setEditCustomer] = useState<{
+    name: string
+    email: string
+    phone: string
+    company: string
+    address: string
+    city: string
+    postal_code: string
+    country: string
+    tax_id: string
+    notes: string
+    status: 'active' | 'inactive' | 'archived'
+  }>({
     name: "",
     email: "",
     phone: "",
@@ -81,7 +93,7 @@ export default function ClientsPage() {
     country: "",
     tax_id: "",
     notes: "",
-    status: "active" as const
+    status: "active"
   })
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [error, setError] = useState("")
