@@ -372,29 +372,29 @@ export default function TrackingPage() {
         )}
 
         {/* Filtres */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Eye className="h-4 w-4" />
-                <span>Cliquez sur une ligne pour voir le suivi de la commande</span>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                <Eye className="h-4 w-4 shrink-0" />
+                <span className="truncate">Cliquez sur une ligne pour voir le suivi de la commande</span>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 min-w-0">
+              <div className="flex-1 min-w-0">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Rechercher par numéro, nom ou email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 w-full min-w-0"
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0 sm:shrink-0">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48 min-w-0">
                     <SelectValue placeholder="Filtrer par statut" />
                   </SelectTrigger>
                   <SelectContent>
@@ -407,7 +407,7 @@ export default function TrackingPage() {
                   </SelectContent>
                 </Select>
                 <Select value={filterContainer} onValueChange={setFilterContainer}>
-                  <SelectTrigger className="w-56">
+                  <SelectTrigger className="w-full sm:w-56 min-w-0 [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:truncate">
                     <SelectValue placeholder="Filtrer par conteneur" />
                   </SelectTrigger>
                   <SelectContent>
