@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { customersApi } from '@/lib/database'
+import { authenticateRequest } from '@/lib/auth-middleware'
 
 // GET /api/customers/[id] - Récupérer un client avec ses commandes
 export async function GET(
@@ -27,12 +28,26 @@ export async function GET(
   }
 }
 
-// PUT /api/customers/[id] - Mettre à jour un client
+// PUT /api/customers/[id] - Mettre à jour un client (admin et operator uniquement)
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await authenticateRequest(request)
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentification requise' },
+        { status: 401 }
+      )
+    }
+    if (user.role !== 'admin' && user.role !== 'operator') {
+      return NextResponse.json(
+        { success: false, error: 'Permissions insuffisantes' },
+        { status: 403 }
+      )
+    }
+
     const { id } = await context.params
     const body = await request.json()
     

@@ -24,17 +24,23 @@ export default function AdminLoginPage() {
     setIsLoading(true)
     setError("")
 
+    const setSession = (role: string) => {
+      localStorage.setItem("danemo_admin_session", "authenticated")
+      localStorage.setItem("danemo_admin_role", role)
+      const maxAge = 60 * 60 * 24 * 7 // 7 jours
+      document.cookie = `danemo_admin_session=authenticated; path=/; max-age=${maxAge}; SameSite=Lax`
+      document.cookie = `danemo_admin_role=${role}; path=/; max-age=${maxAge}; SameSite=Lax`
+    }
+
     // Vérification des identifiants en dur d'abord
     if (email === "admin@danemo.be" && password === "admin123") {
-      localStorage.setItem("danemo_admin_session", "authenticated")
-      localStorage.setItem("danemo_admin_role", "admin")
+      setSession("admin")
       router.push("/admin")
       return
     }
     
     if (email === "operator@danemo.be" && password === "operator123") {
-      localStorage.setItem("danemo_admin_session", "authenticated")
-      localStorage.setItem("danemo_admin_role", "operator")
+      setSession("operator")
       router.push("/admin")
       return
     }
@@ -45,11 +51,9 @@ export default function AdminLoginPage() {
       if (authError) {
         setError("Email ou mot de passe incorrect")
       } else {
-        // Store session marker and role from user metadata if present
-        localStorage.setItem("danemo_admin_session", "authenticated")
         const roleFromMetadata = (data.user?.user_metadata as any)?.role
         const derivedRole = roleFromMetadata || (email === "operator@danemo.be" ? "operator" : "admin")
-        localStorage.setItem("danemo_admin_role", derivedRole)
+        setSession(derivedRole)
         router.push("/admin")
       }
     } catch (err: any) {

@@ -17,7 +17,9 @@ import {
   Building2,
   Mail,
   Phone,
-  Plus
+  Plus,
+  Edit,
+  Loader2
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -47,6 +49,12 @@ interface Customer {
   email: string
   phone?: string | null
   company?: string | null
+  address?: string | null
+  city?: string | null
+  postal_code?: string | null
+  country?: string | null
+  tax_id?: string | null
+  notes?: string | null
   status: 'active' | 'inactive' | 'archived'
   orders: Order[]
   created_at: string
@@ -60,6 +68,22 @@ export default function ClientsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editCustomer, setEditCustomer] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    address: "",
+    city: "",
+    postal_code: "",
+    country: "",
+    tax_id: "",
+    notes: "",
+    status: "active" as const
+  })
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [containers, setContainers] = useState<Array<{ 
     id: string; 
@@ -191,8 +215,58 @@ export default function ClientsPage() {
     return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>
   }
 
+  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'operator'
+
   const handleCustomerClick = (customerId: string) => {
     router.push(`/admin/clients/${customerId}`)
+  }
+
+  const handleOpenEdit = (e: React.MouseEvent, customer: Customer) => {
+    e.stopPropagation()
+    setEditingCustomerId(customer.id)
+    setEditCustomer({
+      name: customer.name || "",
+      email: customer.email || "",
+      phone: customer.phone || "",
+      company: customer.company || "",
+      address: customer.address || "",
+      city: customer.city || "",
+      postal_code: customer.postal_code || "",
+      country: customer.country || "",
+      tax_id: customer.tax_id || "",
+      notes: customer.notes || "",
+      status: customer.status || "active"
+    })
+    setError("")
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditCustomer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingCustomerId) return
+    setError("")
+    setIsSavingEdit(true)
+    try {
+      const response = await fetch(`/api/customers/${editingCustomerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editCustomer),
+        credentials: 'include'
+      })
+      const result = await response.json()
+      if (result.success) {
+        setIsEditDialogOpen(false)
+        setEditingCustomerId(null)
+        fetchCustomers()
+      } else {
+        setError(result.error || 'Erreur lors de la modification')
+      }
+    } catch (err) {
+      console.error('Error updating customer:', err)
+      setError('Erreur de connexion')
+    } finally {
+      setIsSavingEdit(false)
+    }
   }
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
@@ -522,9 +596,20 @@ export default function ClientsPage() {
                           {getStatusBadge(customer.status)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center justify-end">
+                          <div className="flex items-center justify-end gap-2">
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => handleOpenEdit(e, customer)}
+                                title="Modifier le client"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -828,6 +913,149 @@ export default function ClientsPage() {
                   Annuler
                 </Button>
                 <Button type="submit">Créer le client</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog de modification de client */}
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          setIsEditDialogOpen(open)
+          if (!open) setError("")
+        }}>
+          <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Modifier le client</DialogTitle>
+              <DialogDescription>
+                Modifiez les informations du client
+              </DialogDescription>
+            </DialogHeader>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <form onSubmit={handleEditCustomer} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_name">Nom *</Label>
+                  <Input
+                    id="edit_name"
+                    value={editCustomer.name}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_email">Email *</Label>
+                  <Input
+                    id="edit_email"
+                    type="email"
+                    value={editCustomer.email}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_phone">Téléphone</Label>
+                  <Input
+                    id="edit_phone"
+                    value={editCustomer.phone}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_company">Entreprise</Label>
+                  <Input
+                    id="edit_company"
+                    value={editCustomer.company}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, company: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_address">Adresse</Label>
+                  <Input
+                    id="edit_address"
+                    value={editCustomer.address}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, address: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_city">Ville</Label>
+                  <Input
+                    id="edit_city"
+                    value={editCustomer.city}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, city: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_postal_code">Code postal</Label>
+                  <Input
+                    id="edit_postal_code"
+                    value={editCustomer.postal_code}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, postal_code: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_country">Pays</Label>
+                  <Input
+                    id="edit_country"
+                    value={editCustomer.country}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, country: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_tax_id">Numéro de TVA / SIRET</Label>
+                  <Input
+                    id="edit_tax_id"
+                    value={editCustomer.tax_id}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, tax_id: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_status">Statut</Label>
+                  <Select
+                    value={editCustomer.status}
+                    onValueChange={(value: any) => setEditCustomer({ ...editCustomer, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Actif</SelectItem>
+                      <SelectItem value="inactive">Inactif</SelectItem>
+                      <SelectItem value="archived">Archivé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="edit_notes">Notes</Label>
+                <Textarea
+                  id="edit_notes"
+                  value={editCustomer.notes}
+                  onChange={(e) => setEditCustomer({ ...editCustomer, notes: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Annuler
+                </Button>
+                <Button type="submit" disabled={isSavingEdit}>
+                  {isSavingEdit ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    'Enregistrer'
+                  )}
+                </Button>
               </div>
             </form>
           </DialogContent>

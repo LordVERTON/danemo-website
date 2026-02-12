@@ -36,6 +36,8 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const handleLogout = useCallback(() => {
     localStorage.removeItem("danemo_admin_session")
     localStorage.removeItem("danemo_admin_role")
+    document.cookie = "danemo_admin_session=; path=/; max-age=0"
+    document.cookie = "danemo_admin_role=; path=/; max-age=0"
     router.push("/admin/login")
   }, [router])
 
