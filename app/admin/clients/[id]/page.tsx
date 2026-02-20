@@ -88,6 +88,7 @@ interface Order {
   container_code?: string | null
   container_status?: string | null
   qr_code?: string | null
+  parcels_count?: number | null
 }
 
 interface Customer {
@@ -145,6 +146,7 @@ const getDefaultNewOrderData = (customer: Customer | null) => ({
   container_id: "",
   container_code: "",
   customer_id: customer?.id || "",
+  parcels_count: "1",
 })
 
 // Composant pour afficher le QR code
@@ -267,7 +269,8 @@ export default function ClientDetailPage() {
     estimated_delivery: "",
     status: "",
     container_id: "",
-    container_code: ""
+    container_code: "",
+    parcels_count: "1"
   })
 
   useEffect(() => {
@@ -753,7 +756,8 @@ const copyClientToRecipientForEdit = () => {
       estimated_delivery: order.estimated_delivery || "",
       status: order.status,
       container_id: order.container_id || "",
-      container_code: order.container_code || ""
+      container_code: order.container_code || "",
+      parcels_count: order.parcels_count != null ? String(order.parcels_count) : "1"
     })
     setIsEditDialogOpen(true)
   }
@@ -771,6 +775,7 @@ const copyClientToRecipientForEdit = () => {
         estimated_delivery: editOrder.estimated_delivery || null,
         container_id: editOrder.container_id || null,
         container_code: editOrder.container_code || selectedContainer?.code || null,
+        parcels_count: editOrder.parcels_count ? parseInt(editOrder.parcels_count, 10) || 1 : 1,
       }
 
       const response = await fetch(`/api/orders/${selectedOrder.id}`, {
@@ -865,6 +870,7 @@ const copyClientToRecipientForEdit = () => {
         container_code: selectedContainer?.code || null,
         container_status: selectedContainer?.status || null,
         customer_id: newOrder.customer_id || customer?.id || null,
+        parcels_count: newOrder.parcels_count ? parseInt(newOrder.parcels_count, 10) || 1 : 1,
       }
 
       const response = await fetch('/api/orders', {
@@ -899,6 +905,8 @@ const copyClientToRecipientForEdit = () => {
             qrCode: createdOrder.qr_code,
             orderNumber: createdOrder.order_number,
             clientName: createdOrder.client_name,
+            recipientName: createdOrder.recipient_name,
+            parcelsCount: createdOrder.parcels_count,
             serviceType: createdOrder.service_type,
             origin: createdOrder.origin,
             destination: createdOrder.destination
@@ -1140,6 +1148,22 @@ const copyClientToRecipientForEdit = () => {
     return matchesSearch && matchesStatus
   })
 
+  // Récapitulatif des colis par ville de destination (commandes vers la même ville)
+  const getOrderCity = (order: Order) => {
+    const city = order.recipient_city?.trim()
+    if (city) return city
+    const dest = order.destination?.trim()
+    if (dest) return dest.split(",")[0]?.trim() || dest
+    return "—"
+  }
+  const parcelsByCity = filteredOrders.reduce<Record<string, number>>((acc, order) => {
+    const city = getOrderCity(order)
+    const count = order.parcels_count ?? 1
+    acc[city] = (acc[city] || 0) + count
+    return acc
+  }, {})
+  const parcelsByCityEntries = Object.entries(parcelsByCity).filter(([, count]) => count > 0)
+
   if (isLoading) {
     return (
       <AdminLayout title="Détails du client">
@@ -1258,6 +1282,25 @@ const copyClientToRecipientForEdit = () => {
           </Card>
         </div>
 
+        {/* Récapitulatif colis par ville de destination */}
+        {parcelsByCityEntries.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Colis par ville de destination</CardTitle>
+              <CardDescription>Nombre total de colis pour les commandes vers chaque ville</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {parcelsByCityEntries.map(([city, count]) => (
+                  <Badge key={city} variant="secondary" className="text-sm py-1.5 px-3">
+                    {city}: {count} colis{count > 1 ? "" : ""}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Filtres */}
         <Card>
           <CardContent className="pt-6">
@@ -1321,6 +1364,7 @@ const copyClientToRecipientForEdit = () => {
                   <TableHead>Numéro</TableHead>
                   <TableHead>Service</TableHead>
                   <TableHead>Trajet</TableHead>
+                  <TableHead>Colis</TableHead>
                   <TableHead>Conteneur</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Valeur</TableHead>
@@ -1344,6 +1388,9 @@ const copyClientToRecipientForEdit = () => {
                         <div>{order.origin}</div>
                         <div className="text-muted-foreground">→ {order.destination}</div>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {order.parcels_count ?? 1}
                     </TableCell>
                     <TableCell>
                       {order.container_code ? (
@@ -1520,6 +1567,8 @@ const copyClientToRecipientForEdit = () => {
                               qrCode: selectedOrder.qr_code,
                               orderNumber: selectedOrder.order_number,
                               clientName: selectedOrder.client_name,
+                              recipientName: selectedOrder.recipient_name,
+                              parcelsCount: selectedOrder.parcels_count,
                               serviceType: selectedOrder.service_type,
                               origin: selectedOrder.origin,
                               destination: selectedOrder.destination
@@ -1873,7 +1922,17 @@ const copyClientToRecipientForEdit = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="edit_parcels_count">Nombre de colis</Label>
+                  <Input
+                    id="edit_parcels_count"
+                    type="number"
+                    min={1}
+                    value={editOrder.parcels_count || "1"}
+                    onChange={(e) => setEditOrder({ ...editOrder, parcels_count: e.target.value })}
+                  />
+                </div>
                 <div>
                   <Label htmlFor="edit_weight">Poids (kg)</Label>
                   <Input
@@ -2324,7 +2383,18 @@ const copyClientToRecipientForEdit = () => {
                     )
                   })()}
                 </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div>
+                  <Label htmlFor="parcels_count">Nombre de colis</Label>
+                  <Input
+                    id="parcels_count"
+                    type="number"
+                    min={1}
+                    value={newOrder.parcels_count || "1"}
+                    onChange={(e) => setNewOrder({ ...newOrder, parcels_count: e.target.value })}
+                    className="text-base sm:text-sm"
+                  />
+                </div>
                 <div>
                   <Label htmlFor="weight">Poids (kg)</Label>
                   <Input

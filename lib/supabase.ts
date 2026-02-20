@@ -69,6 +69,7 @@ export interface Database {
           container_code: string | null
           container_status: string | null
           customer_id: string | null
+          parcels_count: number | null
         }
         Insert: {
           id?: string
@@ -101,6 +102,7 @@ export interface Database {
           container_code?: string | null
           container_status?: string | null
           customer_id?: string | null
+          parcels_count?: number | null
         }
         Update: {
           id?: string
@@ -133,6 +135,7 @@ export interface Database {
           container_code?: string | null
           container_status?: string | null
           customer_id?: string | null
+          parcels_count?: number | null
         }
       }
       tracking_events: {
@@ -244,7 +247,7 @@ export interface Database {
         Row: {
           id: string
           name: string
-          email: string
+          email: string | null
           phone: string | null
           address: string | null
           city: string | null
@@ -260,7 +263,7 @@ export interface Database {
         Insert: {
           id?: string
           name: string
-          email: string
+          email?: string | null
           phone?: string | null
           address?: string | null
           city?: string | null

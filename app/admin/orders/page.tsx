@@ -77,6 +77,7 @@ interface Order {
   container_code?: string | null
   container_status?: string | null
   customer_id?: string | null
+  parcels_count?: number | null
 }
 
 interface ClientSummary {
@@ -174,6 +175,7 @@ export default function OrdersPage() {
     recipient_city: "",
     recipient_postal_code: "",
     recipient_country: "",
+    parcels_count: "1",
     service_type: "",
     origin: "",
     destination: "",
@@ -197,6 +199,7 @@ export default function OrdersPage() {
     recipient_city: "",
     recipient_postal_code: "",
     recipient_country: "",
+    parcels_count: "1",
     service_type: "",
     origin: "",
     destination: "",
@@ -273,6 +276,7 @@ export default function OrdersPage() {
             recipient_city: data.recipient_city || "",
             recipient_postal_code: data.recipient_postal_code || "",
             recipient_country: data.recipient_country || "",
+            parcels_count: data.parcels_count != null ? String(data.parcels_count) : "1",
             service_type: data.service_type || "fret_maritime",
             origin: data.origin || "",
             destination: data.destination || "",
@@ -847,6 +851,7 @@ const handleEditClientRoleChange = (role: ClientRole) => {
         container_code: selectedContainer?.code || null,
         container_status: selectedContainer?.status || null,
         customer_id: newOrder.customer_id || null,
+        parcels_count: newOrder.parcels_count ? parseInt(newOrder.parcels_count, 10) || 1 : 1,
       }
 
       // Étape 1: Créer la commande dans la base de données
@@ -881,6 +886,7 @@ const handleEditClientRoleChange = (role: ClientRole) => {
         recipient_city: "",
         recipient_postal_code: "",
         recipient_country: "",
+        parcels_count: "1",
         service_type: "",
         origin: "",
         destination: "",
@@ -910,6 +916,8 @@ const handleEditClientRoleChange = (role: ClientRole) => {
             qrCode: createdOrder.qr_code,
             orderNumber: createdOrder.order_number,
             clientName: createdOrder.client_name,
+            recipientName: createdOrder.recipient_name,
+            parcelsCount: createdOrder.parcels_count,
             serviceType: createdOrder.service_type,
             origin: createdOrder.origin,
             destination: createdOrder.destination
@@ -966,6 +974,7 @@ const handleEditClientRoleChange = (role: ClientRole) => {
       container_id: order.container_id || "",
       container_code: order.container_code || "",
       customer_id: order.customer_id || "",
+      parcels_count: order.parcels_count != null ? String(order.parcels_count) : "1",
     })
     const senderClientId =
       order.customer_id || findClientIdByEmail(order.client_email) || "custom"
@@ -1005,6 +1014,7 @@ const handleEditClientRoleChange = (role: ClientRole) => {
         container_code: selectedContainer?.code || null,
         container_status: selectedContainer?.status || null,
         customer_id: editOrder.customer_id || null,
+        parcels_count: editOrder.parcels_count ? parseInt(editOrder.parcels_count, 10) || 1 : 1,
       }
 
       const response = await fetch(`/api/orders/${selectedOrder.id}`, {
@@ -1666,6 +1676,17 @@ const clientRoleChoices: Array<{ value: ClientRole; label: string }> = [
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                   <div>
+                    <Label htmlFor="parcels_count">Nombre de colis</Label>
+                    <Input
+                      id="parcels_count"
+                      type="number"
+                      min={1}
+                      value={newOrder.parcels_count || "1"}
+                      onChange={(e) => setNewOrder({...newOrder, parcels_count: e.target.value})}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="weight">Poids (kg)</Label>
                     <Input
                       id="weight"
@@ -2099,6 +2120,7 @@ const clientRoleChoices: Array<{ value: ClientRole; label: string }> = [
                     <TableHead>Destinataire</TableHead>
                     <TableHead>Service</TableHead>
                     <TableHead>Trajet</TableHead>
+                    <TableHead>Colis</TableHead>
                     <TableHead>Conteneur</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Valeur</TableHead>
@@ -2140,6 +2162,9 @@ const clientRoleChoices: Array<{ value: ClientRole; label: string }> = [
                           <div>{order.origin}</div>
                           <div className="text-muted-foreground">→ {order.destination}</div>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {order.parcels_count ?? 1}
                       </TableCell>
                       <TableCell>
                         {order.container_code ? (
@@ -2794,6 +2819,17 @@ const clientRoleChoices: Array<{ value: ClientRole; label: string }> = [
                 {/* Détails */}
                 <div className="space-y-3 sm:space-y-4 animate-in fade-in-0 slide-in-from-right-2 duration-300" style={{ animationDelay: '300ms' }}>
                   <h3 className="text-base sm:text-lg font-semibold">Détails</h3>
+                  <div>
+                    <Label htmlFor="edit_parcels_count">Nombre de colis</Label>
+                    <Input
+                      id="edit_parcels_count"
+                      type="number"
+                      min={1}
+                      value={editOrder.parcels_count || "1"}
+                      onChange={(e) => setEditOrder({ ...editOrder, parcels_count: e.target.value })}
+                      className="text-base sm:text-sm"
+                    />
+                  </div>
                   <div>
                     <Label htmlFor="edit_weight">Poids</Label>
                     <Input

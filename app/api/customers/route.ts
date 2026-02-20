@@ -50,26 +50,27 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Validation des champs requis
-    if (!body.name || !body.email) {
+    // Validation des champs requis (nom uniquement, email optionnel)
+    if (!body.name?.trim()) {
       return NextResponse.json(
-        { success: false, error: 'Name and email are required' },
+        { success: false, error: 'Le nom est requis' },
         { status: 400 }
       )
     }
 
-    // Validation de l'email
+    // Validation de l'email si fourni
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(body.email)) {
+    const emailValue = body.email?.trim()
+    if (emailValue && !emailRegex.test(emailValue)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid email format' },
+        { success: false, error: 'Format d\'email invalide' },
         { status: 400 }
       )
     }
 
     const customer = await customersApi.create({
       name: body.name.trim(),
-      email: body.email.trim().toLowerCase(),
+      email: emailValue ? emailValue.toLowerCase() : null,
       phone: body.phone?.trim() || null,
       address: body.address?.trim() || null,
       city: body.city?.trim() || null,

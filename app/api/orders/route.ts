@@ -139,7 +139,13 @@ export async function POST(request: NextRequest) {
       estimated_delivery: body.estimated_delivery,
       container_id: body.container_id && body.container_id !== '' ? body.container_id : null,
       container_code: body.container_code && body.container_code !== '' ? body.container_code.trim().substring(0, 50) : null,
-      customer_id: body.customer_id && body.customer_id !== '' ? body.customer_id : null
+      customer_id: body.customer_id && body.customer_id !== '' ? body.customer_id : null,
+      parcels_count: (() => {
+        const v = body.parcels_count
+        if (v == null || v === '') return 1
+        const n = typeof v === 'string' ? parseInt(v, 10) : Math.floor(Number(v))
+        return isNaN(n) || n < 1 ? 1 : Math.min(n, 9999)
+      })()
     }
         
     // Générer un numéro de commande unique et gérer les collisions éventuelles

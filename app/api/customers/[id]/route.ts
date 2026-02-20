@@ -51,9 +51,10 @@ export async function PUT(
     const { id } = await context.params
     const body = await request.json()
     
+    const emailValue = body.email?.trim()
     const customer = await customersApi.update(id, {
       name: body.name?.trim(),
-      email: body.email?.trim().toLowerCase(),
+      email: emailValue ? emailValue.toLowerCase() : null,
       phone: body.phone?.trim() || null,
       address: body.address?.trim() || null,
       city: body.city?.trim() || null,

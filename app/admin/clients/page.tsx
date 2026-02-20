@@ -661,13 +661,12 @@ export default function ClientsPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="customer_email">Email *</Label>
+                    <Label htmlFor="customer_email">Email</Label>
                     <Input
                       id="customer_email"
                       type="email"
                       value={newCustomer.email}
                       onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                      required
                     />
                   </div>
                   <div>
@@ -959,13 +958,12 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_email">Email *</Label>
+                  <Label htmlFor="edit_email">Email</Label>
                   <Input
                     id="edit_email"
                     type="email"
                     value={editCustomer.email}
                     onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })}
-                    required
                   />
                 </div>
                 <div>

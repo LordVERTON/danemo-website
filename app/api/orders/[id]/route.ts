@@ -168,6 +168,17 @@ export async function PUT(
     }
 
     const sanitizedOrderData = sanitizeRecipient()
+
+    // Sanitize parcels_count if provided
+    if ('parcels_count' in orderData) {
+      const v = orderData.parcels_count
+      if (v == null || v === '') {
+        sanitizedOrderData.parcels_count = 1
+      } else {
+        const n = typeof v === 'string' ? parseInt(v, 10) : Math.floor(Number(v))
+        sanitizedOrderData.parcels_count = isNaN(n) || n < 1 ? 1 : Math.min(n, 9999)
+      }
+    }
     
     // Mettre à jour la commande
     const order = await ordersApi.update(orderId, sanitizedOrderData)
