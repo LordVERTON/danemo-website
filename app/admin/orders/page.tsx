@@ -1118,6 +1118,7 @@ const handleEditClientRoleChange = (role: ClientRole) => {
         recipient_city: data.recipient_city || "",
         recipient_postal_code: data.recipient_postal_code || "",
         recipient_country: data.recipient_country || "",
+        parcels_count: data.parcels_count != null ? String(data.parcels_count) : "1",
         service_type: data.service_type || "fret_maritime",
         origin: data.origin || "",
         destination: data.destination || "",

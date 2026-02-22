@@ -76,7 +76,7 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
     const img = new Image()
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve()
-      img.onerror = reject()
+      img.onerror = () => reject(new Error('Logo load failed'))
       img.src = logoDataUrl
     })
     const { w: logoW, h: logoH } = fitRect(img.width, img.height, logoMaxW, logoMaxH)
