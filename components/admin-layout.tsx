@@ -41,7 +41,50 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     router.push("/admin/login")
   }, [router])
 
+  const extractQrCode = useCallback((rawPayload: string) => {
+    const raw = String(rawPayload || "").trim()
+    if (!raw) return null
+
+    if (raw.startsWith("ORD-")) return raw
+
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      try {
+        const url = new URL(raw)
+        return (
+          url.searchParams.get("code") ||
+          url.searchParams.get("qr") ||
+          url.searchParams.get("tracking") ||
+          null
+        )
+      } catch {
+        return null
+      }
+    }
+
+    try {
+      const data = JSON.parse(raw)
+      return (
+        data.qr_code ||
+        data.qr ||
+        data.code ||
+        data.order_number ||
+        data.package_qr ||
+        data.tracking ||
+        null
+      )
+    } catch {
+      return null
+    }
+  }, [])
+
   const handleQRScan = useCallback((qrData: string) => {
+    const qrCode = extractQrCode(qrData)
+
+    if (qrCode) {
+      router.push(`/qr?code=${encodeURIComponent(String(qrCode))}`)
+      return
+    }
+
     try {
       const data = JSON.parse(qrData)
       
@@ -106,7 +149,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     } catch (error) {
       console.error('Format de QR code invalide:', error)
     }
-  }, [currentPath])
+  }, [currentPath, extractQrCode, router])
 
   if (!isAuthenticated) {
     return (

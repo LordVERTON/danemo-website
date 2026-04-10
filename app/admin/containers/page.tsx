@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,6 +64,7 @@ const formatDateTime = (iso: string) =>
   })
 
 export default function ContainersPage() {
+  const router = useRouter()
   const [items, setItems] = useState<Container[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -81,6 +83,42 @@ export default function ContainersPage() {
 const [containerNotificationHistory, setContainerNotificationHistory] = useState<
   Record<string, { status: string; timestamp: string }>
 >({})
+
+  const extractQrCode = (rawPayload: string) => {
+    const raw = String(rawPayload || "").trim()
+    if (!raw) return null
+
+    if (raw.startsWith("ORD-")) return raw
+
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      try {
+        const url = new URL(raw)
+        return (
+          url.searchParams.get("code") ||
+          url.searchParams.get("qr") ||
+          url.searchParams.get("tracking") ||
+          null
+        )
+      } catch {
+        return null
+      }
+    }
+
+    try {
+      const data = JSON.parse(raw)
+      return (
+        data.qr_code ||
+        data.qr ||
+        data.code ||
+        data.order_number ||
+        data.package_qr ||
+        data.tracking ||
+        null
+      )
+    } catch {
+      return null
+    }
+  }
 
   const fetchContainers = async () => {
     try {
@@ -564,7 +602,12 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
             <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Conteneurs</span>
           </Link>
           <QRScanner
-            onScan={() => {}}
+            onScan={(payload) => {
+              const code = extractQrCode(payload)
+              if (code) {
+                router.push(`/qr?code=${encodeURIComponent(String(code))}`)
+              }
+            }}
             requireReauthOnFirstScanInSession
             title="Scanner un QR code"
             description="Scannez un QR code pour pré-remplir les formulaires"
