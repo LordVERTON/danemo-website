@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,14 +18,14 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const returnTo = searchParams.get("returnTo")
-  const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    const params = new URLSearchParams(window.location.search)
+    const returnTo = params.get("returnTo")
+    const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
 
     const setSession = (role: string) => {
       localStorage.setItem("danemo_admin_session", "authenticated")
