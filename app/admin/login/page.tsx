@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,9 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get("returnTo")
+  const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,13 +38,13 @@ export default function AdminLoginPage() {
     // Vérification des identifiants en dur d'abord
     if (email === "admin@danemo.be" && password === "admin123") {
       setSession("admin")
-      router.push("/admin")
+      router.push(redirectTarget)
       return
     }
     
     if (email === "operator@danemo.be" && password === "operator123") {
       setSession("operator")
-      router.push("/admin")
+      router.push(redirectTarget)
       return
     }
 
@@ -54,7 +57,7 @@ export default function AdminLoginPage() {
         const roleFromMetadata = (data.user?.user_metadata as any)?.role
         const derivedRole = roleFromMetadata || (email === "operator@danemo.be" ? "operator" : "admin")
         setSession(derivedRole)
-        router.push("/admin")
+        router.push(redirectTarget)
       }
     } catch (err: any) {
       setError("Email ou mot de passe incorrect")

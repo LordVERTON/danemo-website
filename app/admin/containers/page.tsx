@@ -565,6 +565,7 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
           </Link>
           <QRScanner
             onScan={() => {}}
+            requireReauthOnFirstScanInSession
             title="Scanner un QR code"
             description="Scannez un QR code pour pré-remplir les formulaires"
             trigger={

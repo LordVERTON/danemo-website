@@ -12,6 +12,7 @@ interface QRScannerProps {
   title?: string
   description?: string
   keepOpenAfterScan?: boolean
+  requireReauthOnFirstScanInSession?: boolean
 }
 
 export default function QRScanner({ 
@@ -19,7 +20,8 @@ export default function QRScanner({
   trigger, 
   title = "Scanner QR Code", 
   description = "Scannez un QR code pour ajouter des données",
-  keepOpenAfterScan = false
+  keepOpenAfterScan = false,
+  requireReauthOnFirstScanInSession = false,
 }: QRScannerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
@@ -28,6 +30,16 @@ export default function QRScanner({
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const scanAreaRef = useRef<HTMLDivElement>(null)
   const scannerIdRef = useRef(`qr-reader-${Math.random().toString(36).substring(7)}`)
+  const SESSION_REAUTH_KEY = "danemo_qr_reauth_done"
+
+  const forceReauthentication = () => {
+    localStorage.removeItem("danemo_admin_session")
+    localStorage.removeItem("danemo_admin_role")
+    document.cookie = "danemo_admin_session=; path=/; max-age=0"
+    document.cookie = "danemo_admin_role=; path=/; max-age=0"
+    const returnTo = encodeURIComponent(window.location.pathname + window.location.search)
+    window.location.href = `/admin/login?returnTo=${returnTo}`
+  }
 
   const startScanning = async () => {
     try {
@@ -55,6 +67,21 @@ export default function QRScanner({
         async (decodedText) => {
           // Scan réussi
           setLastScanned(decodedText)
+
+          if (requireReauthOnFirstScanInSession) {
+            const hasReauthenticated = sessionStorage.getItem(SESSION_REAUTH_KEY) === "1"
+            if (!hasReauthenticated) {
+              sessionStorage.setItem(SESSION_REAUTH_KEY, "1")
+              await stopScanning()
+              setIsOpen(false)
+              setError("Par mesure de sécurité, reconnectez-vous avant le premier scan de cette session.")
+              window.setTimeout(() => {
+                forceReauthentication()
+              }, 1200)
+              return
+            }
+          }
+
           onScan(decodedText)
           
           // Si keepOpenAfterScan est false, fermer après le scan

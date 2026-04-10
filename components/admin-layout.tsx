@@ -201,6 +201,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           {/*QR code */}
           <QRScanner 
             onScan={handleQRScan}
+            requireReauthOnFirstScanInSession
             title="Scanner QR Code"
             description="Scannez un QR code pour remplir automatiquement le formulaire"
             trigger={
