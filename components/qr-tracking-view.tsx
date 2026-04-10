@@ -240,6 +240,7 @@ interface QRTrackingViewProps {
 
 export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) {
   const router = useRouter()
+  const [authChecked, setAuthChecked] = useState(false)
   const [inputValue, setInputValue] = useState(initialPayload || "")
   const [decoded, setDecoded] = useState<DecodedPayload>(() => decodePayload(initialPayload || ""))
   const [trackingData, setTrackingData] = useState<TrackingData>(null)
@@ -261,6 +262,18 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
   const container = isOrder ? (trackingData as OrderPayload)?.container : (trackingData as PackagePayload)?.container ?? null
 
   useEffect(() => {
+    const isAuthenticated = localStorage.getItem("danemo_admin_session") === "authenticated"
+    if (!isAuthenticated) {
+      const params = new URLSearchParams(window.location.search)
+      const codeParam = params.get("code")
+      const returnTo = `/qr${codeParam ? `?code=${encodeURIComponent(codeParam)}` : ""}`
+      router.replace(`/admin/login?returnTo=${encodeURIComponent(returnTo)}`)
+      return
+    }
+    setAuthChecked(true)
+  }, [router])
+
+  useEffect(() => {
     if (initialPayload) {
       const decodedPayload = decodePayload(initialPayload)
       setDecoded(decodedPayload)
@@ -272,6 +285,10 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
       }
     }
   }, [initialPayload])
+
+  if (!authChecked) {
+    return null
+  }
 
   const fetchTrackingData = async (qrCode: string) => {
     if (!qrCode) return
