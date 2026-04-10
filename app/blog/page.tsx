@@ -2,29 +2,10 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import Image from "next/image"
 import Link from "next/link"
+import { readBlogPosts } from "@/lib/blog-posts"
 
-export default function BlogPage() {
-  const blogPosts = [
-    {
-      id: 1,
-      title:
-        "Entreprises africaines : facilitez vos achats en Europe grâce à Danemo, votre partenaire logistique de confiance",
-      date: "24/07/2025",
-      excerpt:
-        "Vous êtes une entreprise basée au Cameroun ou ailleurs en Afrique, et vous commandez régulièrement des marchandises en Europe ? La gestion de vos expéditions peut vite devenir un casse-tête : fournisseurs multiples, colis dispersés, frais élevés, suivi compliqué... Heureusement, Danemo SRL est là pour vous simplifier la vie.",
-      image: "/images/entreprises-africaines-bureau.png",
-      slug: "entreprises-africaines",
-    },
-    {
-      id: 2,
-      title: "Envoi de conteneur vers l'Afrique : 7 erreurs fréquentes à éviter absolument",
-      date: "24/07/2025",
-      excerpt:
-        "Envoyer un conteneur vers l'Afrique représente un projet important, que ce soit pour un déménagement personnel, un transfert professionnel ou un approvisionnement commercial. Mais attention : certaines erreurs courantes peuvent coûter cher, en temps comme en argent. Danemo, spécialiste du transport entre l'Europe et l'Afrique, vous partage les...",
-      image: "/images/containers-shipping-port.png", // Updated to use new container image
-      slug: "envoi-conteneur-erreurs",
-    },
-  ]
+export default async function BlogPage() {
+  const blogPosts = (await readBlogPosts()).filter((post) => post.isActive)
 
   return (
     <div className="min-h-screen">
@@ -41,14 +22,14 @@ export default function BlogPage() {
                   <div className="order-2 md:order-1">
                     <div className="p-6 md:p-0">
                       <h2 className="text-2xl font-bold mb-4 text-[#B8860B] font-serif leading-tight">
-                        <Link href={`/blog/${post.slug}`} className="hover:text-orange-600 transition-colors">
+                        <Link href={post.href} className="hover:text-orange-600 transition-colors">
                           {post.title}
                         </Link>
                       </h2>
                       <p className="text-gray-500 text-sm mb-4">{post.date}</p>
                       <p className="text-gray-700 leading-relaxed mb-6">{post.excerpt}</p>
                       <Link
-                        href={`/blog/${post.slug}`}
+                        href={post.href}
                         className="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium transition-colors"
                       >
                         Lire la suite
@@ -59,13 +40,22 @@ export default function BlogPage() {
                     </div>
                   </div>
                   <div className="order-1 md:order-2">
-                    <Image
-                      src={post.image || "/placeholder.svg"}
-                      alt={post.title}
-                      width={400}
-                      height={250}
-                      className="w-full h-64 object-cover rounded-lg"
-                    />
+                    {post.mediaType === "video" ? (
+                      <video
+                        src={post.mediaUrl}
+                        controls
+                        preload="metadata"
+                        className="w-full h-64 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <Image
+                        src={post.mediaUrl || post.image || "/placeholder.svg"}
+                        alt={post.title}
+                        width={400}
+                        height={250}
+                        className="w-full h-64 object-cover rounded-lg"
+                      />
+                    )}
                   </div>
                 </div>
               </article>

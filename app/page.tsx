@@ -1,14 +1,45 @@
 'use client'
 
+import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import Image from "next/image"
 import Link from "next/link"
 import { useI18n } from "@/lib/i18n"
 
+interface HomePost {
+  id: string
+  title: string
+  date: string
+  excerpt: string
+  image?: string
+  mediaUrl?: string
+  mediaType?: "image" | "video"
+  href: string
+  type: "blog"
+  isActive: boolean
+}
+
 export default function HomePage() {
   const { messages } = useI18n()
   const { hero, about, nextDeparture, services, testimonials, contact } = messages.home
+  const [homePosts, setHomePosts] = useState<HomePost[]>([])
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const response = await fetch("/api/blog-posts")
+        const result = await response.json()
+        if (result.success) {
+          const activePosts = (result.data || []).filter((post: HomePost) => post.isActive)
+          setHomePosts(activePosts.slice(0, 3))
+        }
+      } catch (error) {
+        console.error("Error loading blog posts:", error)
+      }
+    }
+    loadPosts()
+  }, [])
 
   return (
     <div className="min-h-screen">
@@ -145,6 +176,42 @@ export default function HomePage() {
                 loading="lazy"
               ></iframe>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Blogs Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold">Blogs</h2>
+            <Link href="/blog" className="text-orange-600 hover:text-orange-700 font-medium">
+              Voir tout
+            </Link>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {homePosts.map((post) => (
+              <Link key={post.id} href={post.href} className="rounded-lg overflow-hidden border hover:shadow-md transition">
+                <div className="aspect-video relative">
+                  {(post.mediaType === "video" || /\.(mp4|webm|ogg)$/i.test(post.mediaUrl || post.image || "")) ? (
+                    <video
+                      src={post.mediaUrl || post.image}
+                      className="h-full w-full object-cover"
+                      controls
+                      preload="metadata"
+                    />
+                  ) : (
+                    <Image src={post.mediaUrl || post.image || "/placeholder.svg"} alt={post.title} fill className="object-cover" />
+                  )}
+                </div>
+                <div className="p-5">
+                  <p className="text-xs text-orange-600 font-semibold uppercase mb-2">BLOG</p>
+                  <h3 className="text-lg font-bold mb-2 line-clamp-2">{post.title}</h3>
+                  <p className="text-sm text-gray-500 mb-2">{post.date}</p>
+                  <p className="text-sm text-gray-700 line-clamp-3">{post.excerpt}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

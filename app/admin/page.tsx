@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Package, Truck, BarChart3, Users, LogOut } from "lucide-react"
+import { Package, Truck, BarChart3, Users, LogOut, BookOpen } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminDashboard() {
@@ -172,6 +172,19 @@ export default function AdminDashboard() {
                     Analyses et rapports
                   </CardTitle>
                   <CardDescription>Consultez les statistiques et générez des rapports</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
+          {role === 'admin' && (
+            <Link href="/admin/blogs">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-orange-600" />
+                    Blogs
+                  </CardTitle>
+                  <CardDescription>Ajoutez et modifiez les contenus du blog de l'accueil</CardDescription>
                 </CardHeader>
               </Card>
             </Link>
