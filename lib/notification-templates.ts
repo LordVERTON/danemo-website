@@ -40,7 +40,7 @@ export function buildTrackingUrl(options: {
   }
   if (options.qrCode) {
     const query = encodeURIComponent(options.qrCode)
-    return `${base}/qr?code=${query}`
+    return `${base}/admin/qr?code=${query}`
   }
   return `${base}/tracking`
 }

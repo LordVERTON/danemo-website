@@ -130,7 +130,7 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
   // Génération du QR code
   try {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-    const qrUrl = `${baseUrl}/qr?code=${encodeURIComponent(data.qrCode)}`
+    const qrUrl = `${baseUrl}/admin/qr?code=${encodeURIComponent(data.qrCode)}`
     const qrCodeDataURL = await QRCode.toDataURL(qrUrl, {
       width: 280,
       margin: 2,

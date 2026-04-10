@@ -158,7 +158,7 @@ function QRCodeDisplay({ value }: { value: string }) {
     if (canvasRef.current && value) {
       // Générer une URL complète pour le QR code
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-      const qrUrl = `${baseUrl}/qr?code=${encodeURIComponent(value)}`
+      const qrUrl = `${baseUrl}/admin/qr?code=${encodeURIComponent(value)}`
       
       QRCode.toCanvas(canvasRef.current, qrUrl, {
         width: 200,
@@ -1551,7 +1551,7 @@ const copyClientToRecipientForEdit = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`/qr?code=${encodeURIComponent(selectedOrder.qr_code || '')}`, '_blank')}
+                      onClick={() => window.open(`/admin/qr?code=${encodeURIComponent(selectedOrder.qr_code || '')}`, '_blank')}
                       className="flex items-center gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />

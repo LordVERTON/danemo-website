@@ -266,7 +266,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
     if (!isAuthenticated) {
       const params = new URLSearchParams(window.location.search)
       const codeParam = params.get("code")
-      const returnTo = `/qr${codeParam ? `?code=${encodeURIComponent(codeParam)}` : ""}`
+      const returnTo = `/admin/qr${codeParam ? `?code=${encodeURIComponent(codeParam)}` : ""}`
       router.replace(`/admin/login?returnTo=${encodeURIComponent(returnTo)}`)
       return
     }
@@ -285,10 +285,6 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
       }
     }
   }, [initialPayload])
-
-  if (!authChecked) {
-    return null
-  }
 
   const fetchTrackingData = async (qrCode: string) => {
     if (!qrCode) return
@@ -370,7 +366,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
     setTrackingData(null)
 
     if (decodedPayload.qrCode) {
-      router.replace(`/qr?code=${encodeURIComponent(decodedPayload.qrCode)}`, { scroll: false })
+      router.replace(`/admin/qr?code=${encodeURIComponent(decodedPayload.qrCode)}`, { scroll: false })
       fetchTrackingData(decodedPayload.qrCode)
     } else {
       setError("Impossible de déterminer le code du QR. Vérifiez le contenu.")
@@ -405,6 +401,10 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
       return new Date(b.event_date).getTime() - new Date(a.event_date).getTime()
     })
   }, [trackingData])
+
+  if (!authChecked) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">

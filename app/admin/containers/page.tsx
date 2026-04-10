@@ -605,7 +605,7 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
             onScan={(payload) => {
               const code = extractQrCode(payload)
               if (code) {
-                router.push(`/qr?code=${encodeURIComponent(String(code))}`)
+                router.push(`/admin/qr?code=${encodeURIComponent(String(code))}`)
               }
             }}
             requireReauthOnFirstScanInSession

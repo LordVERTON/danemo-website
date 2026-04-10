@@ -81,7 +81,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     const qrCode = extractQrCode(qrData)
 
     if (qrCode) {
-      router.push(`/qr?code=${encodeURIComponent(String(qrCode))}`)
+      router.push(`/admin/qr?code=${encodeURIComponent(String(qrCode))}`)
       return
     }
 
