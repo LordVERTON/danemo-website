@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,17 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    const hasCookieSession = document.cookie.split(";").some((cookie) => cookie.trim().startsWith("danemo_admin_session=authenticated"))
+    const hasLocalSession = localStorage.getItem("danemo_admin_session") === "authenticated"
+    if (hasCookieSession || hasLocalSession) {
+      const params = new URLSearchParams(window.location.search)
+      const returnTo = params.get("returnTo")
+      const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
+      router.replace(redirectTarget)
+    }
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
