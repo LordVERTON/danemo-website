@@ -28,6 +28,12 @@ export interface BlogPost {
   sections: BlogSection[]
   backLinkLabel?: string
   backLinkHref?: string
+  createdAt?: string
+  createdByName?: string
+  createdByEmail?: string
+  updatedAt?: string
+  updatedByName?: string
+  updatedByEmail?: string
 }
 
 const BLOG_POSTS_FILE = path.join(process.cwd(), "data", "blog-posts.json")
@@ -50,6 +56,12 @@ export async function readBlogPosts(): Promise<BlogPost[]> {
       sections: Array.isArray(post.sections) ? post.sections : [],
       backLinkLabel: typeof post.backLinkLabel === "string" ? post.backLinkLabel : "← Retour au blog",
       backLinkHref: typeof post.backLinkHref === "string" ? post.backLinkHref : "/blog",
+      createdAt: typeof post.createdAt === "string" ? post.createdAt : undefined,
+      createdByName: typeof post.createdByName === "string" ? post.createdByName : undefined,
+      createdByEmail: typeof post.createdByEmail === "string" ? post.createdByEmail : undefined,
+      updatedAt: typeof post.updatedAt === "string" ? post.updatedAt : undefined,
+      updatedByName: typeof post.updatedByName === "string" ? post.updatedByName : undefined,
+      updatedByEmail: typeof post.updatedByEmail === "string" ? post.updatedByEmail : undefined,
     } as BlogPost
   })
 }

@@ -83,9 +83,16 @@ export async function POST(request: NextRequest) {
     }
 
     const posts = await readBlogPosts()
+    const now = new Date().toISOString()
     const newPost: BlogPost = {
       id: `post-${randomUUID()}`,
       ...payload,
+      createdAt: now,
+      createdByName: user.name || user.email || "Utilisateur",
+      createdByEmail: user.email || "",
+      updatedAt: now,
+      updatedByName: user.name || user.email || "Utilisateur",
+      updatedByEmail: user.email || "",
     }
 
     posts.unshift(newPost)
@@ -124,7 +131,17 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Article introuvable" }, { status: 404 })
     }
 
-    const updatedPost: BlogPost = { id, ...payload }
+    const existingPost = posts[index]
+    const updatedPost: BlogPost = {
+      id,
+      ...payload,
+      createdAt: existingPost.createdAt,
+      createdByName: existingPost.createdByName,
+      createdByEmail: existingPost.createdByEmail,
+      updatedAt: new Date().toISOString(),
+      updatedByName: user.name || user.email || "Utilisateur",
+      updatedByEmail: user.email || "",
+    }
     posts[index] = updatedPost
     await writeBlogPosts(posts)
     return NextResponse.json({ success: true, data: updatedPost })

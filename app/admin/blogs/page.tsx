@@ -23,6 +23,12 @@ interface BlogPost {
   sections: BlogSection[]
   backLinkLabel?: string
   backLinkHref?: string
+  createdAt?: string
+  createdByName?: string
+  createdByEmail?: string
+  updatedAt?: string
+  updatedByName?: string
+  updatedByEmail?: string
 }
 
 interface BlogSection {
@@ -281,6 +287,12 @@ export default function AdminBlogsPage() {
                   </div>
                   <p className="line-clamp-2 text-sm font-medium">{post.title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{post.date}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Cree par: {post.createdByName || post.createdByEmail || "N/A"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Modifie par: {post.updatedByName || post.updatedByEmail || "N/A"}
+                  </p>
                 </button>
               ))
             )}
@@ -303,6 +315,21 @@ export default function AdminBlogsPage() {
                 <Input id="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               </div>
             </div>
+
+            {selectedPost && (
+              <div className="rounded-lg border bg-gray-50 p-3 text-sm text-gray-700">
+                <p>
+                  <span className="font-medium">Cree par :</span>{" "}
+                  {selectedPost.createdByName || selectedPost.createdByEmail || "N/A"}
+                  {selectedPost.createdAt ? ` (${new Date(selectedPost.createdAt).toLocaleString("fr-FR")})` : ""}
+                </p>
+                <p>
+                  <span className="font-medium">Derniere modification :</span>{" "}
+                  {selectedPost.updatedByName || selectedPost.updatedByEmail || "N/A"}
+                  {selectedPost.updatedAt ? ` (${new Date(selectedPost.updatedAt).toLocaleString("fr-FR")})` : ""}
+                </p>
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
