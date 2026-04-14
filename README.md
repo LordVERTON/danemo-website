@@ -342,6 +342,29 @@ pnpm dev
 
 Le serveur de développement se lancera automatiquement sur le port 3000.
 
+### 6.1 Tester sur téléphone en HTTPS (Alternative : ngrok)
+
+```bash
+npm run dev -- --hostname 0.0.0.0 --port 3000
+npx ngrok http 3000
+```
+
+Ouvrez ensuite l’URL `https://...ngrok-free.app` affichée par ngrok sur votre téléphone.
+
+> Si `ngrok` n'est pas reconnu sur Windows, utilisez `npx ngrok` (ci-dessus) ou installez-le globalement.
+
+#### Fix rapide si ngrok échoue (Windows)
+
+Si vous voyez une erreur `ERR_NGROK_334` (endpoint déjà en ligne), fermez les anciens processus ngrok puis relancez :
+
+```bash
+taskkill /IM ngrok.exe /F
+npm run dev -- --hostname 0.0.0.0 --port 3000
+npx ngrok http 3000
+```
+
+Si vous utilisez déjà ngrok sur un autre projet, démarrez l'autre projet sur un port différent (ex: `3001`) pour obtenir une URL différente.
+
 ### 7. Ouvrir l'application
 
 Ouvrez votre navigateur et allez sur [http://localhost:3000](http://localhost:3000)
