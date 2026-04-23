@@ -19,6 +19,7 @@ function isAdmin(request: NextRequest): boolean {
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const isApiRoute = pathname.startsWith("/api/")
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/")
 
   if (isApiRoute) {
     if (pathname === "/api/blog-posts" && request.method === "GET") {
@@ -51,6 +52,10 @@ export function middleware(request: NextRequest) {
       )
     }
 
+    return NextResponse.next()
+  }
+
+  if (!isAdminRoute) {
     return NextResponse.next()
   }
 

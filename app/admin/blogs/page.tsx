@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
 import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -249,7 +250,13 @@ export default function AdminBlogsPage() {
           {section.mediaType === "video" ? (
             <video src={section.mediaUrl} controls className="w-full rounded-lg shadow-lg" />
           ) : (
-            <img src={section.mediaUrl || "/placeholder.svg"} alt={section.title || "Apercu section"} className="w-full rounded-lg shadow-lg" />
+            <Image
+              src={section.mediaUrl || "/placeholder.svg"}
+              alt={section.title || "Apercu section"}
+              width={1600}
+              height={900}
+              className="h-auto w-full rounded-lg shadow-lg"
+            />
           )}
         </section>
       )
@@ -444,7 +451,13 @@ export default function AdminBlogsPage() {
                 {form.mediaType === "video" ? (
                   <video src={form.mediaUrl} controls className="w-full max-h-64 rounded border object-cover" />
                 ) : (
-                  <img src={form.mediaUrl} alt="Apercu media" className="w-full max-h-64 rounded border object-cover" />
+                  <Image
+                    src={form.mediaUrl}
+                    alt="Apercu media"
+                    width={1200}
+                    height={640}
+                    className="max-h-64 w-full rounded border object-cover"
+                  />
                 )}
               </div>
             )}
@@ -580,7 +593,13 @@ export default function AdminBlogsPage() {
                 {form.mediaType === "video" ? (
                   <video src={form.mediaUrl} controls className="w-full rounded-lg shadow-lg" />
                 ) : (
-                  <img src={form.mediaUrl} alt={form.title || "Media principal"} className="w-full rounded-lg shadow-lg" />
+                  <Image
+                    src={form.mediaUrl}
+                    alt={form.title || "Media principal"}
+                    width={1600}
+                    height={900}
+                    className="h-auto w-full rounded-lg shadow-lg"
+                  />
                 )}
               </div>
             )}
