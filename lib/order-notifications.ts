@@ -1,18 +1,16 @@
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/notify'
-import { buildClientStatusEmail, buildTrackingUrl } from '@/lib/notification-templates'
+import {
+  buildOrderStatusEmail,
+  buildTrackingUrl,
+  normalizeOrderStatus,
+  type NotificationOrderStatus,
+} from '@/lib/notification-templates'
 
-type OrderStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
-
-const orderStageLabels: Record<OrderStatus, string> = {
-  pending: 'en préparation',
-  confirmed: 'en préparation',
-  in_progress: 'en cours de livraison',
-  completed: 'livrée',
-  cancelled: 'annulée',
-}
-
-export async function notifyOrderStatusChange(orderId: string, status: OrderStatus) {
+export async function notifyOrderStatusChange(
+  orderId: string,
+  status: NotificationOrderStatus
+) {
   try {
     const { data: order, error } = await supabase
       .from('orders')
@@ -36,12 +34,10 @@ export async function notifyOrderStatusChange(orderId: string, status: OrderStat
       return null
     }
 
-    const stage = orderStageLabels[status] || 'en cours de livraison'
-
-    const { subject, html } = buildClientStatusEmail({
+    const normalized = normalizeOrderStatus(status) || 'in_progress'
+    const { subject, html } = buildOrderStatusEmail(normalized, {
       recipientName: targetName,
-      shipmentReference: order.order_number,
-      stageLabel: stage,
+      orderNumber: order.order_number,
       trackingUrl: buildTrackingUrl({
         orderNumber: order.order_number,
         containerCode: order.container_code || undefined,
@@ -56,5 +52,3 @@ export async function notifyOrderStatusChange(orderId: string, status: OrderStat
     return { success: false, error: err }
   }
 }
-
-

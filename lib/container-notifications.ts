@@ -1,8 +1,11 @@
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/notify'
-import { buildClientStatusEmail, buildTrackingUrl } from '@/lib/notification-templates'
-
-type ContainerStatus = 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
+import {
+  buildContainerStatusEmail,
+  buildTrackingUrl,
+  normalizeContainerStatus,
+  type NotificationContainerStatus,
+} from '@/lib/notification-templates'
 
 interface NotificationOptions {
   customMessage?: string
@@ -14,18 +17,9 @@ interface NotificationResult {
   recipients: number
 }
 
-const containerStageLabels: Record<ContainerStatus, string> = {
-  planned: 'en préparation',
-  departed: 'en cours de livraison',
-  in_transit: 'en cours de livraison',
-  arrived: 'arrivée dans votre région',
-  delivered: 'entre les mains du transporteur',
-  delayed: 'en cours de livraison (avec un léger retard)',
-}
-
 export async function notifyContainerStatusChange(
   containerId: string,
-  status: ContainerStatus,
+  status: NotificationContainerStatus,
   options: NotificationOptions = {},
 ): Promise<NotificationResult | null> {
   try {
@@ -49,7 +43,7 @@ export async function notifyContainerStatusChange(
     if (ordersError) throw ordersError
 
     const filteredOrders = (orders || []).filter(
-      (order) => !!(order.recipient_email || order.client_email)
+      (order) => !!(order.recipient_email || order.client_email),
     )
 
     if (filteredOrders.length === 0) {
@@ -59,6 +53,11 @@ export async function notifyContainerStatusChange(
 
     let emailsSent = 0
 
+    const normalized =
+      normalizeContainerStatus(status) ||
+      normalizeContainerStatus(String(container.status)) ||
+      'in_transit'
+
     await Promise.all(
       filteredOrders.map(async (order) => {
         try {
@@ -66,15 +65,15 @@ export async function notifyContainerStatusChange(
           const recipientEmail = order.recipient_email || order.client_email
           if (!recipientEmail) return
 
-          const { subject, html } = buildClientStatusEmail({
+          const { subject, html } = buildContainerStatusEmail(normalized, {
             recipientName,
-            shipmentReference: order.order_number,
-            stageLabel: options.customMessage || containerStageLabels[status],
+            shipmentReference: order.order_number || container.code,
             trackingUrl: buildTrackingUrl({
               orderNumber: order.order_number,
               containerCode: container.code,
               qrCode: order.qr_code,
             }),
+            customMessage: options.customMessage,
           })
           await sendEmail(recipientEmail as string, subject, html)
           emailsSent += 1
@@ -90,4 +89,3 @@ export async function notifyContainerStatusChange(
     return null
   }
 }
-

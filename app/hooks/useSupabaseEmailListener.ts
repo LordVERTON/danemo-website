@@ -3,14 +3,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-const orderStageLabels: Record<string, string> = {
-  pending: "en préparation",
-  confirmed: "confirmée",
-  in_progress: "en cours de livraison",
-  completed: "livrée",
-  cancelled: "annulée",
-};
-
 export function useSupabaseEmailListener() {
   useEffect(() => {
     const appBaseUrl =
@@ -22,47 +14,47 @@ export function useSupabaseEmailListener() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders" },
         async (payload) => {
-          const { new: newOrder } = payload;
+          const newOrder = payload.new as Record<string, unknown>;
+          const oldOrder = payload.old as Record<string, unknown> | undefined;
+
           const recipientEmail =
-            newOrder.recipient_email ||
-            newOrder.client_email ||
-            newOrder.user_email ||
-            newOrder.email ||
+            (newOrder.recipient_email as string | null) ||
+            (newOrder.client_email as string | null) ||
+            (newOrder.user_email as string | null) ||
+            (newOrder.email as string | null) ||
             null;
 
-          if (newOrder.status && recipientEmail) {
-            const stageLabel =
-              orderStageLabels[newOrder.status] || newOrder.status;
-            const reference =
-              newOrder.order_number ||
-              newOrder.reference ||
-              newOrder.id ||
-              "commande";
+          if (!newOrder.status || !recipientEmail) return;
+          if (oldOrder && newOrder.status === oldOrder.status) return;
 
-            const response = await fetch("/api/send-email", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                to: recipientEmail,
-                prenom:
-                  newOrder.recipient_name ||
-                  newOrder.client_name ||
-                  newOrder.user_firstname ||
-                  newOrder.full_name ||
-                  "Client",
-                reference,
-                stade: stageLabel,
-                trackingUrl: `${appBaseUrl}/suivi/${reference}`,
-                type: "commande",
-              }),
-            });
+          const reference =
+            (newOrder.order_number as string | undefined) ||
+            (newOrder.reference as string | undefined) ||
+            String(newOrder.id || "commande");
 
-            if (!response.ok) {
-              console.error(
-                "[supabase-listener] Failed to send order email notification",
-                await response.text()
-              );
-            }
+          const response = await fetch("/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: recipientEmail,
+              prenom:
+                (newOrder.recipient_name as string | undefined) ||
+                (newOrder.client_name as string | undefined) ||
+                (newOrder.user_firstname as string | undefined) ||
+                (newOrder.full_name as string | undefined) ||
+                "Client",
+              reference,
+              status: newOrder.status,
+              trackingUrl: `${appBaseUrl}/tracking?tracking=${encodeURIComponent(reference)}`,
+              type: "commande",
+            }),
+          });
+
+          if (!response.ok) {
+            console.error(
+              "[supabase-listener] Failed to send order email notification",
+              await response.text()
+            );
           }
         }
       )
@@ -74,27 +66,34 @@ export function useSupabaseEmailListener() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "containers" },
         async (payload) => {
-          const { new: newContainer } = payload;
-          if (newContainer.status && newContainer.owner_email) {
-            const response = await fetch("/api/send-email", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                to: newContainer.owner_email,
-                prenom: newContainer.owner_name || "Client",
-                reference: newContainer.reference,
-                stade: newContainer.status,
-                trackingUrl: `${appBaseUrl}/suivi/${newContainer.reference}`,
-                type: "conteneur",
-              }),
-            });
+          const newContainer = payload.new as Record<string, unknown>;
+          const oldContainer = payload.old as Record<string, unknown> | undefined;
 
-            if (!response.ok) {
-              console.error(
-                "[supabase-listener] Failed to send container email notification",
-                await response.text()
-              );
-            }
+          if (!newContainer.status || !newContainer.owner_email) return;
+          if (oldContainer && newContainer.status === oldContainer.status) return;
+
+          const reference = String(
+            newContainer.reference || newContainer.code || "conteneur"
+          );
+
+          const response = await fetch("/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: newContainer.owner_email,
+              prenom: (newContainer.owner_name as string | undefined) || "Client",
+              reference,
+              status: newContainer.status,
+              trackingUrl: `${appBaseUrl}/tracking?code=${encodeURIComponent(reference)}`,
+              type: "conteneur",
+            }),
+          });
+
+          if (!response.ok) {
+            console.error(
+              "[supabase-listener] Failed to send container email notification",
+              await response.text()
+            );
           }
         }
       )
@@ -106,4 +105,3 @@ export function useSupabaseEmailListener() {
     };
   }, []);
 }
-

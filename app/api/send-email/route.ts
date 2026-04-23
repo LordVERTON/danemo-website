@@ -1,35 +1,107 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
-import StatusNotificationEmail from "@/app/emails/StatusNotificationEmail";
-import { render } from "@react-email/render";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendEmail } from "@/lib/notify";
+import {
+  buildOrderStatusEmail,
+  buildContainerStatusEmail,
+  buildGenericUpdateEmail,
+  buildTrackingUrl,
+  normalizeOrderStatus,
+  normalizeContainerStatus,
+} from "@/lib/notification-templates";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { to, prenom, reference, stade, trackingUrl, type } = body;
-
-    const emailHtml = await render(
-      StatusNotificationEmail({ prenom, reference, stade, trackingUrl, type })
-    );
-
-    await resend.emails.send({
-      from: "Danemo Notifications <notifications@danemo.be>",
+    const {
       to,
-      subject: `Bonne nouvelle ! Votre ${
-        type === "commande" ? "commande" : "conteneur"
-      } avance 🚚`,
-      html: emailHtml,
-    });
+      prenom,
+      reference,
+      stade,
+      trackingUrl: trackingUrlBody,
+      type,
+      status,
+      customMessage,
+    } = body as {
+      to?: string;
+      prenom?: string;
+      reference?: string;
+      stade?: string;
+      trackingUrl?: string;
+      type?: "commande" | "conteneur";
+      status?: string;
+      customMessage?: string;
+    };
+
+    if (!to || !reference || (type !== "commande" && type !== "conteneur")) {
+      return NextResponse.json(
+        { ok: false, error: "Champs requis: to, reference, type (commande|conteneur)" },
+        { status: 400 }
+      );
+    }
+
+    const name = prenom || "Client";
+    const ref = String(reference);
+
+    let subject: string;
+    let html: string;
+
+    if (type === "commande") {
+      const trackingUrl =
+        trackingUrlBody ||
+        buildTrackingUrl({ orderNumber: ref });
+      const norm = normalizeOrderStatus(String(status || ""));
+      if (norm) {
+        const o = buildOrderStatusEmail(norm, {
+          recipientName: name,
+          orderNumber: ref,
+          trackingUrl,
+        });
+        subject = o.subject;
+        html = o.html;
+      } else {
+        const o = buildGenericUpdateEmail({
+          entityLabel: "commande",
+          recipientName: name,
+          reference: ref,
+          humanLine: stade || String(status || "Mise à jour"),
+          trackingUrl,
+        });
+        subject = o.subject;
+        html = o.html;
+      }
+    } else {
+      const trackingUrl =
+        trackingUrlBody ||
+        buildTrackingUrl({ containerCode: ref });
+      const norm = normalizeContainerStatus(String(status || ""));
+      if (norm) {
+        const o = buildContainerStatusEmail(norm, {
+          recipientName: name,
+          shipmentReference: ref,
+          trackingUrl,
+          customMessage: customMessage?.trim() || undefined,
+        });
+        subject = o.subject;
+        html = o.html;
+      } else {
+        const o = buildGenericUpdateEmail({
+          entityLabel: "conteneur",
+          recipientName: name,
+          reference: ref,
+          humanLine: stade || String(status || "Mise à jour"),
+          trackingUrl,
+        });
+        subject = o.subject;
+        html = o.html;
+      }
+    }
+
+    await sendEmail(to, subject, html);
 
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
     console.error("Erreur envoi email:", error);
-    return NextResponse.json(
-      { ok: false, error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
-

@@ -9,6 +9,7 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
+    "resend:hello": "node scripts/resend-hello.mjs",
     "start": "next start"
   },
   "dependencies": {

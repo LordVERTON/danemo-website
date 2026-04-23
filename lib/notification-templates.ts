@@ -1,13 +1,40 @@
 import { getAppBaseUrl } from '@/lib/notify'
 
-export interface StatusEmailPayload {
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+export type NotificationOrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+
+export type NotificationContainerStatus =
+  | 'planned'
+  | 'departed'
+  | 'in_transit'
+  | 'arrived'
+  | 'delivered'
+  | 'delayed'
+
+export interface OrderStatusEmailParams {
   recipientName?: string | null
-  shipmentReference?: string | null
-  stageLabel: string
+  orderNumber?: string | null
   trackingUrl?: string | null
 }
 
-const SUBJECT = 'Bonne nouvelle ! Votre colis avance 🚚'
+export interface ContainerStatusEmailParams {
+  recipientName?: string | null
+  shipmentReference?: string | null
+  trackingUrl?: string | null
+  customMessage?: string | null
+}
 
 function getFirstName(fullName?: string | null) {
   if (!fullName) return 'client'
@@ -45,41 +72,260 @@ export function buildTrackingUrl(options: {
   return `${base}/tracking`
 }
 
-export function buildClientStatusEmail({
-  recipientName,
-  shipmentReference,
-  stageLabel,
-  trackingUrl,
-}: StatusEmailPayload) {
-  const name = getFirstName(recipientName)
-  const reference = shipmentReference || 'votre envoi'
-  const link = ensureTrackingUrl(trackingUrl)
+function layoutEmail(opts: {
+  preview: string
+  greetingName: string
+  blocks: string[]
+  trackingUrl: string
+}) {
+  const link = ensureTrackingUrl(opts.trackingUrl)
+  const blocksHtml = opts.blocks.map((b) => `<p style="margin:0 0 16px;">${b}</p>`).join('')
+  return `
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light" />
+  </head>
+  <body style="margin:0;background-color:#f6f9fc;font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(opts.preview)}</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" style="max-width:600px;background:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.08);padding:28px 24px;">
+            <tr><td style="color:#111827;font-size:15px;line-height:1.6;">
+              <p style="margin:0 0 16px;">Bonjour ${escapeHtml(opts.greetingName)},</p>
+              ${blocksHtml}
+              <p style="margin:0 0 16px;">
+                Suivi en temps réel 👉
+                <a href="${link}" style="color:#ea580c;font-weight:bold;">${link}</a>
+              </p>
+              <p style="margin:0 0 8px;">Merci de votre confiance,</p>
+              <p style="margin:0;">L’équipe <strong>Danemo SRL</strong></p>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`
+}
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6;">
-      <p>Bonjour ${name},</p>
-      <p>
-        Votre commande <strong>${reference}</strong> avance !
-        Elle est maintenant <strong>${stageLabel}</strong>.
-      </p>
-      <p>
-        Vous pouvez suivre son trajet ici 👉
-        <a href="${link}" style="color:#FF8C00; font-weight:bold;">Lien de suivi</a>.
-      </p>
-      <p>
-        Merci d’avoir choisi Danemo pour cette envoi !
-      </p>
-      <p>
-        À très vite,<br />
-        L’équipe Danemo SRL
-      </p>
-    </div>
-  `
+const ORDER_KEYS: NotificationOrderStatus[] = [
+  'pending',
+  'confirmed',
+  'in_progress',
+  'completed',
+  'cancelled',
+]
 
+export function normalizeOrderStatus(raw: string): NotificationOrderStatus | null {
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase()
+  return ORDER_KEYS.includes(s as NotificationOrderStatus) ? (s as NotificationOrderStatus) : null
+}
+
+const CONTAINER_KEYS: NotificationContainerStatus[] = [
+  'planned',
+  'departed',
+  'in_transit',
+  'arrived',
+  'delivered',
+  'delayed',
+]
+
+export function normalizeContainerStatus(raw: string): NotificationContainerStatus | null {
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase()
+  return CONTAINER_KEYS.includes(s as NotificationContainerStatus)
+    ? (s as NotificationContainerStatus)
+    : null
+}
+
+/** Distinct subject + body per order lifecycle step */
+export function buildOrderStatusEmail(
+  status: NotificationOrderStatus,
+  params: OrderStatusEmailParams
+): { subject: string; html: string } {
+  const greetingName = getFirstName(params.recipientName)
+  const ref = params.orderNumber || 'votre commande'
+  const refSafe = escapeHtml(ref)
+  const trackingUrl = params.trackingUrl
+
+  const variants: Record<
+    NotificationOrderStatus,
+    { subject: string; preview: string; blocks: string[] }
+  > = {
+    pending: {
+      subject: `Commande ${ref} — bien reçue`,
+      preview: 'Nous avons bien enregistré votre commande.',
+      blocks: [
+        `Nous avons bien enregistré votre commande <strong>${refSafe}</strong>.`,
+        'Elle est <strong>en préparation</strong> : notre équipe vérifie les informations et planifie l’expédition.',
+        'Vous recevrez un nouvel e-mail dès qu’une étape importante sera atteinte.',
+      ],
+    },
+    confirmed: {
+      subject: `Commande ${ref} — confirmée`,
+      preview: 'Votre commande est confirmée et en préparation.',
+      blocks: [
+        `Bonne nouvelle : votre commande <strong>${refSafe}</strong> est <strong>confirmée</strong>.`,
+        'Nous préparons votre envoi selon les modalités convenues.',
+      ],
+    },
+    in_progress: {
+      subject: `Commande ${ref} — en cours de livraison`,
+      preview: 'Votre colis est en route.',
+      blocks: [
+        `Votre commande <strong>${refSafe}</strong> est maintenant <strong>en cours de livraison</strong>.`,
+        'Le transport est en cours : vous pouvez suivre l’avancement via le lien ci-dessous.',
+      ],
+    },
+    completed: {
+      subject: `Commande ${ref} — livrée`,
+      preview: 'Votre commande est livrée.',
+      blocks: [
+        `Votre commande <strong>${refSafe}</strong> est indiquée comme <strong>livrée</strong>.`,
+        'Nous espérons que tout s’est bien passé. Pour toute question, répondez à cet e-mail ou contactez-nous.',
+      ],
+    },
+    cancelled: {
+      subject: `Commande ${ref} — annulée`,
+      preview: 'Mise à jour sur votre commande.',
+      blocks: [
+        `Votre commande <strong>${refSafe}</strong> a été <strong>annulée</strong>.`,
+        'Si vous pensez qu’il s’agit d’une erreur ou si vous souhaitez en savoir plus, contactez-nous sans attendre.',
+      ],
+    },
+  }
+
+  const v = variants[status]
   return {
-    subject: SUBJECT,
-    html,
+    subject: v.subject,
+    html: layoutEmail({
+      preview: v.preview,
+      greetingName,
+      blocks: v.blocks,
+      trackingUrl: trackingUrl ?? '',
+    }),
   }
 }
 
+/** Distinct subject + body per container logistics step (or custom admin message) */
+export function buildContainerStatusEmail(
+  status: NotificationContainerStatus,
+  params: ContainerStatusEmailParams
+): { subject: string; html: string } {
+  const greetingName = getFirstName(params.recipientName)
+  const ref = params.shipmentReference || 'votre conteneur'
+  const refSafe = escapeHtml(ref)
+  const trackingUrl = params.trackingUrl
 
+  if (params.customMessage?.trim()) {
+    const msg = params.customMessage.trim()
+    return {
+      subject: `Conteneur ${ref} — message Danemo`,
+      html: layoutEmail({
+        preview: msg.slice(0, 120),
+        greetingName,
+        blocks: [
+          `Concernant le conteneur <strong>${refSafe}</strong>, voici une mise à jour de notre équipe :`,
+          escapeHtml(msg),
+        ],
+        trackingUrl: trackingUrl ?? '',
+      }),
+    }
+  }
+
+  const variants: Record<
+    NotificationContainerStatus,
+    { subject: string; preview: string; blocks: string[] }
+  > = {
+    planned: {
+      subject: `Conteneur ${ref} — planifié`,
+      preview: 'Votre conteneur est planifié.',
+      blocks: [
+        `Le conteneur <strong>${refSafe}</strong> est <strong>planifié</strong>.`,
+        'Les dates de départ et d’arrivée estimées seront affichées dans votre suivi dès qu’elles seront figées.',
+      ],
+    },
+    departed: {
+      subject: `Conteneur ${ref} — parti`,
+      preview: 'Votre conteneur a quitté le port de départ.',
+      blocks: [
+        `Le conteneur <strong>${refSafe}</strong> a <strong>quitté le port de départ</strong>.`,
+        'Il est en route vers la prochaine étape logistique.',
+      ],
+    },
+    in_transit: {
+      subject: `Conteneur ${ref} — en transit`,
+      preview: 'Votre conteneur est en transit.',
+      blocks: [
+        `Le conteneur <strong>${refSafe}</strong> est <strong>en transit</strong> sur le trajet prévu.`,
+        'Les délais peuvent varier selon les correspondances et contrôles douaniers.',
+      ],
+    },
+    arrived: {
+      subject: `Conteneur ${ref} — arrivé dans la région`,
+      preview: 'Votre conteneur est arrivé près de vous.',
+      blocks: [
+        `Le conteneur <strong>${refSafe}</strong> est <strong>arrivé dans votre région</strong> (hub ou port d’arrivée).`,
+        'Les opérations de dégroupage et livraison locale peuvent démarrer sous peu.',
+      ],
+    },
+    delivered: {
+      subject: `Conteneur ${ref} — livré`,
+      preview: 'Votre conteneur est livré.',
+      blocks: [
+        `Le conteneur <strong>${refSafe}</strong> est indiqué comme <strong>livré</strong>.`,
+        'Si vous constatez un écart, contactez-nous en précisant la référence du conteneur.',
+      ],
+    },
+    delayed: {
+      subject: `Conteneur ${ref} — retard signalé`,
+      preview: 'Mise à jour : léger retard.',
+      blocks: [
+        `Le conteneur <strong>${refSafe}</strong> subit un <strong>léger retard</strong> sur le planning initial.`,
+        'Nous suivons la situation de près et vous tiendrons informé dès que la date sera rétablie.',
+      ],
+    },
+  }
+
+  const v = variants[status]
+  return {
+    subject: v.subject,
+    html: layoutEmail({
+      preview: v.preview,
+      greetingName,
+      blocks: v.blocks,
+      trackingUrl: trackingUrl ?? '',
+    }),
+  }
+}
+
+/** Fallback when only a free-text status line is available (e.g. older clients). */
+export function buildGenericUpdateEmail(opts: {
+  entityLabel: 'commande' | 'conteneur'
+  recipientName?: string | null
+  reference: string
+  humanLine: string
+  trackingUrl?: string | null
+}) {
+  const greetingName = getFirstName(opts.recipientName)
+  const label = opts.entityLabel === 'commande' ? 'commande' : 'conteneur'
+  const safeLine = escapeHtml(opts.humanLine)
+  return {
+    subject: `Mise à jour — votre ${label} ${opts.reference}`,
+    html: layoutEmail({
+      preview: safeLine.slice(0, 120),
+      greetingName,
+      blocks: [
+        `Nous vous informons d’une mise à jour concernant votre <strong>${label}</strong> <strong>${escapeHtml(opts.reference)}</strong>.`,
+        `Détail : <strong>${safeLine}</strong>.`,
+      ],
+      trackingUrl: opts.trackingUrl ?? '',
+    }),
+  }
+}
