@@ -8,57 +8,8 @@ export function useSupabaseEmailListener() {
     const appBaseUrl =
       process.env.NEXT_PUBLIC_APP_URL ?? "https://danemo.be";
 
-    const orders = supabase
-      .channel("orders-changes")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
-        async (payload) => {
-          const newOrder = payload.new as Record<string, unknown>;
-          const oldOrder = payload.old as Record<string, unknown> | undefined;
-
-          const recipientEmail =
-            (newOrder.recipient_email as string | null) ||
-            (newOrder.client_email as string | null) ||
-            (newOrder.user_email as string | null) ||
-            (newOrder.email as string | null) ||
-            null;
-
-          if (!newOrder.status || !recipientEmail) return;
-          if (oldOrder && newOrder.status === oldOrder.status) return;
-
-          const reference =
-            (newOrder.order_number as string | undefined) ||
-            (newOrder.reference as string | undefined) ||
-            String(newOrder.id || "commande");
-
-          const response = await fetch("/api/send-email", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              to: recipientEmail,
-              prenom:
-                (newOrder.recipient_name as string | undefined) ||
-                (newOrder.client_name as string | undefined) ||
-                (newOrder.user_firstname as string | undefined) ||
-                (newOrder.full_name as string | undefined) ||
-                "Client",
-              reference,
-              status: newOrder.status,
-              trackingUrl: `${appBaseUrl}/tracking?tracking=${encodeURIComponent(reference)}`,
-              type: "commande",
-            }),
-          });
-
-          if (!response.ok) {
-            console.error(
-              "[supabase-listener] Failed to send order email notification",
-              await response.text()
-            );
-          }
-        }
-      )
-      .subscribe();
+    // Les e-mails « changement de statut commande » partent du serveur (ordersApi.update),
+    // pour éviter les doublons et fonctionner sans Realtime.
 
     const containers = supabase
       .channel("containers-changes")
@@ -100,7 +51,6 @@ export function useSupabaseEmailListener() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(orders);
       supabase.removeChannel(containers);
     };
   }, []);

@@ -110,16 +110,31 @@ export const ordersApi = {
 
   // Mettre à jour une commande
   async update(id: string, updates: OrderUpdate): Promise<Order> {
+    let previousStatus: Order['status'] | null | undefined
+    if (updates.status !== undefined) {
+      const { data: row } = await (supabaseAdmin as any)
+        .from('orders')
+        .select('status')
+        .eq('id', id)
+        .maybeSingle()
+      previousStatus = row?.status ?? null
+    }
+
     const { data, error } = await (supabaseAdmin as any)
       .from('orders')
       .update(updates)
       .eq('id', id)
       .select('*')
       .single()
-    
+
     if (error) throw error
-    
-    // container_code est maintenant directement dans la table orders (mis à jour par le trigger)
+
+    if (updates.status !== undefined && data.status !== previousStatus) {
+      notifyOrderStatusChange(id, data.status as Order['status']).catch((err) => {
+        console.error('[notifications] notifyOrderStatusChange (ordersApi.update):', err)
+      })
+    }
+
     return data
   },
 
@@ -323,21 +338,10 @@ export const trackingApi = {
     return data
   },
 
-  // Mettre à jour le statut d'une commande et ajouter un événement
+  // Mettre à jour le statut d'une commande et ajouter un événement (email via ordersApi.update)
   async updateOrderStatus(orderId: string, status: string, eventData: Partial<TrackingEventInsert>): Promise<void> {
-    const { data: existingOrder } = await supabase
-      .from('orders')
-      .select('status')
-      .eq('id', orderId)
-      .single()
+    await ordersApi.update(orderId, { status: status as Order['status'] })
 
-    // Mettre à jour le statut de la commande
-    await supabase
-      .from('orders')
-      .update({ status: status as any })
-      .eq('id', orderId)
-
-    // Ajouter l'événement de suivi
     await supabase
       .from('tracking_events')
       .insert({
@@ -345,12 +349,6 @@ export const trackingApi = {
         status,
         ...eventData
       })
-
-    if (!existingOrder || existingOrder.status !== status) {
-      notifyOrderStatusChange(orderId, status as Order['status']).catch((error) => {
-        console.error('[notifications] Failed to dispatch order status change from tracking update:', error)
-      })
-    }
   }
 }
 

@@ -54,6 +54,16 @@ interface TrackingEvent {
   event_date: string
 }
 
+/** Plus récent en premier (ordre déchronologique) pour l’historique public */
+function sortTrackingEventsNewestFirst(events: TrackingEvent[]): TrackingEvent[] {
+  return [...events].sort((a, b) => {
+    const diff =
+      new Date(b.event_date).getTime() - new Date(a.event_date).getTime()
+    if (diff !== 0) return diff
+    return String(b.id).localeCompare(String(a.id))
+  })
+}
+
 interface Container {
   id: string
   code: string
@@ -154,7 +164,9 @@ export default function TrackingPage() {
           const eventsResult = await eventsResponse.json()
 
           if (eventsResult.success) {
-            setTrackingEvents(eventsResult.data)
+            setTrackingEvents(
+              sortTrackingEventsNewestFirst(eventsResult.data ?? [])
+            )
           }
 
           await fetchContainerDetails(foundOrder)
