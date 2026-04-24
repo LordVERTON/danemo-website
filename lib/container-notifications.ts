@@ -17,6 +17,17 @@ interface NotificationResult {
   recipients: number
 }
 
+/** Champs sélectionnés sur `orders` pour les notifications conteneur */
+interface ContainerOrderRow {
+  id: string
+  order_number: string
+  client_name: string
+  client_email: string | null
+  recipient_name: string | null
+  recipient_email: string | null
+  qr_code: string | null
+}
+
 export async function notifyContainerStatusChange(
   containerId: string,
   status: NotificationContainerStatus,
@@ -42,8 +53,10 @@ export async function notifyContainerStatusChange(
 
     if (ordersError) throw ordersError
 
-    const filteredOrders = (orders || []).filter(
-      (order) => !!(order.recipient_email || order.client_email),
+    const orderRows = (orders ?? []) as ContainerOrderRow[]
+    const filteredOrders = orderRows.filter(
+      (order: ContainerOrderRow) =>
+        !!(order.recipient_email || order.client_email),
     )
 
     if (filteredOrders.length === 0) {
