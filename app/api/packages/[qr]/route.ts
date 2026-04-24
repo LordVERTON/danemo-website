@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { packagesApi, clientsApi, containersApi, trackingApi } from '@/lib/database'
+import { packagesApi, customersApi, containersApi, trackingApi } from '@/lib/database'
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ qr: string }> }) {
   try {
@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ qr
     }
 
     const [client, container, events] = await Promise.all([
-      pkg.client_id ? clientsApi.getById(pkg.client_id) : Promise.resolve(null),
+      pkg.client_id ? customersApi.getById(pkg.client_id) : Promise.resolve(null),
       pkg.container_id ? containersApi.getById(pkg.container_id) : Promise.resolve(null),
       pkg.container_id ? trackingApi.getByOrderId(pkg.container_id) : Promise.resolve([]),
     ])
