@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ordersApi, utils } from '@/lib/database'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // GET /api/orders - Récupérer toutes les commandes
 export async function GET(request: NextRequest) {
@@ -112,6 +113,43 @@ export async function POST(request: NextRequest) {
     const sanitizedClientPostalCode = body.client_postal_code?.trim().substring(0, 20) || null
     const sanitizedClientCountry = body.client_country?.trim().substring(0, 100) || null
 
+    let resolvedCustomerId: string | null =
+      body.customer_id && body.customer_id !== '' ? body.customer_id : null
+
+    if (!resolvedCustomerId && (sanitizedClientName || sanitizedClientEmail)) {
+      if (sanitizedClientEmail) {
+        const { data: existingByEmail } = await (supabaseAdmin as any)
+          .from('customers')
+          .select('id')
+          .ilike('email', sanitizedClientEmail)
+          .limit(1)
+        resolvedCustomerId = existingByEmail?.[0]?.id ?? null
+      }
+
+      if (!resolvedCustomerId) {
+        const { data: createdCustomer, error: customerCreateError } = await (supabaseAdmin as any)
+          .from('customers')
+          .insert({
+            name: sanitizedClientName || sanitizedClientEmail,
+            email: sanitizedClientEmail || null,
+            phone: body.client_phone?.trim().substring(0, 20) || null,
+            address: sanitizedClientAddress,
+            city: sanitizedClientCity,
+            postal_code: sanitizedClientPostalCode,
+            country: sanitizedClientCountry,
+            status: 'active',
+          })
+          .select('id')
+          .single()
+
+        if (customerCreateError) {
+          console.error('[orders.create] Failed to auto-create customer:', customerCreateError)
+        } else {
+          resolvedCustomerId = createdCustomer?.id ?? null
+        }
+      }
+    }
+
     const sanitizedData = {
       client_name: sanitizedClientName,
       client_email: sanitizedClientEmail,
@@ -139,7 +177,7 @@ export async function POST(request: NextRequest) {
       estimated_delivery: body.estimated_delivery,
       container_id: body.container_id && body.container_id !== '' ? body.container_id : null,
       container_code: body.container_code && body.container_code !== '' ? body.container_code.trim().substring(0, 50) : null,
-      customer_id: body.customer_id && body.customer_id !== '' ? body.customer_id : null,
+      customer_id: resolvedCustomerId,
       parcels_count: (() => {
         const v = body.parcels_count
         if (v == null || v === '') return 1
