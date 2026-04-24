@@ -19,8 +19,6 @@ import {
   AlertCircle,
   Plane,
   Car,
-  Copy,
-  ExternalLink,
   PackageSearch,
 } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
@@ -330,24 +328,6 @@ export default function TrackingPage() {
                         <Badge variant="secondary">
                           {containerStatusLabels[container.status] || container.status}
                         </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigator.clipboard.writeText(container.code)}
-                          className="flex items-center gap-2"
-                        >
-                          <Copy className="h-4 w-4" />
-                          {tracking.container.copy}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(`/tracking?code=${container.code}`, "_blank")}
-                          className="flex items-center gap-2"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          {tracking.container.follow}
-                        </Button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                         <div>

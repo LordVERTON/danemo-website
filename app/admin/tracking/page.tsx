@@ -108,6 +108,8 @@ export default function TrackingPage() {
   const [successMessage, setSuccessMessage] = useState("")
   const [containers, setContainers] = useState<Array<{ id: string; code: string; status?: string | null }>>([])
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  /** Ignore les réponses obsolètes si l’utilisateur change de ligne rapidement */
+  const trackingLoadSeq = useRef(0)
 
   // Formulaire pour ajouter un événement
   const [newEvent, setNewEvent] = useState({
@@ -155,18 +157,65 @@ export default function TrackingPage() {
   }
 
   const fetchTrackingEvents = async (orderId: string) => {
+    const id = String(orderId || "").trim()
+    if (!id) {
+      setTrackingEvents([])
+      setErrorMessage("Identifiant de commande invalide")
+      return
+    }
+
+    const seq = ++trackingLoadSeq.current
+
     try {
       setIsLoadingTrackingEvents(true)
-      const response = await fetch(`/api/orders/${orderId}/tracking`)
-      const result = await response.json()
-      
-      if (result.success) {
+      setErrorMessage("")
+
+      const response = await fetch(
+        `/api/orders/${encodeURIComponent(id)}/tracking`,
+        { credentials: "same-origin" }
+      )
+
+      const text = await response.text()
+      let result: { success?: boolean; data?: TrackingEvent[]; error?: string } =
+        {}
+      try {
+        result = text ? JSON.parse(text) : {}
+      } catch {
+        if (seq !== trackingLoadSeq.current) return
+        setTrackingEvents([])
+        setErrorMessage("Réponse serveur invalide")
+        return
+      }
+
+      if (seq !== trackingLoadSeq.current) return
+
+      if (!response.ok) {
+        setTrackingEvents([])
+        setErrorMessage(
+          result.error || `Erreur ${response.status} lors du chargement du suivi`
+        )
+        return
+      }
+
+      if (result.success && Array.isArray(result.data)) {
         setTrackingEvents(result.data)
+      } else {
+        setTrackingEvents([])
+        setErrorMessage(
+          result.error || "Impossible de charger les événements de suivi"
+        )
       }
     } catch (error) {
-      console.error('Error fetching tracking events:', error)
+      if (seq !== trackingLoadSeq.current) return
+      console.error("Error fetching tracking events:", error)
+      setTrackingEvents([])
+      setErrorMessage(
+        "Erreur réseau (vérifiez que le serveur Next.js est bien démarré)"
+      )
     } finally {
-      setIsLoadingTrackingEvents(false)
+      if (seq === trackingLoadSeq.current) {
+        setIsLoadingTrackingEvents(false)
+      }
     }
   }
 

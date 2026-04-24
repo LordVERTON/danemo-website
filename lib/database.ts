@@ -316,24 +316,24 @@ export const packagesApi = {
 export const trackingApi = {
   // Récupérer tous les événements d'une commande
   async getByOrderId(orderId: string): Promise<TrackingEvent[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as any)
       .from('tracking_events')
       .select('*')
       .eq('order_id', orderId)
       .order('event_date', { ascending: true })
-    
+
     if (error) throw error
     return data || []
   },
 
   // Ajouter un événement de suivi
   async addEvent(event: TrackingEventInsert): Promise<TrackingEvent> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as any)
       .from('tracking_events')
       .insert(event)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   },
@@ -342,13 +342,11 @@ export const trackingApi = {
   async updateOrderStatus(orderId: string, status: string, eventData: Partial<TrackingEventInsert>): Promise<void> {
     await ordersApi.update(orderId, { status: status as Order['status'] })
 
-    await supabase
-      .from('tracking_events')
-      .insert({
-        order_id: orderId,
-        status,
-        ...eventData
-      })
+    await (supabaseAdmin as any).from('tracking_events').insert({
+      order_id: orderId,
+      status,
+      ...eventData,
+    })
   }
 }
 
