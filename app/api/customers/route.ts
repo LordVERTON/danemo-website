@@ -1,9 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { customersApi } from '@/lib/database'
+import { supabaseAdmin } from '@/lib/supabase'
+
+async function syncOrdersWithoutCustomer() {
+  const { data: danglingOrders, error } = await (supabaseAdmin as any)
+    .from('orders')
+    .select(
+      'id, customer_id, client_name, client_email, client_phone, client_address, client_city, client_postal_code, client_country',
+    )
+    .is('customer_id', null)
+
+  if (error) throw error
+  if (!danglingOrders || danglingOrders.length === 0) return
+
+  for (const order of danglingOrders) {
+    const name = String(order.client_name || '').trim()
+    const email = String(order.client_email || '')
+      .trim()
+      .toLowerCase()
+    const phone = String(order.client_phone || '').trim()
+
+    if (!name && !email) continue
+
+    let customerId: string | null = null
+
+    if (email) {
+      const { data: byEmail } = await (supabaseAdmin as any)
+        .from('customers')
+        .select('id')
+        .ilike('email', email)
+        .limit(1)
+      customerId = byEmail?.[0]?.id ?? null
+    }
+
+    if (!customerId && name) {
+      const byNameQuery = (supabaseAdmin as any)
+        .from('customers')
+        .select('id')
+        .eq('name', name)
+        .limit(1)
+      const { data: byName } = phone
+        ? await byNameQuery.eq('phone', phone)
+        : await byNameQuery
+      customerId = byName?.[0]?.id ?? null
+    }
+
+    if (!customerId) {
+      const { data: created, error: createError } = await (supabaseAdmin as any)
+        .from('customers')
+        .insert({
+          name: name || email,
+          email: email || null,
+          phone: phone || null,
+          address: String(order.client_address || '').trim() || null,
+          city: String(order.client_city || '').trim() || null,
+          postal_code: String(order.client_postal_code || '').trim() || null,
+          country: String(order.client_country || '').trim() || null,
+          status: 'active',
+        })
+        .select('id')
+        .single()
+      if (createError) {
+        console.error('[customers-sync] Failed to create customer from order', order.id, createError)
+        continue
+      }
+      customerId = created?.id ?? null
+    }
+
+    if (!customerId) continue
+
+    const { error: linkError } = await (supabaseAdmin as any)
+      .from('orders')
+      .update({ customer_id: customerId })
+      .eq('id', order.id)
+      .is('customer_id', null)
+
+    if (linkError) {
+      console.error('[customers-sync] Failed to link order to customer', order.id, linkError)
+    }
+  }
+}
 
 // GET /api/customers - Récupérer tous les clients avec leurs commandes
 export async function GET(request: NextRequest) {
   try {
+    // Backfill défensif : garantit que les commandes (y compris en conteneur)
+    // créent/pointent bien vers un client visible dans la page Clients.
+    await syncOrdersWithoutCustomer()
+
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const status = searchParams.get('status')
