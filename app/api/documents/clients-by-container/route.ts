@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
 
     const clientIds = Array.from(new Set((packages || []).map((p) => p.client_id).filter(Boolean))) as string[]
 
-    // Load clients
+    // Load customers (legacy field name `client_id` kept on packages)
     let rows: any[] = []
     if (clientIds.length > 0) {
-      const { data: clients, error: clErr } = await supabase.from('clients').select('*').in('id', clientIds)
+      const { data: clients, error: clErr } = await supabase.from('customers').select('*').in('id', clientIds)
       if (clErr) throw clErr
       rows = (clients || []).map((c) => ({
         name: c.name,
