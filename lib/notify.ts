@@ -41,6 +41,12 @@ function isMailpitEnabled(): boolean {
   return v === '1' || v?.toLowerCase() === 'true'
 }
 
+function isDanemoAppSender(from: string): boolean {
+  const match = from.match(/<([^>]+)>/)
+  const email = (match ? match[1] : from).trim().toLowerCase()
+  return email.endsWith('@danemo.app')
+}
+
 /** SMTP vers Mailpit (aucune auth par défaut). Prioritaire en dev si MAILPIT_ENABLED. */
 async function sendViaMailpit(to: string, subject: string, html: string) {
   const host = process.env.MAILPIT_SMTP_HOST || '127.0.0.1'
@@ -71,11 +77,17 @@ export async function sendEmail(to: string, subject: string, html: string) {
   const resendKey = process.env.RESEND_API_KEY
   if (resendKey) {
     const resend = new Resend(resendKey)
-    // Use an address on a domain verified in Resend (dashboard → Domains).
-    // Override with RESEND_FROM if you use another domain or mailbox name.
+    // `from` must use a domain verified in Resend (https://resend.com/domains).
+    // Default matches the Danemo Resend domain; override with RESEND_FROM if needed.
     const from =
       process.env.RESEND_FROM?.trim() ||
-      'Danemo <notifications@danemo.app>'
+      'Danemo <noreply@danemo.app>'
+    if (!isDanemoAppSender(from)) {
+      console.warn(
+        '[notifications] RESEND_FROM should use a verified @danemo.app sender. Current value:',
+        from,
+      )
+    }
     const { error } = await resend.emails.send({ from, to, subject, html })
     if (error) {
       const msg =
