@@ -201,8 +201,6 @@ export type TranslationSchema = {
     container: {
       title: string
       description: string
-      copy: string
-      follow: string
       vessel: string
       departure: string
       arrival: string
@@ -556,8 +554,6 @@ export const translations: Record<Lang, TranslationSchema> = {
       container: {
         title: "Conteneur associé",
         description: "Informations sur le conteneur affecté à votre expédition.",
-        copy: "Copier",
-        follow: "Suivre le conteneur",
         vessel: "Navire",
         departure: "Départ",
         arrival: "Arrivée",
@@ -910,8 +906,6 @@ export const translations: Record<Lang, TranslationSchema> = {
       container: {
         title: "Associated Container",
         description: "Information about the container assigned to your shipment.",
-        copy: "Copy",
-        follow: "Track this container",
         vessel: "Vessel",
         departure: "Departure",
         arrival: "Arrival",
