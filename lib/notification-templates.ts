@@ -223,29 +223,32 @@ export function buildContainerStatusEmail(
   params: ContainerStatusEmailParams
 ): { subject: string; html: string } {
   const greetingName = getFirstName(params.recipientName)
-  const ref = params.shipmentReference || 'votre conteneur'
+  const trackingRef = (params.orderNumber || params.shipmentReference || '').trim()
+  const containerRef = (params.containerCode || '').trim()
+  const ref = trackingRef || containerRef || 'votre colis'
   const refSafe = escapeHtml(ref)
+  const containerSafe = escapeHtml(containerRef)
   const trackingUrl = params.trackingUrl
 
   if (params.customMessage?.trim()) {
     const msg = params.customMessage.trim()
-    const orderNum = (params.orderNumber || params.shipmentReference || ref).trim()
-    const contCode = (params.containerCode || '').trim()
+    const orderNum = trackingRef || ref
+    const contCode = containerRef
     const orderSafe = escapeHtml(orderNum)
-    const contSafe = escapeHtml(contCode)
+    const contSafe = containerSafe
 
     let intro: string
     if (contCode && orderNum && contCode !== orderNum) {
-      intro = `Concernant le conteneur <strong>${contSafe}</strong> lié à votre commande n° <strong>${orderSafe}</strong>, voici une mise à jour de notre équipe :`
+      intro = `Concernant votre colis n° <strong>${orderSafe}</strong> dans le conteneur <strong>${contSafe}</strong>, voici une mise à jour de notre équipe :`
     } else if (orderNum) {
-      intro = `Concernant le conteneur de votre commande n° <strong>${orderSafe}</strong>, voici une mise à jour de notre équipe :`
+      intro = `Concernant votre colis n° <strong>${orderSafe}</strong>, voici une mise à jour de notre équipe :`
     } else {
-      intro = `Concernant le conteneur <strong>${refSafe}</strong>, voici une mise à jour de notre équipe :`
+      intro = `Concernant votre colis <strong>${refSafe}</strong>, voici une mise à jour de notre équipe :`
     }
 
-    const subjectRef = contCode || orderNum || ref
+    const subjectRef = orderNum || ref
     return {
-      subject: `Conteneur ${subjectRef} — message Danemo`,
+      subject: `Suivi de votre colis ${subjectRef} — message Danemo`,
       html: layoutEmail({
         preview: msg.slice(0, 120),
         greetingName,
@@ -260,50 +263,62 @@ export function buildContainerStatusEmail(
     { subject: string; preview: string; blocks: string[] }
   > = {
     planned: {
-      subject: `Conteneur ${ref} — planifié`,
-      preview: 'Votre conteneur est planifié.',
+      subject: `Suivi de votre colis ${ref} — planifié`,
+      preview: 'Votre colis est planifié.',
       blocks: [
-        `Le conteneur <strong>${refSafe}</strong> est <strong>planifié</strong>.`,
+        containerRef
+          ? `Votre colis <strong>${refSafe}</strong> est <strong>planifié</strong> dans le conteneur <strong>${containerSafe}</strong>.`
+          : `Votre colis <strong>${refSafe}</strong> est <strong>planifié</strong>.`,
         'Les dates de départ et d’arrivée estimées seront affichées dans votre suivi dès qu’elles seront figées.',
       ],
     },
     departed: {
-      subject: `Conteneur ${ref} — parti`,
-      preview: 'Votre conteneur a quitté le port de départ.',
+      subject: `Suivi de votre colis ${ref} — départ confirmé`,
+      preview: 'Le départ de votre colis est confirmé.',
       blocks: [
-        `Le conteneur <strong>${refSafe}</strong> a <strong>quitté le port de départ</strong>.`,
+        containerRef
+          ? `Le départ de votre colis <strong>${refSafe}</strong> est confirmé (conteneur <strong>${containerSafe}</strong>).`
+          : `Le départ de votre colis <strong>${refSafe}</strong> est confirmé.`,
         'Il est en route vers la prochaine étape logistique.',
       ],
     },
     in_transit: {
-      subject: `Conteneur ${ref} — en transit`,
-      preview: 'Votre conteneur est en transit.',
+      subject: `Suivi de votre colis ${ref} — en transit`,
+      preview: 'Votre colis est en transit.',
       blocks: [
-        `Le conteneur <strong>${refSafe}</strong> est <strong>en transit</strong> sur le trajet prévu.`,
+        containerRef
+          ? `Votre colis <strong>${refSafe}</strong> est <strong>en transit</strong> (conteneur <strong>${containerSafe}</strong>) sur le trajet prévu.`
+          : `Votre colis <strong>${refSafe}</strong> est <strong>en transit</strong> sur le trajet prévu.`,
         'Les délais peuvent varier selon les correspondances et contrôles douaniers.',
       ],
     },
     arrived: {
-      subject: `Conteneur ${ref} — arrivé dans la région`,
-      preview: 'Votre conteneur est arrivé près de vous.',
+      subject: `Suivi de votre colis ${ref} — arrivé dans la région`,
+      preview: 'Votre colis est arrivé près de vous.',
       blocks: [
-        `Le conteneur <strong>${refSafe}</strong> est <strong>arrivé dans votre région</strong> (hub ou port d’arrivée).`,
+        containerRef
+          ? `Votre colis <strong>${refSafe}</strong> est <strong>arrivé dans votre région</strong> (conteneur <strong>${containerSafe}</strong>).`
+          : `Votre colis <strong>${refSafe}</strong> est <strong>arrivé dans votre région</strong>.`,
         'Les opérations de dégroupage et livraison locale peuvent démarrer sous peu.',
       ],
     },
     delivered: {
-      subject: `Conteneur ${ref} — livré`,
-      preview: 'Votre conteneur est livré.',
+      subject: `Suivi de votre colis ${ref} — livré`,
+      preview: 'Votre colis est livré.',
       blocks: [
-        `Le conteneur <strong>${refSafe}</strong> est indiqué comme <strong>livré</strong>.`,
-        'Si vous constatez un écart, contactez-nous en précisant la référence du conteneur.',
+        `Votre colis <strong>${refSafe}</strong> est indiqué comme <strong>livré</strong>.`,
+        containerRef
+          ? `Si vous constatez un écart, contactez-nous en précisant le numéro de suivi ${refSafe} (conteneur ${containerSafe}).`
+          : `Si vous constatez un écart, contactez-nous en précisant le numéro de suivi ${refSafe}.`,
       ],
     },
     delayed: {
-      subject: `Conteneur ${ref} — retard signalé`,
+      subject: `Suivi de votre colis ${ref} — retard signalé`,
       preview: 'Mise à jour : léger retard.',
       blocks: [
-        `Le conteneur <strong>${refSafe}</strong> subit un <strong>léger retard</strong> sur le planning initial.`,
+        containerRef
+          ? `Votre colis <strong>${refSafe}</strong> subit un <strong>léger retard</strong> (conteneur <strong>${containerSafe}</strong>) sur le planning initial.`
+          : `Votre colis <strong>${refSafe}</strong> subit un <strong>léger retard</strong> sur le planning initial.`,
         'Nous suivons la situation de près et vous tiendrons informé dès que la date sera rétablie.',
       ],
     },
