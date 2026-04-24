@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { sendEmail } from '@/lib/notify'
 import {
   buildOrderStatusEmail,
@@ -12,13 +12,13 @@ export async function notifyOrderStatusChange(
   status: NotificationOrderStatus
 ) {
   try {
-    const { data: order, error } = await supabase
+    const { data: order, error } = await (supabaseAdmin as any)
       .from('orders')
       .select(
         'id, order_number, client_name, client_email, recipient_name, recipient_email, recipient_address, recipient_city, recipient_postal_code, recipient_country, qr_code, container_code'
       )
       .eq('id', orderId)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     if (!order) {

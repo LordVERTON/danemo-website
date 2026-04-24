@@ -21,6 +21,8 @@ export async function POST(req: Request) {
       type,
       status,
       customMessage,
+      orderNumber: orderNumberBody,
+      containerCode: containerCodeBody,
     } = body as {
       to?: string;
       prenom?: string;
@@ -30,6 +32,8 @@ export async function POST(req: Request) {
       type?: "commande" | "conteneur";
       status?: string;
       customMessage?: string;
+      orderNumber?: string;
+      containerCode?: string;
     };
 
     if (!to || !reference || (type !== "commande" && type !== "conteneur")) {
@@ -80,6 +84,8 @@ export async function POST(req: Request) {
           shipmentReference: ref,
           trackingUrl,
           customMessage: customMessage?.trim() || undefined,
+          orderNumber: orderNumberBody?.trim() || undefined,
+          containerCode: containerCodeBody?.trim() || undefined,
         });
         subject = o.subject;
         html = o.html;

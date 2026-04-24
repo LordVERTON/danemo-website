@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,11 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { PackageSearch, Plus, MapPin, Clock, BadgeCheck, Loader2, Send, Users, Package, Truck, QrCode, BarChart3 } from "lucide-react"
+import { PackageSearch, Plus, MapPin, Clock, BadgeCheck, Loader2, Send } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import QRScanner from "@/components/qr-scanner"
-
 interface Container {
   id: string
   code: string
@@ -64,7 +61,6 @@ const formatDateTime = (iso: string) =>
   })
 
 export default function ContainersPage() {
-  const router = useRouter()
   const [items, setItems] = useState<Container[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -80,45 +76,9 @@ export default function ContainersPage() {
   const [notifyLoading, setNotifyLoading] = useState(false)
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const [notifySuccess, setNotifySuccess] = useState<string | null>(null)
-const [containerNotificationHistory, setContainerNotificationHistory] = useState<
-  Record<string, { status: string; timestamp: string }>
->({})
-
-  const extractQrCode = (rawPayload: string) => {
-    const raw = String(rawPayload || "").trim()
-    if (!raw) return null
-
-    if (raw.startsWith("ORD-")) return raw
-
-    if (raw.startsWith("http://") || raw.startsWith("https://")) {
-      try {
-        const url = new URL(raw)
-        return (
-          url.searchParams.get("code") ||
-          url.searchParams.get("qr") ||
-          url.searchParams.get("tracking") ||
-          null
-        )
-      } catch {
-        return null
-      }
-    }
-
-    try {
-      const data = JSON.parse(raw)
-      return (
-        data.qr_code ||
-        data.qr ||
-        data.code ||
-        data.order_number ||
-        data.package_qr ||
-        data.tracking ||
-        null
-      )
-    } catch {
-      return null
-    }
-  }
+  const [containerNotificationHistory, setContainerNotificationHistory] = useState<
+    Record<string, { status: string; timestamp: string }>
+  >({})
 
   const fetchContainers = async () => {
     try {
@@ -132,11 +92,6 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
   }
 
   useEffect(() => {
-    const session = localStorage.getItem("danemo_admin_session")
-    if (session !== "authenticated") {
-      window.location.href = "/admin/login"
-      return
-    }
     fetchContainers()
   }, [])
 
@@ -281,55 +236,56 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-orange-600">Conteneurs</h1>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" /> Nouveau conteneur
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg w-[95vw]">
-                <DialogHeader>
-                  <DialogTitle>Ajouter un conteneur</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label>Code (ex: MSKU1234567)</Label>
-                    <Input value={form.code || ''} onChange={e => setForm({ ...form, code: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Navire</Label>
-                    <Input value={form.vessel || ''} onChange={e => setForm({ ...form, vessel: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Port de départ</Label>
-                    <Input value={form.departure_port || ''} onChange={e => setForm({ ...form, departure_port: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Port d'arrivée</Label>
-                    <Input value={form.arrival_port || ''} onChange={e => setForm({ ...form, arrival_port: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>ETD</Label>
-                    <Input type="date" value={form.etd || ''} onChange={e => setForm({ ...form, etd: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>ETA</Label>
-                    <Input type="date" value={form.eta || ''} onChange={e => setForm({ ...form, eta: e.target.value })} />
-                  </div>
-                  <Button onClick={submit}>Enregistrer</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+    <AdminLayout title="Gestion des conteneurs">
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Conteneurs</h1>
+            <p className="text-muted-foreground mt-1">
+              Liste, suivi et notifications pour chaque conteneur
+            </p>
           </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center gap-2 shrink-0">
+                <Plus className="h-4 w-4" /> Nouveau conteneur
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg w-[95vw]">
+              <DialogHeader>
+                <DialogTitle>Ajouter un conteneur</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label>Code (ex: MSKU1234567)</Label>
+                  <Input value={form.code || ''} onChange={e => setForm({ ...form, code: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Navire</Label>
+                  <Input value={form.vessel || ''} onChange={e => setForm({ ...form, vessel: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Port de départ</Label>
+                  <Input value={form.departure_port || ''} onChange={e => setForm({ ...form, departure_port: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Port d'arrivée</Label>
+                  <Input value={form.arrival_port || ''} onChange={e => setForm({ ...form, arrival_port: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>ETD</Label>
+                  <Input type="date" value={form.etd || ''} onChange={e => setForm({ ...form, etd: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>ETA</Label>
+                  <Input type="date" value={form.eta || ''} onChange={e => setForm({ ...form, eta: e.target.value })} />
+                </div>
+                <Button onClick={submit}>Enregistrer</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -582,59 +538,8 @@ const [containerNotificationHistory, setContainerNotificationHistory] = useState
             </div>
           </DialogContent>
         </Dialog>
-      </main>
-
-      {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
-        <div className="flex items-center justify-around py-1 sm:py-2 px-1 sm:px-2 gap-0.5 sm:gap-1">
-          <Link
-            href="/admin/clients"
-            className="flex flex-col items-center py-1 sm:py-2 px-1 sm:px-2 rounded-lg transition-colors min-w-0 flex-1"
-          >
-            <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Clients</span>
-          </Link>
-          <Link
-            href="/admin/containers"
-            className="flex flex-col items-center py-1 sm:py-2 px-1 sm:px-2 rounded-lg transition-colors min-w-0 flex-1 text-orange-600 bg-orange-50"
-          >
-            <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Conteneurs</span>
-          </Link>
-          <QRScanner
-            onScan={(payload) => {
-              const code = extractQrCode(payload)
-              if (code) {
-                router.push(`/admin/qr?code=${encodeURIComponent(String(code))}`)
-              }
-            }}
-            requireReauthOnFirstScanInSession
-            title="Scanner un QR code"
-            description="Scannez un QR code pour pré-remplir les formulaires"
-            trigger={
-              <div className="flex flex-col items-center py-1 sm:py-2 px-1 sm:px-2 rounded-lg transition-colors text-gray-600 hover:text-orange-600 min-w-0 flex-1">
-                <QrCode className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Scanner</span>
-              </div>
-            }
-          />
-          <Link
-            href="/admin/tracking"
-            className="flex flex-col items-center py-1 sm:py-2 px-1 sm:px-2 rounded-lg transition-colors min-w-0 flex-1"
-          >
-            <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Suivi</span>
-          </Link>
-          <Link
-            href="/admin/analytics"
-            className="flex flex-col items-center py-1 sm:py-2 px-1 sm:px-2 rounded-lg transition-colors min-w-0 flex-1"
-          >
-            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Analyses</span>
-          </Link>
-        </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }
 

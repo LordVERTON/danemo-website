@@ -41,9 +41,11 @@ export async function sendEmail(to: string, subject: string, html: string) {
   const resendKey = process.env.RESEND_API_KEY
   if (resendKey) {
     const resend = new Resend(resendKey)
+    // Use an address on a domain verified in Resend (dashboard → Domains).
+    // Override with RESEND_FROM if you use another domain or mailbox name.
     const from =
-      process.env.RESEND_FROM ||
-      'Danemo Notifications <notifications@danemo.be>'
+      process.env.RESEND_FROM?.trim() ||
+      'Danemo <notifications@danemo.app>'
     const { error } = await resend.emails.send({ from, to, subject, html })
     if (error) {
       const msg =

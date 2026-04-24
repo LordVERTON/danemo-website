@@ -58,10 +58,25 @@ export const ordersApi = {
       .from('orders')
       .select('*')
       .eq('order_number', orderNumber)
-      .single()
-    
+      .maybeSingle()
+
     if (error) throw error
     return data
+  },
+
+  /** Première commande liée à ce code conteneur (suivi public / liens ?code=). */
+  async getFirstByContainerCode(containerCode: string): Promise<Order | null> {
+    const code = String(containerCode || '').trim()
+    if (!code) return null
+    const { data, error } = await (supabaseAdmin as any)
+      .from('orders')
+      .select('*')
+      .eq('container_code', code)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (error) throw error
+    return data?.[0] ?? null
   },
 
   // Récupérer une commande par QR code
@@ -214,11 +229,11 @@ export const containersApi = {
     return data || []
   },
   async getById(id: string): Promise<Container | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as any)
       .from('containers')
       .select('*')
       .eq('id', id)
-      .single()
+      .maybeSingle()
     if (error) throw error
     return data
   },

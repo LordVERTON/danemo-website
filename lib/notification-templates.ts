@@ -34,6 +34,10 @@ export interface ContainerStatusEmailParams {
   shipmentReference?: string | null
   trackingUrl?: string | null
   customMessage?: string | null
+  /** Numéro de commande (texte d’intro du message personnalisé) */
+  orderNumber?: string | null
+  /** Code conteneur maritime (texte d’intro du message personnalisé) */
+  containerCode?: string | null
 }
 
 function getFirstName(fullName?: string | null) {
@@ -225,15 +229,27 @@ export function buildContainerStatusEmail(
 
   if (params.customMessage?.trim()) {
     const msg = params.customMessage.trim()
+    const orderNum = (params.orderNumber || params.shipmentReference || ref).trim()
+    const contCode = (params.containerCode || '').trim()
+    const orderSafe = escapeHtml(orderNum)
+    const contSafe = escapeHtml(contCode)
+
+    let intro: string
+    if (contCode && orderNum && contCode !== orderNum) {
+      intro = `Concernant le conteneur <strong>${contSafe}</strong> lié à votre commande n° <strong>${orderSafe}</strong>, voici une mise à jour de notre équipe :`
+    } else if (orderNum) {
+      intro = `Concernant le conteneur de votre commande n° <strong>${orderSafe}</strong>, voici une mise à jour de notre équipe :`
+    } else {
+      intro = `Concernant le conteneur <strong>${refSafe}</strong>, voici une mise à jour de notre équipe :`
+    }
+
+    const subjectRef = contCode || orderNum || ref
     return {
-      subject: `Conteneur ${ref} — message Danemo`,
+      subject: `Conteneur ${subjectRef} — message Danemo`,
       html: layoutEmail({
         preview: msg.slice(0, 120),
         greetingName,
-        blocks: [
-          `Concernant le conteneur <strong>${refSafe}</strong>, voici une mise à jour de notre équipe :`,
-          escapeHtml(msg),
-        ],
+        blocks: [intro, escapeHtml(msg)],
         trackingUrl: trackingUrl ?? '',
       }),
     }

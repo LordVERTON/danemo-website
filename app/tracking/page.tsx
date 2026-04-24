@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -67,6 +68,7 @@ interface Container {
 }
 
 export default function TrackingPage() {
+  const searchParams = useSearchParams()
   const { messages } = useI18n()
   const tracking = messages.tracking
   const containerStatusLabels: Record<string, string> = {
@@ -87,48 +89,7 @@ export default function TrackingPage() {
   const [error, setError] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!trackingNumber.trim()) return
-
-    try {
-      setIsLoading(true)
-      setError("")
-      setHasSearched(true)
-
-      const response = await fetch(`/api/orders/search?tracking=${trackingNumber}`)
-      const result = await response.json()
-      
-      if (result.success && result.data.length > 0) {
-        const foundOrder = result.data[0]
-        setOrder(foundOrder)
-        
-        // Récupérer les événements de suivi
-        const eventsResponse = await fetch(`/api/orders/${foundOrder.id}/tracking`)
-        const eventsResult = await eventsResponse.json()
-        
-        if (eventsResult.success) {
-          setTrackingEvents(eventsResult.data)
-        }
-
-        await fetchContainerDetails(foundOrder)
-      } else {
-        setOrder(null)
-        setTrackingEvents([])
-        setContainer(null)
-        setError(tracking.errors.notFound)
-      }
-    } catch (error) {
-      setError(tracking.errors.generic)
-      setOrder(null)
-      setTrackingEvents([])
-      setContainer(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const fetchContainerDetails = async (order: Order) => {
+  const fetchContainerDetails = useCallback(async (order: Order) => {
     if (!order.container_id && !order.container_code) {
       setContainer(null)
       return
@@ -164,6 +125,68 @@ export default function TrackingPage() {
     } finally {
       setIsLoadingContainer(false)
     }
+  }, [])
+
+  const searchWithQuery = useCallback(
+    async (rawQuery: string) => {
+      const q = rawQuery.trim()
+      if (!q) return
+
+      setTrackingNumber(q)
+
+      try {
+        setIsLoading(true)
+        setError("")
+        setHasSearched(true)
+
+        const response = await fetch(
+          `/api/orders/search?tracking=${encodeURIComponent(q)}`
+        )
+        const result = await response.json()
+
+        if (result.success && result.data.length > 0) {
+          const foundOrder = result.data[0]
+          setOrder(foundOrder)
+
+          const eventsResponse = await fetch(
+            `/api/orders/${foundOrder.id}/tracking`
+          )
+          const eventsResult = await eventsResponse.json()
+
+          if (eventsResult.success) {
+            setTrackingEvents(eventsResult.data)
+          }
+
+          await fetchContainerDetails(foundOrder)
+        } else {
+          setOrder(null)
+          setTrackingEvents([])
+          setContainer(null)
+          setError(tracking.errors.notFound)
+        }
+      } catch {
+        setError(tracking.errors.generic)
+        setOrder(null)
+        setTrackingEvents([])
+        setContainer(null)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [fetchContainerDetails, tracking.errors]
+  )
+
+  useEffect(() => {
+    const fromTracking = searchParams.get("tracking")?.trim()
+    const fromCode = searchParams.get("code")?.trim()
+    const fromUrl = fromTracking || fromCode || ""
+    if (!fromUrl) return
+    void searchWithQuery(fromUrl)
+  }, [searchParams, searchWithQuery])
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await searchWithQuery(trackingNumber)
   }
 
   const getStatusBadge = (status: string) => {

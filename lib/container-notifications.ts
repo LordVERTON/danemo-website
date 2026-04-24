@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { sendEmail } from '@/lib/notify'
 import {
   buildContainerStatusEmail,
@@ -23,11 +23,11 @@ export async function notifyContainerStatusChange(
   options: NotificationOptions = {},
 ): Promise<NotificationResult | null> {
   try {
-    const { data: container, error: containerError } = await supabase
+    const { data: container, error: containerError } = await (supabaseAdmin as any)
       .from('containers')
       .select('*')
       .eq('id', containerId)
-      .single()
+      .maybeSingle()
 
     if (containerError) throw containerError
     if (!container) {
@@ -35,7 +35,7 @@ export async function notifyContainerStatusChange(
       return null
     }
 
-    const { data: orders, error: ordersError } = await supabase
+    const { data: orders, error: ordersError } = await (supabaseAdmin as any)
       .from('orders')
       .select('id, order_number, client_name, client_email, recipient_name, recipient_email, qr_code')
       .eq('container_id', containerId)
@@ -68,6 +68,8 @@ export async function notifyContainerStatusChange(
           const { subject, html } = buildContainerStatusEmail(normalized, {
             recipientName,
             shipmentReference: order.order_number || container.code,
+            orderNumber: order.order_number || null,
+            containerCode: container.code || null,
             trackingUrl: buildTrackingUrl({
               orderNumber: order.order_number,
               containerCode: container.code,
