@@ -75,6 +75,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
   }
 
   const resendKey = process.env.RESEND_API_KEY
+  console.info('[notifications] RESEND_API_KEY exists:', Boolean(resendKey))
   if (resendKey) {
     const resend = new Resend(resendKey)
     // `from` must use a domain verified in Resend (https://resend.com/domains).
@@ -82,19 +83,28 @@ export async function sendEmail(to: string, subject: string, html: string) {
     const from =
       process.env.RESEND_FROM?.trim() ||
       'Danemo <noreply@danemo.app>'
+    console.info('[notifications] RESEND_FROM:', from)
     if (!isDanemoAppSender(from)) {
       console.warn(
         '[notifications] RESEND_FROM should use a verified @danemo.app sender. Current value:',
         from,
       )
     }
-    const { error } = await resend.emails.send({ from, to, subject, html })
-    if (error) {
+    try {
+      const { error } = await resend.emails.send({ from, to, subject, html })
+      if (error) {
+        const msg =
+          typeof error === 'object' && error && 'message' in error
+            ? String((error as { message: string }).message)
+            : String(error)
+        console.error('[notifications] Resend API returned an error:', msg)
+        throw new Error(msg)
+      }
+    } catch (err) {
       const msg =
-        typeof error === 'object' && error && 'message' in error
-          ? String((error as { message: string }).message)
-          : String(error)
-      throw new Error(msg)
+        err instanceof Error ? err.message : 'Unknown Resend transport error'
+      console.error('[notifications] Resend request failed before API response:', msg)
+      throw err
     }
     return
   }
