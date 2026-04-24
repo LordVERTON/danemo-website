@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PackageSearch, Plus, MapPin, Clock, BadgeCheck, Loader2, Send } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -48,6 +49,15 @@ const containerStatusLabels: Record<Container['status'], string> = {
   delayed: "Retard signalé",
 }
 
+const containerStatusOptions: Array<{ value: Container["status"]; label: string }> = [
+  { value: "planned", label: "Planifié" },
+  { value: "departed", label: "Départ confirmé" },
+  { value: "in_transit", label: "En transit" },
+  { value: "arrived", label: "Arrivé" },
+  { value: "delivered", label: "Livré" },
+  { value: "delayed", label: "Retard signalé" },
+]
+
 const formatContainerStatus = (status: string) =>
   containerStatusLabels[status as keyof typeof containerStatusLabels] || status
 
@@ -76,6 +86,10 @@ export default function ContainersPage() {
   const [notifyLoading, setNotifyLoading] = useState(false)
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const [notifySuccess, setNotifySuccess] = useState<string | null>(null)
+  const [autoNotifyStatusMessage, setAutoNotifyStatusMessage] = useState<string | null>(null)
+  const [statusDrafts, setStatusDrafts] = useState<Record<string, Container["status"]>>({})
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState<string | null>(null)
+  const [statusUpdateFeedback, setStatusUpdateFeedback] = useState<string | null>(null)
   const [containerNotificationHistory, setContainerNotificationHistory] = useState<
     Record<string, { status: string; timestamp: string }>
   >({})
@@ -85,7 +99,16 @@ export default function ContainersPage() {
       setLoading(true)
       const res = await fetch('/api/containers')
       const json = await res.json()
-      if (json.success) setItems(json.data)
+      if (json.success) {
+        const fetched = json.data as Container[]
+        setItems(fetched)
+        setStatusDrafts(
+          fetched.reduce((acc, container) => {
+            acc[container.id] = container.status
+            return acc
+          }, {} as Record<string, Container["status"]>),
+        )
+      }
     } finally {
       setLoading(false)
     }
@@ -176,6 +199,7 @@ export default function ContainersPage() {
       setManualMessage('')
       setNotifyError(null)
       setNotifySuccess(null)
+      setAutoNotifyStatusMessage(null)
     }
   }
 
@@ -232,6 +256,54 @@ export default function ContainersPage() {
       setOpen(false)
       setForm({ status: 'planned' })
       fetchContainers()
+    }
+  }
+
+  const updateContainerStatus = async (container: Container) => {
+    const nextStatus = statusDrafts[container.id] || container.status
+    if (nextStatus === container.status) return
+
+    try {
+      setStatusUpdateLoading(container.id)
+      setStatusUpdateFeedback(null)
+
+      const response = await fetch(`/api/containers/${container.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Impossible de mettre à jour le statut.")
+      }
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === container.id
+            ? { ...item, status: nextStatus }
+            : item,
+        ),
+      )
+
+      if (selected?.id === container.id) {
+        setSelected((prev) => (prev ? { ...prev, status: nextStatus } : prev))
+        setAutoNotifyStatusMessage(
+          `Changement de statut enregistré : "${formatContainerStatus(nextStatus)}". Les clients liés au conteneur ont été notifiés automatiquement par e-mail.`,
+        )
+      }
+
+      setStatusUpdateFeedback(
+        `Le statut du conteneur ${container.code} est passé à "${formatContainerStatus(nextStatus)}". Les clients liés sont notifiés automatiquement.`,
+      )
+    } catch (error) {
+      console.error("Failed to update container status", error)
+      setStatusUpdateFeedback(
+        error instanceof Error
+          ? error.message
+          : "Échec de la mise à jour du statut du conteneur.",
+      )
+    } finally {
+      setStatusUpdateLoading(null)
     }
   }
 
@@ -297,6 +369,11 @@ export default function ContainersPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {statusUpdateFeedback && (
+              <Alert className="mb-4">
+                <AlertDescription>{statusUpdateFeedback}</AlertDescription>
+              </Alert>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -325,8 +402,39 @@ export default function ContainersPage() {
                         <td className="p-2">{c.etd || '-'}</td>
                         <td className="p-2">{c.eta || '-'}</td>
                         <td className="p-2">
-                          <div className="flex items-center gap-2">
-                            <span>{c.status}</span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Select
+                              value={statusDrafts[c.id] || c.status}
+                              onValueChange={(value: Container["status"]) =>
+                                setStatusDrafts((prev) => ({ ...prev, [c.id]: value }))
+                              }
+                            >
+                              <SelectTrigger className="w-[180px] h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {containerStatusOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={
+                                statusUpdateLoading === c.id ||
+                                (statusDrafts[c.id] || c.status) === c.status
+                              }
+                              onClick={() => updateContainerStatus(c)}
+                            >
+                              {statusUpdateLoading === c.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Enregistrer"
+                              )}
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -363,6 +471,11 @@ export default function ContainersPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 sm:space-y-6">
+              {autoNotifyStatusMessage && (
+                <Alert className="border-green-200 bg-green-50 text-green-800">
+                  <AlertDescription>{autoNotifyStatusMessage}</AlertDescription>
+                </Alert>
+              )}
               {selected && (
                 <div className="space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2">
