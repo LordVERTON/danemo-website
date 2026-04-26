@@ -114,7 +114,7 @@ const LAYOUT = {
   dateRightPadMm: 2,
   factureBannerMm: { x: 8, w: 92, h: 20, topMm: 31 },
   /** Zone logo (fond orange, coin haut-droit), avec forme arrondie type template. */
-  logo: { boxW: 70, boxH: 32, maxW: 47, maxH: 19, rightPadMm: -19, topMm: -8, radiusMm: 16 },
+  logo: { boxW: 62, boxH: 24, maxW: 34, maxH: 16, rightPadMm: 0, topMm: 0, radiusMm: 18 },
   /** Sous le bandeau FACTURE : numéro de facture. */
   invoiceNoBelowBannerMm: 57,
   /** Bloc société sous le logo (centré). */
@@ -136,8 +136,8 @@ const LAYOUT = {
     body: 10,
     total: 10,
     totalEmphasis: 11,
-    footer: 7.5,
-    footerTight: 6.8,
+    footer: 10.2,
+    footerTight: 9.4,
   },
   summaryGapAfterTableMm: 6,
   summaryLineGapMm: 4.4,
@@ -145,7 +145,7 @@ const LAYOUT = {
   summaryDividerGapMm: 3,
   totalExtraGapMm: 6,
   paymentBlockGapMm: 10,
-  paymentLineGapMm: 4.5,
+  paymentLineGapMm: 4.8,
   paymentTitleGapMm: 4.5,
   tableRuleWidthMm: 0.08,
   tableClosingRuleWidthMm: 0.25,
@@ -153,16 +153,19 @@ const LAYOUT = {
   rowRuleOffsetMm: 3.5,
   tableHeaderFontSize: 12,
   tableOuterFrameWidthMm: 0.25,
-  footerBandMm: 18,
-  footerLine1OffsetMm: 5.6,
-  footerLine2OffsetMm: 11.8,
-  footerSep: "   ",
+  footerBandMm: 22.5,
+  footerLine1OffsetMm: 7.2,
+  footerLine2OffsetMm: 13.8,
+  footerSep: "    ",
 } as const;
 
 /** Orange gabarit (#FF8C00, léger ajustement saturation). */
 const orangeColor = [252, 138, 4] as [number, number, number];
+const footerGradientStartColor = [247, 147, 26] as [number, number, number]; // #F7931A
+const footerGradientEndColor = [227, 93, 16] as [number, number, number]; // #E35D10
 const whiteColor = [255, 255, 255] as [number, number, number];
 const blackColor = [0, 0, 0] as [number, number, number];
+const linkBlueColor = [42, 116, 210] as [number, number, number];
 /** Traits de tableau plus discrets. */
 const grayColor = [165, 165, 165] as [number, number, number];
 const tableGridColor = [190, 190, 190] as [number, number, number];
@@ -217,6 +220,121 @@ function fitRect(
 ): { w: number; h: number } {
   const ratio = Math.min(maxW / imgW, maxH / imgH, 1);
   return { w: imgW * ratio, h: imgH * ratio };
+}
+
+function createFooterTrapezoidDataUrl(params: {
+  widthMm: number;
+  heightMm: number;
+  slopeRatio: number;
+  rightRadiusMm: number;
+}): string | null {
+  if (typeof document === "undefined") return null;
+  const { widthMm, heightMm, slopeRatio, rightRadiusMm } = params;
+  const pxPerMm = 8;
+  const w = Math.max(500, Math.round(widthMm * pxPerMm));
+  const h = Math.max(90, Math.round(heightMm * pxPerMm));
+  const radius = Math.max(1, Math.round(rightRadiusMm * pxPerMm));
+  const slopeStartX = Math.round(w * (1 - slopeRatio));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const grad = ctx.createLinearGradient(0, 0, w, 0);
+  grad.addColorStop(0, "#F7931A");
+  grad.addColorStop(1, "#E35D10");
+  ctx.fillStyle = grad;
+
+  // Trapèze: gauche droit (90deg), droite inclinée avec arrondis haut/bas.
+  const topCornerX = slopeStartX;
+  const topCornerY = 0;
+  const bottomCornerX = w;
+  const bottomCornerY = h;
+  const dx = bottomCornerX - topCornerX;
+  const dy = bottomCornerY - topCornerY;
+  const len = Math.max(1, Math.hypot(dx, dy));
+  const ux = dx / len;
+  const uy = dy / len;
+
+  const topArcStartX = topCornerX - radius;
+  const topArcStartY = 0;
+  const topArcEndX = topCornerX + ux * radius;
+  const topArcEndY = topCornerY + uy * radius;
+  const bottomArcStartX = bottomCornerX - ux * radius;
+  const bottomArcStartY = bottomCornerY - uy * radius;
+  const bottomArcEndX = bottomCornerX - radius;
+  const bottomArcEndY = h;
+
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(Math.max(0, topArcStartX), 0);
+  ctx.quadraticCurveTo(topCornerX, topCornerY, topArcEndX, topArcEndY);
+  ctx.lineTo(bottomArcStartX, bottomArcStartY);
+  ctx.quadraticCurveTo(bottomCornerX, bottomCornerY, bottomArcEndX, bottomArcEndY);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fill();
+
+  return canvas.toDataURL("image/png");
+}
+
+function createHeaderLogoBandDataUrl(params: {
+  widthMm: number;
+  heightMm: number;
+  leftRadiusXMm: number;
+  leftRadiusYMm: number;
+}): string | null {
+  if (typeof document === "undefined") return null;
+  const { widthMm, heightMm, leftRadiusXMm, leftRadiusYMm } = params;
+  const pxPerMm = 10;
+  const w = Math.max(360, Math.round(widthMm * pxPerMm));
+  const h = Math.max(120, Math.round(heightMm * pxPerMm));
+  const rx = Math.max(16, Math.round(leftRadiusXMm * pxPerMm));
+  const ry = Math.max(10, Math.round(leftRadiusYMm * pxPerMm));
+  const topCap = Math.min(Math.round(h * 0.46), ry);
+  const bottomCap = Math.min(Math.round(h * 0.54), Math.round(ry * 1.08));
+  const k = 0.5522847498;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const grad = ctx.createLinearGradient(0, 0, w, 0);
+  grad.addColorStop(0, "#F7931A");
+  grad.addColorStop(1, "#E35D10");
+  ctx.fillStyle = grad;
+
+  // Bloc PAGUI: haut/bas/droite rectilignes, gauche elliptique (rx > ry).
+  ctx.beginPath();
+  ctx.moveTo(rx, 0);
+  ctx.lineTo(w, 0);
+  ctx.lineTo(w, h);
+  ctx.lineTo(rx, h);
+  ctx.bezierCurveTo(
+    rx - rx * k,
+    h,
+    0,
+    h - bottomCap + bottomCap * k,
+    0,
+    h - bottomCap
+  );
+  ctx.lineTo(0, topCap);
+  ctx.bezierCurveTo(
+    0,
+    topCap - topCap * k,
+    rx - rx * k,
+    0,
+    rx,
+    0
+  );
+  ctx.closePath();
+  ctx.fill();
+
+  return canvas.toDataURL("image/png");
 }
 
 /** Retour à la ligne (mots + paragraphes \n) pour jsPDF. */
@@ -462,16 +580,24 @@ export const generateInvoice = async (data: InvoiceData) => {
 
   const logoBoxW = LAYOUT.logo.boxW;
   const logoBoxH = LAYOUT.logo.boxH;
-  const logoBoxX = pageWidth - logoBoxW - LAYOUT.logo.rightPadMm;
-  const logoBoxY = LAYOUT.logo.topMm;
+  const logoBoxX = pageWidth - logoBoxW;
+  const logoBoxY = 0;
   const logoMaxW = LAYOUT.logo.maxW;
   const logoMaxH = LAYOUT.logo.maxH;
-  const logoRadius = LAYOUT.logo.radiusMm;
-  const logoCx = logoBoxX + logoBoxW / 2;
-  const logoCy = logoBoxY + logoBoxH / 2;
-
-  pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
-  pdf.roundedRect(logoBoxX, logoBoxY, logoBoxW, logoBoxH, logoRadius, logoRadius, "F");
+  const logoCx = logoBoxX + logoBoxW * 0.7;
+  const logoCy = logoBoxY + logoBoxH * 0.52;
+  const headerLogoBandDataUrl = createHeaderLogoBandDataUrl({
+    widthMm: logoBoxW,
+    heightMm: logoBoxH,
+    leftRadiusXMm: 18,
+    leftRadiusYMm: 12,
+  });
+  if (headerLogoBandDataUrl) {
+    pdf.addImage(headerLogoBandDataUrl, "PNG", logoBoxX, logoBoxY, logoBoxW, logoBoxH);
+  } else {
+    pdf.setFillColor(footerGradientStartColor[0], footerGradientStartColor[1], footerGradientStartColor[2]);
+    pdf.rect(logoBoxX, logoBoxY, logoBoxW, logoBoxH, "F");
+  }
 
   try {
     const logoUrl =
@@ -516,10 +642,8 @@ export const generateInvoice = async (data: InvoiceData) => {
   pdf.text("FACTURE", LAYOUT.factureBannerMm.x + 6, LAYOUT.header.factureTitleY);
 
   const hy = LAYOUT.header;
-  const rightBlockCenterX = logoBoxX + logoBoxW / 2;
-  const sloganCenterX = rightBlockCenterX - 14;
-
-  const sloganY1 = logoBoxY + logoBoxH + 6;
+  const sloganCenterX = logoBoxX + logoBoxW * 0.7;
+  const sloganY1 = logoBoxY + logoBoxH + 8;
   const sloganY2 = sloganY1 + 4.8;
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
   pdf.setFontSize(LAYOUT.fontSizes.slogan);
@@ -702,51 +826,67 @@ export const generateInvoice = async (data: InvoiceData) => {
   }
 
   const summaryLabelX = totColR - LAYOUT.summaryLabelColumnMm;
-  const amountX = (txt: string) => totColR - pdf.getTextWidth(txt) - LAYOUT.textRightPadMm;
+  const dividerX = totColR - 21.5;
+  const amountLeftX = dividerX + 2.2;
+  const amountX = (txt: string) =>
+    Math.max(amountLeftX, totColR - pdf.getTextWidth(txt) - LAYOUT.textRightPadMm);
+  const labelX = (label: string) => dividerX - 2.2 - pdf.getTextWidth(label);
+  const summaryTopY = yPos;
 
   pdf.setFontSize(LAYOUT.fontSizes.body);
-  pdf.setFont("helvetica", "bold");
+  pdf.setFont("helvetica", "bolditalic");
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
-  pdf.text("Sous-total", summaryLabelX, yPos);
+  const subtotalLabel = "Sous-total";
+  pdf.text(subtotalLabel, Math.max(summaryLabelX, labelX(subtotalLabel)), yPos);
   const subtotalText = formatCurrencyEUR(subtotal);
   pdf.setFont("helvetica", "bold");
   pdf.text(subtotalText, amountX(subtotalText), yPos);
 
+  pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
+  pdf.setLineWidth(0.18);
+  pdf.line(summaryLabelX - 2, yPos + 1.2, totColR, yPos + 1.2);
+
   yPos += LAYOUT.summaryLineGapMm;
-  pdf.setFont("helvetica", "bold");
-  pdf.text("Taux de TVA", summaryLabelX, yPos);
+  const taxRateLabel = "Taux de TVA";
+  pdf.setFont("helvetica", "bolditalic");
+  pdf.text(taxRateLabel, Math.max(summaryLabelX, labelX(taxRateLabel)), yPos);
   const taxRateStr = formatTaxRateDisplay(taxRate);
   pdf.setFont("helvetica", "bold");
   pdf.text(taxRateStr, amountX(taxRateStr), yPos);
 
   yPos += LAYOUT.summaryLineGapMm;
-  pdf.setFont("helvetica", "bold");
-  pdf.text("TVA", summaryLabelX, yPos);
+  const taxAmountLabel = "TVA";
+  pdf.setFont("helvetica", "bolditalic");
+  pdf.text(taxAmountLabel, Math.max(summaryLabelX, labelX(taxAmountLabel)), yPos);
   const taxAmountText = formatTaxAmountDisplay(taxAmount);
   pdf.setFont("helvetica", "bold");
   pdf.text(taxAmountText, amountX(taxAmountText), yPos);
 
-  // Pas de trait d'encadrement dans le bloc totaux: contour reserve au tableau d'items.
-
   yPos += LAYOUT.totalExtraGapMm;
   const totalText = formatCurrencyEUR(total);
-  pdf.setFont("helvetica", "bold");
+  const totalLabel = "TOTAL";
+  pdf.setFont("helvetica", "bolditalic");
   pdf.setFontSize(LAYOUT.fontSizes.totalEmphasis);
   pdf.setTextColor(orangeColor[0], orangeColor[1], orangeColor[2]);
-  pdf.text("TOTAL", summaryLabelX, yPos);
-  const totalAmountX = totColR - pdf.getTextWidth(totalText) - LAYOUT.textRightPadMm;
-  pdf.text(totalText, totalAmountX, yPos);
+  pdf.text(totalLabel, Math.max(summaryLabelX, labelX(totalLabel)), yPos);
+  pdf.text(totalText, amountX(totalText), yPos);
 
+  pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
+  pdf.setLineWidth(0.18);
+  pdf.line(dividerX, summaryTopY - 2.6, dividerX, yPos + 2.6);
+
+  const paymentTitleFontSize = 11;
+  const paymentBodyFontSize = 10.5;
   const paymentText = resolveInvoicePaymentText(data.paymentMethod, data.consolidatedInvoice);
   const maxPaymentWidth = rightMargin - margin;
-  const payLines = wrapLinesJsPDF(pdf, paymentText, maxPaymentWidth, LAYOUT.fontSizes.body);
+  const payLines = wrapLinesJsPDF(pdf, paymentText, maxPaymentWidth, paymentBodyFontSize);
   const bicLines =
     data.company.bic && data.company.iban
       ? wrapLinesJsPDF(
           pdf,
           `BIC : ${data.company.bic} \u2013 IBAN : ${data.company.iban}`,
           maxPaymentWidth,
-          LAYOUT.fontSizes.body
+          paymentBodyFontSize
         )
       : [];
   const payTitle = "Détails de payement :";
@@ -766,11 +906,16 @@ export const generateInvoice = async (data: InvoiceData) => {
 
   yPos = paymentStartY;
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
-  pdf.setFontSize(LAYOUT.fontSizes.body);
+  pdf.setFontSize(paymentTitleFontSize);
   pdf.setFont("helvetica", "bold");
   pdf.text(payTitle, margin, yPos);
+  const payTitleWidth = pdf.getTextWidth(payTitle);
+  pdf.setDrawColor(blackColor[0], blackColor[1], blackColor[2]);
+  pdf.setLineWidth(0.2);
+  pdf.line(margin, yPos + 1.1, margin + payTitleWidth, yPos + 1.1);
 
   yPos += LAYOUT.paymentTitleGapMm;
+  pdf.setFontSize(paymentBodyFontSize);
   pdf.setFont("helvetica", "normal");
   for (const pl of payLines) {
     pdf.text(pl, margin, yPos);
@@ -782,46 +927,105 @@ export const generateInvoice = async (data: InvoiceData) => {
   }
 
   const pageCount = pdf.getNumberOfPages();
-  const websitePart = data.company.website
-    ? `www.${data.company.website.replace(/^https?:\/\//, "").replace(/^www\./, "")}`
+  const websiteHost = data.company.website
+    ? data.company.website.replace(/^https?:\/\//, "").replace(/^www\./, "")
     : "";
-  const line1Parts = [websitePart, data.company.phone, data.company.email, data.company.tva ? `TVA : ${data.company.tva}` : ""].filter(
-    Boolean
-  ) as string[];
-  const footerLine1Base = line1Parts.join(LAYOUT.footerSep);
+  const websiteLabel = websiteHost ? `www.${websiteHost}` : "";
+  const websiteUrl = websiteHost ? `https://${websiteHost}` : "";
+  const emailLabel = data.company.email ? sanitizeJsPdfText(data.company.email) : "";
+  const emailUrl = emailLabel ? `mailto:${emailLabel}` : "";
+  const phoneLabel = data.company.phone ? sanitizeJsPdfText(data.company.phone) : "";
+  const tvaLabel = data.company.tva ? `TVA : ${data.company.tva}` : "";
   const footerLine2Base = data.company.address ? sanitizeJsPdfText(data.company.address) : "";
+
+  const footerBandDataUrl = createFooterTrapezoidDataUrl({
+    widthMm: pageWidth,
+    heightMm: LAYOUT.footerBandMm,
+    slopeRatio: 0.022,
+    rightRadiusMm: 3.2,
+  });
 
   const drawFooterOnPage = (pageIdx: number) => {
     pdf.setPage(pageIdx);
     const footerBandMm = LAYOUT.footerBandMm;
     const footerY = pageHeight - footerBandMm;
-    pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
-    pdf.rect(0, footerY, pageWidth, footerBandMm, "F");
+    if (footerBandDataUrl) {
+      pdf.addImage(footerBandDataUrl, "PNG", 0, footerY, pageWidth, footerBandMm);
+    } else {
+      pdf.setFillColor(footerGradientStartColor[0], footerGradientStartColor[1], footerGradientStartColor[2]);
+      pdf.rect(0, footerY, pageWidth, footerBandMm, "F");
+    }
 
     pdf.setTextColor(whiteColor[0], whiteColor[1], whiteColor[2]);
     pdf.setFont("helvetica", "normal");
-    const maxFooterWidth = rightMargin - margin;
+    const leftPadding = 18;
+    const rightPadding = 18;
+    const slopeStartX = pageWidth * 0.978;
+    const slopeSafety = 12; // évite toute collision visuelle avec la pente
+    const contentRightLimitX = Math.min(pageWidth - rightPadding, slopeStartX - slopeSafety);
+    const footerContentX = leftPadding;
+    const maxFooterWidth = Math.max(20, contentRightLimitX - footerContentX);
 
     let footerFontSize: number = LAYOUT.fontSizes.footer;
     pdf.setFontSize(footerFontSize);
-    if (
-      pdf.getTextWidth(footerLine1Base) > maxFooterWidth ||
-      (footerLine2Base && pdf.getTextWidth(footerLine2Base) > maxFooterWidth)
-    ) {
+    const footerLine1Preview = [websiteLabel, phoneLabel, emailLabel, tvaLabel]
+      .filter(Boolean)
+      .join(LAYOUT.footerSep);
+    if (pdf.getTextWidth(footerLine1Preview) > maxFooterWidth || (footerLine2Base && pdf.getTextWidth(footerLine2Base) > maxFooterWidth)) {
       footerFontSize = LAYOUT.fontSizes.footerTight;
       pdf.setFontSize(footerFontSize);
     }
 
-    pdf.text(
-      truncateText(footerLine1Base, maxFooterWidth, footerFontSize),
-      margin,
-      footerY + LAYOUT.footerLine1OffsetMm
-    );
+    const line1Y = footerY + footerBandMm * 0.40;
+    const line2Y = footerY + footerBandMm * 0.71;
+    const addFooterTextPart = (
+      label: string,
+      x: number,
+      align: "left" | "center" | "right",
+      opts?: { url?: string; color?: [number, number, number] }
+    ) => {
+      if (!label) return;
+      const safeLabel = sanitizeJsPdfText(label);
+      const textColor = opts?.color ?? whiteColor;
+      pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+      pdf.text(safeLabel, x, line1Y, { align });
+      const w = pdf.getTextWidth(safeLabel);
+      let leftX = x;
+      if (align === "center") leftX = x - w / 2;
+      if (align === "right") leftX = x - w;
+      if (opts?.url) {
+        pdf.link(leftX, line1Y - footerFontSize * 0.34, w, footerFontSize * 0.55, {
+          url: opts.url,
+        });
+        pdf.setDrawColor(textColor[0], textColor[1], textColor[2]);
+        pdf.setLineWidth(0.15);
+        pdf.line(leftX, line1Y + 0.45, leftX + w, line1Y + 0.45);
+      }
+    };
+
+    const usableWidth = maxFooterWidth;
+    const colWidth = usableWidth / 4;
+    const col1Left = footerContentX;
+    const col2Center = footerContentX + colWidth * 1.5;
+    const col3Center = footerContentX + colWidth * 2.5;
+    const col4Right = footerContentX + colWidth * 4;
+    const vatSafeRight = contentRightLimitX - 1.2;
+    const vatAnchorX = Math.min(col4Right, vatSafeRight);
+
+    addFooterTextPart(websiteLabel, col1Left, "left", { url: websiteUrl || undefined });
+    addFooterTextPart(phoneLabel, col2Center, "center", { color: whiteColor });
+    addFooterTextPart(emailLabel, col3Center, "center", {
+      url: emailUrl || undefined,
+      color: linkBlueColor,
+    });
+    addFooterTextPart(tvaLabel, vatAnchorX, "right", { color: whiteColor });
+
     if (footerLine2Base) {
+      pdf.setTextColor(whiteColor[0], whiteColor[1], whiteColor[2]);
       pdf.text(
         truncateText(footerLine2Base, maxFooterWidth, footerFontSize),
-        margin,
-        footerY + LAYOUT.footerLine2OffsetMm
+        footerContentX,
+        line2Y
       );
     }
   };
