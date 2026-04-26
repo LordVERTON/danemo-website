@@ -22,10 +22,13 @@ export function formatCurrencyEUR(amount: number): string {
   const cents = Math.round(rounded * 100);
   const hasDecimals = cents % 100 !== 0;
   const n = hasDecimals ? rounded : Math.round(rounded);
-  return `${n.toLocaleString("fr-FR", {
+  const formatted = n
+    .toLocaleString("fr-FR", {
     minimumFractionDigits: hasDecimals ? 2 : 0,
     maximumFractionDigits: hasDecimals ? 2 : 0,
-  })} €`;
+    })
+    .replace(/[\u202f\u00a0]/g, " ");
+  return `${formatted} €`;
 }
 
 /** Ligne TVA : « 0 » sans symbole si nul (gabarit PAGUI). */

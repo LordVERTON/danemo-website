@@ -99,7 +99,7 @@ const LAYOUT = {
   textRightPadMm: 1,
   tableTopMm: 88,
   gapAfterAddressesMm: 16,
-  tableHeaderGapMm: 9,
+  tableHeaderGapMm: 5.5,
   tableHeaderBandMm: 9,
   descLineHeightMm: 3.8,
   minRowMm: 8,
@@ -108,47 +108,51 @@ const LAYOUT = {
   continuationBottomMarginMm: 14,
   continuationTableTopMm: 44,
   colFracs: [0.46, 0.14, 0.15, 0.25] as const,
-  addressBlockTopMm: 52,
+  addressBlockTopMm: 66,
   addressLineGapMm: 5.2,
   addressLabelGapMm: 6,
   dateRightPadMm: 2,
-  factureBannerMm: { w: 72, h: 28 },
-  /** Zone logo (fond orange, coin haut-droit). */
-  logo: { boxW: 48, boxH: 28, maxW: 34, maxH: 20, rightPadMm: 0, topMm: 5 },
+  factureBannerMm: { x: 8, w: 92, h: 20, topMm: 31 },
+  /** Zone logo (fond orange, coin haut-droit), avec forme arrondie type template. */
+  logo: { boxW: 70, boxH: 32, maxW: 47, maxH: 19, rightPadMm: -19, topMm: -8, radiusMm: 16 },
   /** Sous le bandeau FACTURE : numéro de facture. */
-  invoiceNoBelowBannerMm: 31.5,
+  invoiceNoBelowBannerMm: 57,
   /** Bloc société sous le logo (centré). */
   header: {
-    factureTitleY: 18,
-    companyNameY: 36,
-    slogan1Y: 40.2,
-    slogan2Y: 43.8,
-    dateY1: 47.5,
-    dateY2: 51.5,
+    factureTitleY: 45.5,
+    companyNameY: 41,
+    slogan1Y: 43,
+    slogan2Y: 48,
+    dateY1: 60,
+    dateY2: 64,
   },
   fontSizes: {
-    factureTitle: 22,
+    factureTitle: 24,
     invoiceNo: 10,
-    company: 9.5,
-    slogan: 6.8,
-    body: 9,
-    total: 9,
+    company: 10,
+    slogan: 8.2,
+    date: 12,
+    address: 12,
+    body: 10,
+    total: 10,
     totalEmphasis: 11,
     footer: 7.5,
     footerTight: 6.8,
   },
-  summaryGapAfterTableMm: 14,
-  summaryLineGapMm: 5.2,
-  summaryLabelColumnMm: 46,
+  summaryGapAfterTableMm: 6,
+  summaryLineGapMm: 4.4,
+  summaryLabelColumnMm: 45,
   summaryDividerGapMm: 3,
-  totalExtraGapMm: 9,
-  paymentBlockGapMm: 16,
-  paymentLineGapMm: 4.6,
-  paymentTitleGapMm: 6,
+  totalExtraGapMm: 6,
+  paymentBlockGapMm: 10,
+  paymentLineGapMm: 4.5,
+  paymentTitleGapMm: 4.5,
   tableRuleWidthMm: 0.08,
   tableClosingRuleWidthMm: 0.25,
-  tableVerticalWidthMm: 0.06,
+  tableVerticalWidthMm: 0.25,
   rowRuleOffsetMm: 3.5,
+  tableHeaderFontSize: 12,
+  tableOuterFrameWidthMm: 0.25,
   footerBandMm: 18,
   footerLine1OffsetMm: 5.6,
   footerLine2OffsetMm: 11.8,
@@ -161,6 +165,8 @@ const whiteColor = [255, 255, 255] as [number, number, number];
 const blackColor = [0, 0, 0] as [number, number, number];
 /** Traits de tableau plus discrets. */
 const grayColor = [165, 165, 165] as [number, number, number];
+const tableGridColor = [190, 190, 190] as [number, number, number];
+const rowStripeGrayColor = [238, 238, 238] as [number, number, number];
 const pageBgColor = [250, 250, 250] as [number, number, number];
 
 function sanitizeJsPdfText(text: string): string {
@@ -172,6 +178,15 @@ function sanitizeJsPdfText(text: string): string {
     .replace(/\u2014/g, "--")
     .replace(/\u2026/g, "...")
     .replace(/\u00a0/g, " ");
+}
+
+function toNameCase(value: string): string {
+  const cleaned = sanitizeJsPdfText(value).trim().toLowerCase();
+  if (!cleaned) return "";
+  return cleaned
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 async function webpUrlToPngDataUrl(url: string): Promise<string> {
@@ -305,18 +320,23 @@ function drawProductTableHeader(
   const totColR = colPositions[3] + colWidths[3];
 
   pdf.setTextColor(whiteColor[0], whiteColor[1], whiteColor[2]);
-  pdf.setFontSize(LAYOUT.fontSizes.body);
+  pdf.setFontSize(LAYOUT.tableHeaderFontSize);
   pdf.setFont("helvetica", "bold");
   const cpad = LAYOUT.cellPadMm;
-  pdf.text("DESCRIPTION", colPositions[0] + cpad, yPos);
-  textCenterInColumn(pdf, "QUANTITES", colPositions[1], qtyColR, yPos, LAYOUT.fontSizes.body, "bold");
-  textCenterInColumn(pdf, "P.U", colPositions[2], puColR, yPos, LAYOUT.fontSizes.body, "bold");
-  textRightInColumn(pdf, "PRIX TOTAL", colPositions[3], totColR, yPos, LAYOUT.fontSizes.body, "bold");
+  textCenterInColumn(pdf, "DESCRIPTION", colPositions[0], colPositions[0] + colWidths[0], yPos, LAYOUT.tableHeaderFontSize, "bold");
+  textCenterInColumn(pdf, "QUANTITES", colPositions[1], qtyColR, yPos, LAYOUT.tableHeaderFontSize, "bold");
+  textCenterInColumn(pdf, "P.U", colPositions[2], puColR, yPos, LAYOUT.tableHeaderFontSize, "bold");
+  textCenterInColumn(pdf, "PRIX TOTAL", colPositions[3], totColR, yPos, LAYOUT.tableHeaderFontSize, "bold");
 
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
   pdf.setFontSize(LAYOUT.fontSizes.body);
   pdf.setFont("helvetica", "normal");
   const bandBottomY = bandTopY + band;
+  pdf.setDrawColor(tableGridColor[0], tableGridColor[1], tableGridColor[2]);
+  pdf.setLineWidth(LAYOUT.tableVerticalWidthMm);
+  pdf.line(colPositions[1], bandTopY, colPositions[1], bandBottomY);
+  pdf.line(colPositions[2], bandTopY, colPositions[2], bandBottomY);
+  pdf.line(colPositions[3], bandTopY, colPositions[3], bandBottomY);
   return { yAfter: yPos + LAYOUT.tableHeaderGapMm, bandTopY, bandBottomY };
 }
 
@@ -326,7 +346,7 @@ function drawTableColumnSeparators(
   yTop: number,
   yBottom: number
 ) {
-  pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
+  pdf.setDrawColor(tableGridColor[0], tableGridColor[1], tableGridColor[2]);
   pdf.setLineWidth(LAYOUT.tableVerticalWidthMm);
   for (const x of xs) {
     pdf.line(x, yTop, x, yBottom);
@@ -363,29 +383,23 @@ function drawAddressBlock(
   y += addressLabelGap;
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
   pdf.setFont("helvetica", "normal");
-  pdf.text(truncate(address.name, maxWidth, fontSize), x, y);
+  pdf.text(truncate(toNameCase(address.name), maxWidth, fontSize), x, y);
 
   if (address.address) {
     y += lineGap;
     pdf.text(truncate(sanitizeJsPdfText(address.address), maxWidth, fontSize), x, y);
   }
-  if (address.postal_code) {
+  const postalCity = [address.postal_code, address.city]
+    .map((value) => (value ? sanitizeJsPdfText(value).trim() : ""))
+    .filter(Boolean)
+    .join(" ");
+  if (postalCity) {
     y += lineGap;
-    pdf.text(address.postal_code, x, y);
+    pdf.text(truncate(postalCity, maxWidth, fontSize), x, y);
   }
-  if (address.city && address.country) {
+  if (address.country) {
     y += lineGap;
-    pdf.text(
-      truncate(`${address.city.toUpperCase()} - ${address.country.toUpperCase()}`, maxWidth, fontSize),
-      x,
-      y
-    );
-  } else if (address.city) {
-    y += lineGap;
-    pdf.text(truncate(address.city.toUpperCase(), maxWidth, fontSize), x, y);
-  } else if (address.country) {
-    y += lineGap;
-    pdf.text(truncate(address.country.toUpperCase(), maxWidth, fontSize), x, y);
+    pdf.text(truncate(sanitizeJsPdfText(address.country).toUpperCase(), maxWidth, fontSize), x, y);
   }
 
   return y;
@@ -448,15 +462,16 @@ export const generateInvoice = async (data: InvoiceData) => {
 
   const logoBoxW = LAYOUT.logo.boxW;
   const logoBoxH = LAYOUT.logo.boxH;
-  const logoBoxX = rightMargin - logoBoxW;
+  const logoBoxX = pageWidth - logoBoxW - LAYOUT.logo.rightPadMm;
   const logoBoxY = LAYOUT.logo.topMm;
   const logoMaxW = LAYOUT.logo.maxW;
   const logoMaxH = LAYOUT.logo.maxH;
+  const logoRadius = LAYOUT.logo.radiusMm;
   const logoCx = logoBoxX + logoBoxW / 2;
   const logoCy = logoBoxY + logoBoxH / 2;
 
   pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
-  pdf.rect(logoBoxX, logoBoxY, logoBoxW, logoBoxH, "F");
+  pdf.roundedRect(logoBoxX, logoBoxY, logoBoxW, logoBoxH, logoRadius, logoRadius, "F");
 
   try {
     const logoUrl =
@@ -487,26 +502,30 @@ export const generateInvoice = async (data: InvoiceData) => {
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
 
   pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
-  pdf.rect(0, 0, LAYOUT.factureBannerMm.w, LAYOUT.factureBannerMm.h, "F");
+  pdf.rect(
+    LAYOUT.factureBannerMm.x,
+    LAYOUT.factureBannerMm.topMm,
+    LAYOUT.factureBannerMm.w,
+    LAYOUT.factureBannerMm.h,
+    "F"
+  );
 
   pdf.setTextColor(whiteColor[0], whiteColor[1], whiteColor[2]);
   pdf.setFontSize(LAYOUT.fontSizes.factureTitle);
   pdf.setFont("helvetica", "bold");
-  pdf.text("FACTURE", 6, LAYOUT.header.factureTitleY);
+  pdf.text("FACTURE", LAYOUT.factureBannerMm.x + 6, LAYOUT.header.factureTitleY);
 
   const hy = LAYOUT.header;
   const rightBlockCenterX = logoBoxX + logoBoxW / 2;
+  const sloganCenterX = rightBlockCenterX - 14;
 
+  const sloganY1 = logoBoxY + logoBoxH + 6;
+  const sloganY2 = sloganY1 + 4.8;
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
-  pdf.setFontSize(LAYOUT.fontSizes.company);
-  pdf.setFont("helvetica", "bold");
-  const companyName = sanitizeJsPdfText(data.company.name);
-  pdf.text(companyName, rightBlockCenterX, hy.companyNameY, { align: "center" });
-
   pdf.setFontSize(LAYOUT.fontSizes.slogan);
   pdf.setFont("helvetica", "normal");
-  pdf.text("IMPORT & EXPORT GROUPAGE", rightBlockCenterX, hy.slogan1Y, { align: "center" });
-  pdf.text("ET TRANSPORT MARITIME", rightBlockCenterX, hy.slogan2Y, { align: "center" });
+  pdf.text("IMPORT & EXPORT GROUPAGE", sloganCenterX, sloganY1, { align: "center" });
+  pdf.text("ET TRANSPORT MARITIME", sloganCenterX, sloganY2, { align: "center" });
 
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
   pdf.setFontSize(LAYOUT.fontSizes.invoiceNo);
@@ -521,13 +540,17 @@ export const generateInvoice = async (data: InvoiceData) => {
   const { line1: dateLine1, line2: dateLine2 } = formatInvoiceDateLines(location, issueDate);
 
   pdf.setTextColor(orangeColor[0], orangeColor[1], orangeColor[2]);
-  pdf.setFontSize(LAYOUT.fontSizes.body);
+  pdf.setFontSize(LAYOUT.fontSizes.date);
   pdf.setFont("helvetica", "bold");
   const dr = LAYOUT.dateRightPadMm;
   const d1 = sanitizeJsPdfText(dateLine1);
   const d2 = sanitizeJsPdfText(dateLine2);
   pdf.text(d1, rightMargin - dr, hy.dateY1, { align: "right" });
-  pdf.text(d2, rightMargin - dr, hy.dateY2, { align: "right" });
+  const d1Width = pdf.getTextWidth(d1);
+  const d2Width = pdf.getTextWidth(d2);
+  const d1LeftX = rightMargin - dr - d1Width;
+  const d2X = d1LeftX + (d1Width - d2Width) / 2;
+  pdf.text(d2, d2X, hy.dateY2);
 
   const addrGap = LAYOUT.addressLineGapMm;
   let yPos: number = LAYOUT.addressBlockTopMm;
@@ -537,11 +560,11 @@ export const generateInvoice = async (data: InvoiceData) => {
   const billingBottomMm = drawAddressBlock(pdf, {
     title: "Adresse de facturation :",
     x: margin,
-    startY: yPos,
+    startY: yPos + 4,
     maxWidth: maxAddressWidth,
     lineGap: addrGap,
     addressLabelGap: LAYOUT.addressLabelGapMm,
-    fontSize: LAYOUT.fontSizes.body,
+    fontSize: LAYOUT.fontSizes.address,
     address: billingAddress,
     truncate: truncateText,
   });
@@ -552,11 +575,11 @@ export const generateInvoice = async (data: InvoiceData) => {
   const shippingBottomMm = drawAddressBlock(pdf, {
     title: "Adresse de livraison",
     x: shippingLabelX,
-    startY: yPos,
+    startY: yPos + 24,
     maxWidth: maxShippingWidth,
     lineGap: addrGap,
     addressLabelGap: LAYOUT.addressLabelGapMm,
-    fontSize: LAYOUT.fontSizes.body,
+    fontSize: LAYOUT.fontSizes.address,
     address: shippingAddress,
     truncate: truncateText,
   });
@@ -594,7 +617,8 @@ export const generateInvoice = async (data: InvoiceData) => {
 
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(LAYOUT.fontSizes.body);
-    const descLines = wrapLinesJsPDF(pdf, item.description, maxDescWidth, LAYOUT.fontSizes.body);
+    const descriptionText = item.description.toLocaleUpperCase("fr-FR");
+    const descLines = wrapLinesJsPDF(pdf, descriptionText, maxDescWidth, LAYOUT.fontSizes.body);
     const rowHeight = Math.max(
       LAYOUT.minRowMm,
       (descLines.length - 1) * LAYOUT.descLineHeightMm + LAYOUT.minRowMm
@@ -619,14 +643,25 @@ export const generateInvoice = async (data: InvoiceData) => {
     }
 
     const rowY = yPos;
+    const rowTopY = rowY - LAYOUT.rowRuleOffsetMm;
+    const isGrayRow = index % 2 === 0;
+    const [r, g, b] = isGrayRow ? rowStripeGrayColor : whiteColor;
+    pdf.setFillColor(r, g, b);
+    pdf.rect(tableStartX, rowTopY, tableWidth, rowHeight, "F");
+
     pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
     pdf.setLineWidth(LAYOUT.tableRuleWidthMm);
     pdf.line(
       tableStartX,
-      rowY - LAYOUT.rowRuleOffsetMm,
+      rowTopY,
       tableStartX + tableWidth,
-      rowY - LAYOUT.rowRuleOffsetMm
+      rowTopY
     );
+    pdf.setDrawColor(tableGridColor[0], tableGridColor[1], tableGridColor[2]);
+    pdf.setLineWidth(LAYOUT.tableVerticalWidthMm);
+    pdf.line(colPositions[1], rowTopY, colPositions[1], rowTopY + rowHeight);
+    pdf.line(colPositions[2], rowTopY, colPositions[2], rowTopY + rowHeight);
+    pdf.line(colPositions[3], rowTopY, colPositions[3], rowTopY + rowHeight);
 
     let descYMm = rowY;
     pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
@@ -636,27 +671,11 @@ export const generateInvoice = async (data: InvoiceData) => {
       descYMm += LAYOUT.descLineHeightMm;
     }
 
-    const unitPriceStr = formatCurrencyEUR(item.unitPrice);
+    const unitPriceStr = formatCurrencyEUR(item.unitPrice).replace(/\s+€/g, "€");
     pdf.setFont("helvetica", "normal");
-    textCenterInColumn(
-      pdf,
-      item.quantity.toString(),
-      colPositions[1],
-      qtyColR,
-      rowY,
-      LAYOUT.fontSizes.body,
-      "normal"
-    );
-    textCenterInColumn(pdf, unitPriceStr, colPositions[2], puColR, rowY, LAYOUT.fontSizes.body, "normal");
-    textRightInColumn(
-      pdf,
-      formatCurrencyEUR(item.total),
-      colPositions[3],
-      totColR,
-      rowY,
-      LAYOUT.fontSizes.body,
-      "normal"
-    );
+    pdf.text(item.quantity.toString(), colPositions[1] + cpad, rowY);
+    pdf.text(unitPriceStr, colPositions[2] + cpad, rowY);
+    pdf.text(formatCurrencyEUR(item.total), colPositions[3] + cpad, rowY);
 
     yPos += rowHeight;
   }
@@ -664,18 +683,15 @@ export const generateInvoice = async (data: InvoiceData) => {
   const tableEndY = yPos;
   const tableEndPage = pdf.getNumberOfPages();
 
-  pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
+  pdf.setDrawColor(tableGridColor[0], tableGridColor[1], tableGridColor[2]);
   pdf.setLineWidth(LAYOUT.tableVerticalWidthMm);
   pdf.line(tableStartX, tableBandTopY, tableStartX + tableWidth, tableBandTopY);
   if (tableStartPage === tableEndPage) {
     const colXs = [tableStartX, colPositions[1], colPositions[2], colPositions[3], tableStartX + tableWidth];
     drawTableColumnSeparators(pdf, colXs, tableBandTopY, tableEndY);
-    pdf.line(tableStartX, tableBandTopY, tableStartX, tableEndY);
-    pdf.line(tableStartX + tableWidth, tableBandTopY, tableStartX + tableWidth, tableEndY);
   }
 
-  pdf.setLineWidth(LAYOUT.tableClosingRuleWidthMm);
-  pdf.line(tableStartX, tableEndY, tableStartX + tableWidth, tableEndY);
+  pdf.setDrawColor(tableGridColor[0], tableGridColor[1], tableGridColor[2]);
 
   yPos = tableEndY + LAYOUT.summaryGapAfterTableMm;
   const footerSafeTop = pageHeight - LAYOUT.footerBandMm - 8;
@@ -686,37 +702,31 @@ export const generateInvoice = async (data: InvoiceData) => {
   }
 
   const summaryLabelX = totColR - LAYOUT.summaryLabelColumnMm;
-  const summaryDividerX = summaryLabelX - LAYOUT.summaryDividerGapMm;
   const amountX = (txt: string) => totColR - pdf.getTextWidth(txt) - LAYOUT.textRightPadMm;
 
-  const summaryTopY = yPos - 1.5;
-
   pdf.setFontSize(LAYOUT.fontSizes.body);
-  pdf.setFont("helvetica", "italic");
+  pdf.setFont("helvetica", "bold");
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
   pdf.text("Sous-total", summaryLabelX, yPos);
   const subtotalText = formatCurrencyEUR(subtotal);
-  pdf.setFont("helvetica", "normal");
+  pdf.setFont("helvetica", "bold");
   pdf.text(subtotalText, amountX(subtotalText), yPos);
 
   yPos += LAYOUT.summaryLineGapMm;
-  pdf.setFont("helvetica", "italic");
+  pdf.setFont("helvetica", "bold");
   pdf.text("Taux de TVA", summaryLabelX, yPos);
   const taxRateStr = formatTaxRateDisplay(taxRate);
-  pdf.setFont("helvetica", "normal");
+  pdf.setFont("helvetica", "bold");
   pdf.text(taxRateStr, amountX(taxRateStr), yPos);
 
   yPos += LAYOUT.summaryLineGapMm;
-  pdf.setFont("helvetica", "italic");
+  pdf.setFont("helvetica", "bold");
   pdf.text("TVA", summaryLabelX, yPos);
   const taxAmountText = formatTaxAmountDisplay(taxAmount);
-  pdf.setFont("helvetica", "normal");
+  pdf.setFont("helvetica", "bold");
   pdf.text(taxAmountText, amountX(taxAmountText), yPos);
 
-  const summaryMidBottomY = yPos + 2;
-  pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
-  pdf.setLineWidth(0.12);
-  pdf.line(summaryDividerX, summaryTopY, summaryDividerX, summaryMidBottomY);
+  // Pas de trait d'encadrement dans le bloc totaux: contour reserve au tableau d'items.
 
   yPos += LAYOUT.totalExtraGapMm;
   const totalText = formatCurrencyEUR(total);
@@ -727,45 +737,48 @@ export const generateInvoice = async (data: InvoiceData) => {
   const totalAmountX = totColR - pdf.getTextWidth(totalText) - LAYOUT.textRightPadMm;
   pdf.text(totalText, totalAmountX, yPos);
 
-  yPos += LAYOUT.paymentBlockGapMm;
-  if (yPos + 32 > footerSafeTop) {
-    pdf.addPage();
-    paintPageBackground(pdf, pageWidth, pageHeight);
-    yPos = margin + 6;
-  }
-
-  pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
-  pdf.setFontSize(LAYOUT.fontSizes.body);
-  pdf.setFont("helvetica", "bold");
-  const payTitle = "Détails de payement :";
-  pdf.text(payTitle, margin, yPos);
-  const payTitleW = pdf.getTextWidth(payTitle);
-  pdf.setDrawColor(blackColor[0], blackColor[1], blackColor[2]);
-  pdf.setLineWidth(0.2);
-  pdf.line(margin, yPos + 1.1, margin + payTitleW, yPos + 1.1);
-
-  yPos += LAYOUT.paymentTitleGapMm;
-  pdf.setFont("helvetica", "normal");
   const paymentText = resolveInvoicePaymentText(data.paymentMethod, data.consolidatedInvoice);
   const maxPaymentWidth = rightMargin - margin;
   const payLines = wrapLinesJsPDF(pdf, paymentText, maxPaymentWidth, LAYOUT.fontSizes.body);
+  const bicLines =
+    data.company.bic && data.company.iban
+      ? wrapLinesJsPDF(
+          pdf,
+          `BIC : ${data.company.bic} \u2013 IBAN : ${data.company.iban}`,
+          maxPaymentWidth,
+          LAYOUT.fontSizes.body
+        )
+      : [];
+  const payTitle = "Détails de payement :";
   const payGap = LAYOUT.paymentLineGapMm;
+  const paymentBlockHeight =
+    LAYOUT.paymentTitleGapMm + (payLines.length + bicLines.length) * payGap;
+  let paymentStartY =
+    pageHeight - LAYOUT.footerBandMm - 8 - paymentBlockHeight;
+  const minPaymentStartY = yPos + LAYOUT.paymentBlockGapMm;
+
+  if (paymentStartY < minPaymentStartY) {
+    pdf.addPage();
+    paintPageBackground(pdf, pageWidth, pageHeight);
+    paymentStartY =
+      pageHeight - LAYOUT.footerBandMm - 8 - paymentBlockHeight;
+  }
+
+  yPos = paymentStartY;
+  pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+  pdf.setFontSize(LAYOUT.fontSizes.body);
+  pdf.setFont("helvetica", "bold");
+  pdf.text(payTitle, margin, yPos);
+
+  yPos += LAYOUT.paymentTitleGapMm;
+  pdf.setFont("helvetica", "normal");
   for (const pl of payLines) {
     pdf.text(pl, margin, yPos);
     yPos += payGap;
   }
-
-  if (data.company.bic && data.company.iban) {
-    const bicLines = wrapLinesJsPDF(
-      pdf,
-      `BIC : ${data.company.bic} \u2013 IBAN : ${data.company.iban}`,
-      maxPaymentWidth,
-      LAYOUT.fontSizes.body
-    );
-    for (const bl of bicLines) {
-      pdf.text(bl, margin, yPos);
-      yPos += payGap;
-    }
+  for (const bl of bicLines) {
+    pdf.text(bl, margin, yPos);
+    yPos += payGap;
   }
 
   const pageCount = pdf.getNumberOfPages();
@@ -813,13 +826,17 @@ export const generateInvoice = async (data: InvoiceData) => {
     }
   };
 
-  for (let p = 1; p <= pageCount; p++) {
-    drawFooterOnPage(p);
-  }
+  drawFooterOnPage(pageCount);
 
   pdf.setPage(pageCount);
-  const safeName = invoiceNumberRaw.replace(/[^\w.-]+/g, "_").slice(0, 48);
-  pdf.save(`facture-${safeName}-${new Date().toISOString().split("T")[0]}.pdf`);
+  const conciseRef = (invoiceDisplay || invoiceNumberRaw)
+    .replace(/^N°\s*/i, "")
+    .replace(/[^\w-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+  const filePrefix = data.consolidatedInvoice ? "danemo-facture-recap" : "danemo-facture";
+  pdf.save(`${filePrefix}-${conciseRef || "invoice"}.pdf`);
 };
 
 export const defaultCompanyData = {
