@@ -114,7 +114,7 @@ const LAYOUT = {
   dateRightPadMm: 2,
   factureBannerMm: { x: 8, w: 92, h: 20, topMm: 31 },
   /** Zone logo (fond orange, coin haut-droit), avec forme arrondie type template. */
-  logo: { boxW: 62, boxH: 24, maxW: 34, maxH: 16, rightPadMm: 0, topMm: 0, radiusMm: 18 },
+  logo: { boxW: 60, boxH: 25, maxW: 34, maxH: 16, rightPadMm: 0, topMm: 0, radiusMm: 18 },
   /** Sous le bandeau FACTURE : numéro de facture. */
   invoiceNoBelowBannerMm: 57,
   /** Bloc société sous le logo (centré). */
@@ -308,7 +308,7 @@ function createHeaderLogoBandDataUrl(params: {
   grad.addColorStop(1, "#E35D10");
   ctx.fillStyle = grad;
 
-  // Bloc PAGUI: haut/bas/droite rectilignes, gauche elliptique (rx > ry).
+  // Bloc PAGUI: haut/bas/droite rectilignes, gauche elliptique compacte (plus verticale).
   ctx.beginPath();
   ctx.moveTo(rx, 0);
   ctx.lineTo(w, 0);
@@ -590,7 +590,7 @@ export const generateInvoice = async (data: InvoiceData) => {
     widthMm: logoBoxW,
     heightMm: logoBoxH,
     leftRadiusXMm: 18,
-    leftRadiusYMm: 12,
+    leftRadiusYMm: 13,
   });
   if (headerLogoBandDataUrl) {
     pdf.addImage(headerLogoBandDataUrl, "PNG", logoBoxX, logoBoxY, logoBoxW, logoBoxH);
@@ -642,7 +642,7 @@ export const generateInvoice = async (data: InvoiceData) => {
   pdf.text("FACTURE", LAYOUT.factureBannerMm.x + 6, LAYOUT.header.factureTitleY);
 
   const hy = LAYOUT.header;
-  const sloganCenterX = logoBoxX + logoBoxW * 0.7;
+  const sloganCenterX = logoBoxX + logoBoxW * 0.64 - 5;
   const sloganY1 = logoBoxY + logoBoxH + 8;
   const sloganY2 = sloganY1 + 4.8;
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
@@ -828,8 +828,7 @@ export const generateInvoice = async (data: InvoiceData) => {
   const summaryLabelX = totColR - LAYOUT.summaryLabelColumnMm;
   const dividerX = totColR - 21.5;
   const amountLeftX = dividerX + 2.2;
-  const amountX = (txt: string) =>
-    Math.max(amountLeftX, totColR - pdf.getTextWidth(txt) - LAYOUT.textRightPadMm);
+  const amountX = (_txt: string) => amountLeftX;
   const labelX = (label: string) => dividerX - 2.2 - pdf.getTextWidth(label);
   const summaryTopY = yPos;
 
@@ -873,7 +872,7 @@ export const generateInvoice = async (data: InvoiceData) => {
 
   pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
   pdf.setLineWidth(0.18);
-  pdf.line(dividerX, summaryTopY - 2.6, dividerX, yPos + 2.6);
+  pdf.line(dividerX, summaryTopY + LAYOUT.summaryLineGapMm - 0.8, dividerX, yPos + 2.6);
 
   const paymentTitleFontSize = 11;
   const paymentBodyFontSize = 10.5;
@@ -889,7 +888,10 @@ export const generateInvoice = async (data: InvoiceData) => {
           paymentBodyFontSize
         )
       : [];
-  const payTitle = "Détails de payement :";
+  const isEnglishContext =
+    /\b(brussels|belgium|london|united kingdom|uk|usa|united states)\b/i.test(location) ||
+    /\b(payment|bank transfer|invoice|details)\b/i.test(paymentText);
+  const payTitle = isEnglishContext ? "Payment details:" : "Détails de paiement :";
   const payGap = LAYOUT.paymentLineGapMm;
   const paymentBlockHeight =
     LAYOUT.paymentTitleGapMm + (payLines.length + bicLines.length) * payGap;
