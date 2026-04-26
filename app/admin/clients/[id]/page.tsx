@@ -977,7 +977,7 @@ const copyClientToRecipientForEdit = () => {
       }
 
       const items = ordersForInvoice.map((order) => ({
-        description: `${order.order_number} • ${getServiceTypeLabel(order.service_type)} • ${order.origin} → ${order.destination}`,
+        description: getServiceTypeLabel(order.service_type),
         quantity: 1,
         unitPrice: Number(order.value) || 0,
         total: Number(order.value) || 0,
