@@ -4,8 +4,23 @@ import Image from "next/image"
 import Link from "next/link"
 import { readBlogPosts } from "@/lib/blog-posts"
 
+function toSortableDate(value: string): number {
+  const parts = value.split("/")
+  if (parts.length === 3) {
+    const [dd, mm, yyyy] = parts.map((part) => Number(part))
+    if (!Number.isNaN(dd) && !Number.isNaN(mm) && !Number.isNaN(yyyy)) {
+      return new Date(yyyy, mm - 1, dd).getTime()
+    }
+  }
+  const fallback = new Date(value).getTime()
+  return Number.isNaN(fallback) ? 0 : fallback
+}
+
 export default async function BlogPage() {
-  const blogPosts = (await readBlogPosts()).filter((post) => post.isActive)
+  const blogPosts = (await readBlogPosts())
+    .filter((post) => post.isActive)
+    .sort((a, b) => toSortableDate(b.date) - toSortableDate(a.date))
+  const recentPosts = blogPosts.slice(0, 2)
 
   return (
     <div className="min-h-screen">
@@ -16,7 +31,7 @@ export default async function BlogPage() {
           <h1 className="text-4xl font-bold text-center mb-12 font-serif text-[#B8860B]">Blog</h1>
 
           <div className="space-y-12">
-            {blogPosts.map((post) => (
+            {recentPosts.map((post) => (
               <article key={post.id} className="bg-white rounded-lg overflow-hidden">
                 <div className="grid md:grid-cols-2 gap-8 items-start">
                   <div className="order-2 md:order-1">
@@ -62,10 +77,10 @@ export default async function BlogPage() {
             ))}
           </div>
 
-          <div className="text-center mt-12">
+          <div className="text-left mt-12">
             <Link
               href="/blog/anciens"
-              className="inline-flex items-center text-gray-600 hover:text-gray-800 font-medium transition-colors"
+              className="inline-flex items-center text-gray-600 hover:text-gray-800 font-semibold transition-colors"
             >
               Anciens articles
               <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
