@@ -8,12 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -39,8 +33,6 @@ import {
   CheckCircle,
   XCircle,
   FileText,
-  FileDown,
-  FileSpreadsheet,
   User,
   Mail,
   Phone,
@@ -1026,9 +1018,34 @@ const copyClientToRecipientForEdit = () => {
 
   const handleGenerateInvoice = async (order: Order) => {
     try {
+      const invoiceNumber = `INV-${order.id}-${Date.now()}`
       const invoiceData: InvoiceData = {
-        order: order,
-        company: defaultCompanyData
+        order,
+        company: defaultCompanyData,
+        invoiceNumber,
+        issueDate: new Date().toISOString(),
+        billingAddress: {
+          name: order.client_name,
+          address: order.client_address || undefined,
+          postal_code: order.client_postal_code || undefined,
+          city: order.client_city || undefined,
+          country: order.client_country || undefined,
+        },
+        shippingAddress: {
+          name: order.recipient_name || order.client_name,
+          address: order.recipient_address || order.destination || undefined,
+          postal_code: order.recipient_postal_code || undefined,
+          city: order.recipient_city || undefined,
+          country: order.recipient_country || undefined,
+        },
+        items: [
+          {
+            description: getServiceTypeLabel(order.service_type),
+            quantity: 1,
+            unitPrice: Number(order.value) || 0,
+            total: Number(order.value) || 0,
+          },
+        ],
       }
       await generateInvoice(invoiceData)
     } catch (error) {
@@ -1410,37 +1427,6 @@ const copyClientToRecipientForEdit = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <FileSpreadsheet className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleGenerateProformaPdf(order)
-                              }}
-                            >
-                              <FileDown className="h-4 w-4 mr-2" />
-                              Proforma PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleGenerateProformaDocx(order)
-                              }}
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              Proforma DOCX
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                         <Button
                           variant="outline"
                           size="sm"
