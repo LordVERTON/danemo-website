@@ -139,7 +139,7 @@ const LAYOUT = {
     footer: 10.2,
     footerTight: 9.4,
   },
-  summaryGapAfterTableMm: 6,
+  summaryGapAfterTableMm: 10,
   summaryLineGapMm: 4.4,
   summaryLabelColumnMm: 45,
   summaryDividerGapMm: 3,
@@ -590,7 +590,7 @@ export const generateInvoice = async (data: InvoiceData) => {
     widthMm: logoBoxW,
     heightMm: logoBoxH,
     leftRadiusXMm: 18,
-    leftRadiusYMm: 13,
+    leftRadiusYMm: 30,
   });
   if (headerLogoBandDataUrl) {
     pdf.addImage(headerLogoBandDataUrl, "PNG", logoBoxX, logoBoxY, logoBoxW, logoBoxH);
@@ -734,10 +734,18 @@ export const generateInvoice = async (data: InvoiceData) => {
 
   const cpad = LAYOUT.cellPadMm;
   const maxDescWidth = colWidths[0] - 2 * cpad;
+  const itemsToRender = [...items];
+  while (itemsToRender.length > 1) {
+    const lastItem = itemsToRender[itemsToRender.length - 1];
+    const hasDescription = sanitizeJsPdfText(lastItem.description).trim().length > 0;
+    const hasAmount = lastItem.quantity !== 0 || lastItem.unitPrice !== 0 || lastItem.total !== 0;
+    if (hasDescription || hasAmount) break;
+    itemsToRender.pop();
+  }
 
-  for (let index = 0; index < items.length; index++) {
-    const item = items[index];
-    const hasMoreItems = index < items.length - 1;
+  for (let index = 0; index < itemsToRender.length; index++) {
+    const item = itemsToRender[index];
+    const hasMoreItems = index < itemsToRender.length - 1;
 
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(LAYOUT.fontSizes.body);
@@ -787,7 +795,10 @@ export const generateInvoice = async (data: InvoiceData) => {
     pdf.line(colPositions[2], rowTopY, colPositions[2], rowTopY + rowHeight);
     pdf.line(colPositions[3], rowTopY, colPositions[3], rowTopY + rowHeight);
 
-    let descYMm = rowY;
+    const rowCenterY = rowTopY + rowHeight / 2;
+    const singleLineTextY = rowCenterY + 1.2;
+    const descBlockHeight = (descLines.length - 1) * LAYOUT.descLineHeightMm;
+    let descYMm = rowCenterY - descBlockHeight / 2 + 1.2;
     pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
     pdf.setFont("helvetica", "bold");
     for (const line of descLines) {
@@ -797,14 +808,14 @@ export const generateInvoice = async (data: InvoiceData) => {
 
     const unitPriceStr = formatCurrencyEUR(item.unitPrice).replace(/\s+€/g, "€");
     pdf.setFont("helvetica", "normal");
-    pdf.text(item.quantity.toString(), colPositions[1] + cpad, rowY);
-    pdf.text(unitPriceStr, colPositions[2] + cpad, rowY);
-    pdf.text(formatCurrencyEUR(item.total), colPositions[3] + cpad, rowY);
+    pdf.text(item.quantity.toString(), colPositions[1] + cpad, singleLineTextY);
+    pdf.text(unitPriceStr, colPositions[2] + cpad, singleLineTextY);
+    pdf.text(formatCurrencyEUR(item.total), colPositions[3] + cpad, singleLineTextY);
 
     yPos += rowHeight;
   }
 
-  const tableEndY = yPos;
+  const tableEndY = yPos - LAYOUT.rowRuleOffsetMm;
   const tableEndPage = pdf.getNumberOfPages();
 
   pdf.setDrawColor(tableGridColor[0], tableGridColor[1], tableGridColor[2]);
@@ -814,6 +825,7 @@ export const generateInvoice = async (data: InvoiceData) => {
     const colXs = [tableStartX, colPositions[1], colPositions[2], colPositions[3], tableStartX + tableWidth];
     drawTableColumnSeparators(pdf, colXs, tableBandTopY, tableEndY);
   }
+  pdf.line(tableStartX, tableEndY, tableStartX + tableWidth, tableEndY);
 
   pdf.setDrawColor(tableGridColor[0], tableGridColor[1], tableGridColor[2]);
 
@@ -872,7 +884,7 @@ export const generateInvoice = async (data: InvoiceData) => {
 
   pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
   pdf.setLineWidth(0.18);
-  pdf.line(dividerX, summaryTopY + LAYOUT.summaryLineGapMm - 0.8, dividerX, yPos + 2.6);
+  pdf.line(dividerX, summaryTopY + 1.2, dividerX, yPos + 2.6);
 
   const paymentTitleFontSize = 11;
   const paymentBodyFontSize = 10.5;
