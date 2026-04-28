@@ -58,6 +58,11 @@ export type TranslationSchema = {
     testimonials: {
       title: string
     }
+    selfRegister: {
+      title: string
+      description: string
+      cta: string
+    }
     contact: {
       brussels: {
         title: string
@@ -233,6 +238,75 @@ export type TranslationSchema = {
       delayed: string
     }
   }
+  newClientForm: {
+    metaTitle: string
+    metaDescription: string
+    title: string
+    intro: string
+    consentLabel: string
+    sections: {
+      customer: string
+      articles: string
+      shipment: string
+      recipient: string
+    }
+    recipientHint: string
+    recipientName: string
+    recipientEmail: string
+    recipientPhone: string
+    recipientAddress: string
+    recipientCity: string
+    recipientPostalCode: string
+    recipientCountry: string
+    name: string
+    email: string
+    phone: string
+    company: string
+    address: string
+    city: string
+    postalCode: string
+    country: string
+    taxId: string
+    notes: string
+    serviceType: string
+    serviceColis: string
+    serviceFretMaritime: string
+    serviceFretAerien: string
+    serviceDemenagement: string
+    origin: string
+    destination: string
+    weightKg: string
+    valueEur: string
+    parcelsCount: string
+    estimatedDelivery: string
+    articleLine: string
+    fromTariffs: string
+    catalogArticleSelectPlaceholder: string
+    customArticle: string
+    customArticlePlaceholder: string
+    quantity: string
+    addArticle: string
+    removeArticle: string
+    submit: string
+    submitting: string
+    successTitle: string
+    successWithOrder: string
+    successNoOrder: string
+    errorGeneric: string
+    errorConflict: string
+    errorCatalogArticleRequired: string
+    linkTarifs: string
+    linkHome: string
+    priceEstimateTitle: string
+    priceEstimateColumnArticle: string
+    priceEstimateColumnQty: string
+    priceEstimateColumnUnit: string
+    priceEstimateColumnLine: string
+    priceEstimateCustomHint: string
+    priceEstimateOnQuote: string
+    priceEstimateTotal: string
+    priceEstimateDisclaimer: string
+  }
 }
 
 export const translations: Record<Lang, TranslationSchema> = {
@@ -345,6 +419,12 @@ export const translations: Record<Lang, TranslationSchema> = {
       },
       testimonials: {
         title: "Témoignages",
+      },
+      selfRegister: {
+        title: "Ouvrir un dossier client",
+        description:
+          "Renseignez vos coordonnées et votre envoi en ligne — sans compte d’administration. Vous recevrez un numéro de commande pour le suivi.",
+        cta: "Formulaire client",
       },
       contact: {
         brussels: {
@@ -532,6 +612,81 @@ export const translations: Record<Lang, TranslationSchema> = {
         email: "Mail :",
       },
     },
+    newClientForm: {
+      metaTitle: "Formulaire client — Danemo",
+      metaDescription:
+        "Créez votre fiche client et votre demande d’expédition : coordonnées complètes, articles selon la grille tarifaire ou hors liste, itinéraire.",
+      title: "Formulaire client",
+      intro:
+        "Les articles peuvent être choisis dans la même liste que la page Tarifs, ou décrits librement s’ils n’y figurent pas. Vous pouvez ajouter plusieurs lignes.",
+      consentLabel: "J’accepte que Danemo traite mes données pour traiter ma demande.",
+      sections: {
+        customer: "Vos informations",
+        articles: "Colis / prestations",
+        shipment: "Transport",
+        recipient: "Destinataire au Cameroun (optionnel)",
+      },
+      recipientHint: "Si différent de l’expéditeur — sinon laissez vide.",
+      recipientName: "Nom du destinataire",
+      recipientEmail: "E-mail destinataire",
+      recipientPhone: "Téléphone destinataire",
+      recipientAddress: "Adresse destinataire",
+      recipientCity: "Ville",
+      recipientPostalCode: "Code postal",
+      recipientCountry: "Pays",
+      name: "Nom complet *",
+      email: "E-mail *",
+      phone: "Téléphone",
+      company: "Société",
+      address: "Adresse (rue, numéro)",
+      city: "Ville",
+      postalCode: "Code postal",
+      country: "Pays",
+      taxId: "N° TVA / SIRET (optionnel)",
+      notes: "Précisions (emballage, créneau, etc.)",
+      serviceType: "Type de service *",
+      serviceColis: "Colis / messagerie",
+      serviceFretMaritime: "Fret maritime",
+      serviceFretAerien: "Fret aérien",
+      serviceDemenagement: "Déménagement",
+      origin: "Lieu de prise en charge / départ *",
+      destination: "Destination *",
+      weightKg: "Poids estimé (kg)",
+      valueEur: "Valeur estimée (EUR)",
+      parcelsCount: "Nombre de colis",
+      estimatedDelivery: "Livraison souhaitée (date ou texte libre)",
+      articleLine: "Ligne",
+      fromTariffs: "Article (grille tarifs)",
+      catalogArticleSelectPlaceholder: "Choisir un article…",
+      customArticle: "Autre article (hors liste)",
+      customArticlePlaceholder: "Décrivez précisément l’article ou la prestation",
+      quantity: "Qté",
+      addArticle: "Ajouter une ligne",
+      removeArticle: "Supprimer",
+      submit: "Envoyer la demande",
+      submitting: "Envoi en cours…",
+      successTitle: "Demande enregistrée",
+      successWithOrder:
+        "Merci. Votre fiche client est créée et une commande est ouverte. Conservez votre numéro de suivi : {{orderNumber}}",
+      successNoOrder: "Merci. Votre fiche client est créée.",
+      errorGeneric: "Une erreur est survenue. Réessayez plus tard ou contactez-nous par téléphone.",
+      errorConflict: "Cette adresse e-mail est déjà utilisée. Contactez-nous pour lier votre demande à votre dossier.",
+      errorCatalogArticleRequired:
+        "Pour chaque ligne « grille tarifs », choisissez un article dans le menu déroulant.",
+      linkTarifs: "Voir la grille tarifaire",
+      linkHome: "Retour à l’accueil",
+      priceEstimateTitle: "Estimation du prix",
+      priceEstimateColumnArticle: "Article",
+      priceEstimateColumnQty: "Qté",
+      priceEstimateColumnUnit: "Prix unitaire",
+      priceEstimateColumnLine: "Sous-total",
+      priceEstimateCustomHint:
+        "Les lignes « hors liste » ne sont pas incluses : un devis vous sera communiqué.",
+      priceEstimateOnQuote: "Sur devis",
+      priceEstimateTotal: "Total estimé (grille tarifs)",
+      priceEstimateDisclaimer:
+        "Indicatif uniquement : les prix affichés sur la page Tarifs peuvent varier selon la valeur marchande des colis et la nature réelle des marchandises.",
+    },
     tracking: {
       title: "Suivi de colis",
       subtitle: "Suivez votre expédition en temps réel avec votre numéro de suivi",
@@ -697,6 +852,12 @@ export const translations: Record<Lang, TranslationSchema> = {
       },
       testimonials: {
         title: "Testimonials",
+      },
+      selfRegister: {
+        title: "Open a customer file",
+        description:
+          "Enter your details and shipment online — no admin portal account. You will receive an order number for tracking.",
+        cta: "Client form",
       },
       contact: {
         brussels: {
@@ -883,6 +1044,81 @@ export const translations: Record<Lang, TranslationSchema> = {
         phone: "Tel:",
         email: "Email:",
       },
+    },
+    newClientForm: {
+      metaTitle: "Client registration — Danemo",
+      metaDescription:
+        "Create your customer record and shipment request: full contact details, items from our rate list or custom description, route.",
+      title: "Client registration form",
+      intro:
+        "Items can be picked from the same list as the Rates page, or described freely if not listed. You can add several lines.",
+      consentLabel: "I agree that Danemo may process my data to handle my request.",
+      sections: {
+        customer: "Your details",
+        articles: "Parcels / services",
+        shipment: "Transport",
+        recipient: "Recipient in Cameroon (optional)",
+      },
+      recipientHint: "If different from the sender — otherwise leave blank.",
+      recipientName: "Recipient name",
+      recipientEmail: "Recipient email",
+      recipientPhone: "Recipient phone",
+      recipientAddress: "Recipient address",
+      recipientCity: "City",
+      recipientPostalCode: "Postal code",
+      recipientCountry: "Country",
+      name: "Full name *",
+      email: "Email *",
+      phone: "Phone",
+      company: "Company",
+      address: "Address (street, number)",
+      city: "City",
+      postalCode: "Postal code",
+      country: "Country",
+      taxId: "VAT / company number (optional)",
+      notes: "Additional notes (packaging, time window, etc.)",
+      serviceType: "Service type *",
+      serviceColis: "Parcel / courier",
+      serviceFretMaritime: "Sea freight",
+      serviceFretAerien: "Air freight",
+      serviceDemenagement: "International moving",
+      origin: "Pickup / origin *",
+      destination: "Destination *",
+      weightKg: "Estimated weight (kg)",
+      valueEur: "Estimated value (EUR)",
+      parcelsCount: "Number of parcels",
+      estimatedDelivery: "Desired delivery (date or free text)",
+      articleLine: "Line",
+      fromTariffs: "Item (rate list)",
+      catalogArticleSelectPlaceholder: "Select an item…",
+      customArticle: "Other item (not on list)",
+      customArticlePlaceholder: "Describe the item or service precisely",
+      quantity: "Qty",
+      addArticle: "Add a line",
+      removeArticle: "Remove",
+      submit: "Submit request",
+      submitting: "Sending…",
+      successTitle: "Request received",
+      successWithOrder:
+        "Thank you. Your customer record is created and an order is open. Please keep your tracking number: {{orderNumber}}",
+      successNoOrder: "Thank you. Your customer record is created.",
+      errorGeneric: "Something went wrong. Try again later or contact us by phone.",
+      errorConflict: "This email is already registered. Contact us to link your request to your file.",
+      errorCatalogArticleRequired:
+        'For each "rate list" line, pick an item from the drop-down list.',
+      linkTarifs: "View rate list",
+      linkHome: "Back to home",
+      priceEstimateTitle: "Price estimate",
+      priceEstimateColumnArticle: "Item",
+      priceEstimateColumnQty: "Qty",
+      priceEstimateColumnUnit: "Unit price",
+      priceEstimateColumnLine: "Subtotal",
+      priceEstimateCustomHint:
+        "“Off list” lines are not included: we will send you a quote.",
+      priceEstimateOnQuote: "Quote on request",
+      priceEstimateTotal: "Estimated total (rate card)",
+      priceEstimateDisclaimer:
+        "For guidance only: prices on the Rates page may vary depending on the market value of goods and the actual nature of the shipment.",
     },
     tracking: {
       title: "Parcel Tracking",
