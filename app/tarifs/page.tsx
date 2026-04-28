@@ -1,5 +1,6 @@
 'use client'
 
+import Link from "next/link"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -10,6 +11,7 @@ import { useI18n } from "@/lib/i18n"
 export default function TarifsPage() {
   const { messages } = useI18n()
   const { title, description, items, quoteRequest } = messages.rates
+  const newClientCta = messages.home.selfRegister.cta
 
   return (
     <div className="min-h-screen">
@@ -19,7 +21,16 @@ export default function TarifsPage() {
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl font-bold text-center mb-8 font-serif text-[#B8860B]">{title}</h1>
 
-          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">{description}</p>
+          <p className="text-center text-gray-600 mb-6 max-w-2xl mx-auto">{description}</p>
+
+          <p className="text-center mb-10">
+            <Link
+              href="/new-client-form"
+              className="text-orange-600 font-medium hover:text-orange-700 hover:underline"
+            >
+              {newClientCta}
+            </Link>
+          </p>
 
           <div className="bg-white rounded-lg shadow-sm border overflow-hidden mb-12">
             <div className="divide-y divide-gray-200">
