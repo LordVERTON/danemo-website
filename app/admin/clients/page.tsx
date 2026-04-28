@@ -1238,10 +1238,10 @@ export default function ClientsPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>QR code — formulaire client</DialogTitle>
-              <DialogDescription>
-                À placer en magasin ou sur un flyer : le client scanne et remplit ses informations sans compte
-                d’administration.
-              </DialogDescription>
+              <p className="text-sm text-muted-foreground leading-relaxed text-center px-1">
+                Afin de simplifier votre expérience chez Danemo, vous pouvez dès à présent remplir le formulaire en
+                scannant le QR code.
+              </p>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-2">
               {qrDataUrl ? (
@@ -1259,7 +1259,11 @@ export default function ClientsPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               )}
-              <p className="max-w-full break-all text-center text-xs text-muted-foreground">{publicFormUrl}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed text-center px-1">
+                Ou en vous connectant sur ce lien depuis internet :
+                <br />
+                <span className="font-medium text-foreground break-all">{publicFormUrl}</span>
+              </p>
               <div className="flex flex-wrap justify-center gap-2">
                 <Button
                   type="button"
@@ -1284,8 +1288,22 @@ export default function ClientsPage() {
                     if (!qrDataUrl) return
                     const w = window.open("", "_blank")
                     if (!w) return
+                    const intro =
+                      "Afin de simplifier votre expérience chez Danemo, vous pouvez dès à présent remplir le formulaire en scannant le QR code."
+                    const linkLine = "Ou en vous connectant sur ce lien depuis internet :"
+                    const urlSafe = publicFormUrl
+                      .replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
                     w.document.write(
-                      `<!DOCTYPE html><html><head><title>QR Danemo</title></head><body style="text-align:center;font-family:sans-serif;padding:24px"><img src="${qrDataUrl}" width="280" height="280" alt="QR" /><p style="font-size:14px;margin-top:16px">${publicFormUrl}</p><p style="font-size:12px;color:#666">Impression depuis le navigateur (Ctrl+P)</p></body></html>`,
+                      `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>QR Danemo — formulaire client</title>
+<style>@media print{body{padding:16px}}</style></head>
+<body style="margin:0;text-align:center;font-family:system-ui,-apple-system,sans-serif;padding:28px 20px;color:#111827">
+<p style="font-size:15px;line-height:1.55;max-width:34rem;margin:0 auto 22px;font-weight:500">${intro}</p>
+<img src="${qrDataUrl}" width="280" height="280" alt="QR code formulaire client Danemo" style="display:block;margin:0 auto;border:1px solid #e5e7eb;border-radius:8px"/>
+<p style="font-size:15px;line-height:1.55;max-width:34rem;margin:18px auto 0;font-weight:500">${linkLine}<br/><span style="word-break:break-all;font-weight:600;color:#111827">${urlSafe}</span></p>
+</body></html>`,
                     )
                     w.document.close()
                     w.focus()
