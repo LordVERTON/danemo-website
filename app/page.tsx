@@ -22,7 +22,7 @@ interface HomePost {
 
 export default function HomePage() {
   const { messages } = useI18n()
-  const { hero, about, nextDeparture, services, testimonials, contact } = messages.home
+  const { hero, about, nextDeparture, services, testimonials, contact, selfRegister } = messages.home
   const [homePosts, setHomePosts] = useState<HomePost[]>([])
 
   useEffect(() => {
@@ -64,6 +64,16 @@ export default function HomePage() {
           </div>
           <div className="inline-block bg-orange-500 px-6 py-3 rounded-lg">
             <h2 className="text-lg md:text-xl font-bold italic">{hero.subtitle}</h2>
+          </div>
+          <div className="mx-auto mt-6 max-w-xl rounded-lg border border-gray-200 bg-white/95 px-4 py-3 text-left text-gray-800 shadow-md sm:mt-10 sm:px-5 sm:py-4 sm:text-center">
+            <p className="text-sm font-semibold text-gray-900 sm:text-base">{selfRegister.title}</p>
+            <p className="mt-1 text-xs leading-relaxed text-gray-600 sm:text-sm">{selfRegister.description}</p>
+            <Link
+              href="/new-client-form"
+              className="mt-3 flex min-h-11 w-full touch-manipulation items-center justify-center rounded-md bg-orange-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-orange-600 active:bg-orange-700 sm:inline-flex sm:w-auto sm:py-2"
+            >
+              {selfRegister.cta}
+            </Link>
           </div>
         </div>
       </section>

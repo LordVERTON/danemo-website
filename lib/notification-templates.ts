@@ -336,6 +336,85 @@ export function buildContainerStatusEmail(
   }
 }
 
+/**
+ * E-mail envoyé au client après inscription via le formulaire public (nouveau client).
+ * Contenu aligné sur le message métier demandé (prise en charge + suivi).
+ */
+export function buildSelfRegisterClientConfirmationEmail(opts: {
+  orderNumber: string
+  /** Ex. ville / pays de destination saisis sur le formulaire */
+  destination: string
+}): { subject: string; html: string } {
+  const orderSafe = escapeHtml(opts.orderNumber.trim())
+  const destSafe = escapeHtml((opts.destination || '').trim() || 'votre destination')
+  const trackingPageUrl = ensureTrackingUrl(`${getAppBaseUrl()}/tracking`)
+  const trackingPageDisplay = escapeHtml(trackingPageUrl)
+  const trackingPageHrefAttr = escapeHtml(trackingPageUrl)
+  const contactPhoneRaw = (process.env.DANEMO_CONTACT_PHONE || '+32 488 645 183').trim()
+  const contactPhoneDisplay = escapeHtml(contactPhoneRaw)
+  const telDigits = contactPhoneRaw.replace(/[^\d+]/g, '') || '+32488645183'
+  const telHrefAttr = escapeHtml(`tel:${telDigits}`)
+
+  const subject = `Danemo — Prise en charge de votre envoi (${opts.orderNumber.trim()})`
+
+  const html = `
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light" />
+  </head>
+  <body style="margin:0;background-color:#f6f9fc;font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;">Votre envoi ${orderSafe} est pris en charge — suivi sur danemo.app</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" style="max-width:640px;background:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.08);padding:28px 24px;">
+            <tr>
+              <td style="color:#111827;font-size:15px;line-height:1.65;">
+                <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">Message — Client</p>
+                <p style="margin:0 0 20px;">Madame, Monsieur,</p>
+                <p style="margin:0 0 16px;">
+                  Nous vous informons que votre envoi a bien été <strong>pris en charge</strong> par nos services.
+                </p>
+                <p style="margin:0 0 16px;">
+                  📦 <strong>Numéro de colis :</strong> <strong style="color:#c2410c;">${orderSafe}</strong>
+                </p>
+                <p style="margin:0 0 20px;">
+                  Votre colis est actuellement en attente d’acheminement vers <strong>${destSafe}</strong>,
+                  conformément aux informations fournies lors de votre commande.
+                </p>
+                <p style="margin:0 0 10px;"><strong>Détails d’accès au suivi :</strong></p>
+                <ul style="margin:0 0 20px;padding-left:20px;">
+                  <li style="margin-bottom:8px;">
+                    <strong>Étape 1 :</strong> Rendez-vous sur le site officiel :
+                    <a href="${trackingPageHrefAttr}" style="color:#ea580c;font-weight:bold;">${trackingPageDisplay}</a>
+                  </li>
+                  <li style="margin-bottom:8px;"><strong>Étape 2 :</strong> Saisissez votre numéro de colis</li>
+                  <li style="margin-bottom:8px;"><strong>Étape 3 :</strong> Consultez les informations relatives à votre envoi</li>
+                </ul>
+                <p style="margin:0 0 16px;">
+                  Pour toute question supplémentaire, veuillez nous contacter au
+                  <strong><a href="${telHrefAttr}" style="color:#111827;">${contactPhoneDisplay}</a></strong>
+                  afin que nous puissions vous répondre dans les plus brefs délais.
+                </p>
+                <p style="margin:0 0 8px;">
+                  Nous vous remercions de votre confiance et restons à votre entière disposition pour toute information complémentaire.
+                </p>
+                <p style="margin:20px 0 0;">Cordialement,</p>
+                <p style="margin:4px 0 0;"><strong>Équipe DANEMO</strong></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`
+
+  return { subject, html }
+}
+
 /** Fallback when only a free-text status line is available (e.g. older clients). */
 export function buildGenericUpdateEmail(opts: {
   entityLabel: 'commande' | 'conteneur'
