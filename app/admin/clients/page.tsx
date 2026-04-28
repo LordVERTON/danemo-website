@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Search, 
+import {
+  Search,
   Filter,
   User,
   Package,
@@ -19,7 +19,9 @@ import {
   Phone,
   Plus,
   Edit,
-  Loader2
+  Loader2,
+  QrCode,
+  Download,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -33,6 +35,7 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useCurrentUser } from "@/lib/use-current-user"
+import QRCode from "qrcode"
 
 interface Order {
   id: string
@@ -68,6 +71,9 @@ export default function ClientsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [publicFormUrl, setPublicFormUrl] = useState("")
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [editCustomer, setEditCustomer] = useState<{
@@ -148,6 +154,31 @@ export default function ClientsPage() {
     fetchCustomers()
     fetchContainers()
   }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const base =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      window.location.origin
+    setPublicFormUrl(`${String(base).replace(/\/$/, "")}/new-client-form`)
+  }, [])
+
+  useEffect(() => {
+    if (!isQrDialogOpen || !publicFormUrl) return
+    let cancelled = false
+    setQrDataUrl(null)
+    QRCode.toDataURL(publicFormUrl, { width: 280, margin: 2, errorCorrectionLevel: "M" })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url)
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isQrDialogOpen, publicFormUrl])
   
   const fetchContainers = async () => {
     try {
@@ -459,14 +490,27 @@ export default function ClientsPage() {
               Gérez vos clients et leurs commandes
             </p>
           </div>
-          <Button onClick={async () => {
-            await fetchContainers()
-            setIsCreateDialogOpen(true)
-          }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Créer un client
-                </Button>
-                  </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsQrDialogOpen(true)}
+              title="Afficher un QR code vers le formulaire client (sans compte admin)"
+            >
+              <QrCode className="h-4 w-4 mr-2" />
+              QR formulaire
+            </Button>
+            <Button
+              onClick={async () => {
+                await fetchContainers()
+                setIsCreateDialogOpen(true)
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Créer un client
+            </Button>
+          </div>
+        </div>
 
         {/* Statistiques */}
         <div className="grid gap-4 md:grid-cols-2">
@@ -1189,7 +1233,72 @@ export default function ClientsPage() {
             </form>
           </DialogContent>
         </Dialog>
-    </div>
+
+        <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>QR code — formulaire client</DialogTitle>
+              <DialogDescription>
+                À placer en magasin ou sur un flyer : le client scanne et remplit ses informations sans compte
+                d’administration.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-4 py-2">
+              {qrDataUrl ? (
+                // Data URL: next/image not applicable
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qrDataUrl}
+                  alt="QR code vers le formulaire client Danemo"
+                  width={280}
+                  height={280}
+                  className="rounded-lg border bg-white p-2"
+                />
+              ) : (
+                <div className="flex h-[280px] w-[280px] items-center justify-center rounded-lg border bg-muted">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              <p className="max-w-full break-all text-center text-xs text-muted-foreground">{publicFormUrl}</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!qrDataUrl}
+                  onClick={() => {
+                    if (!qrDataUrl) return
+                    const a = document.createElement("a")
+                    a.href = qrDataUrl
+                    a.download = "danemo-formulaire-client-qr.png"
+                    a.click()
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Télécharger PNG
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!qrDataUrl}
+                  onClick={() => {
+                    if (!qrDataUrl) return
+                    const w = window.open("", "_blank")
+                    if (!w) return
+                    w.document.write(
+                      `<!DOCTYPE html><html><head><title>QR Danemo</title></head><body style="text-align:center;font-family:sans-serif;padding:24px"><img src="${qrDataUrl}" width="280" height="280" alt="QR" /><p style="font-size:14px;margin-top:16px">${publicFormUrl}</p><p style="font-size:12px;color:#666">Impression depuis le navigateur (Ctrl+P)</p></body></html>`,
+                    )
+                    w.document.close()
+                    w.focus()
+                    w.print()
+                  }}
+                >
+                  Imprimer
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </AdminLayout>
   )
 }
