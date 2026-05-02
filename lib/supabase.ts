@@ -249,6 +249,9 @@ export interface Database {
           name: string
           email: string | null
           phone: string | null
+          phone_e164: string | null
+          opted_in_sms: boolean
+          opted_in_whatsapp: boolean
           address: string | null
           city: string | null
           postal_code: string | null
@@ -265,6 +268,9 @@ export interface Database {
           name: string
           email?: string | null
           phone?: string | null
+          phone_e164?: string | null
+          opted_in_sms?: boolean
+          opted_in_whatsapp?: boolean
           address?: string | null
           city?: string | null
           postal_code?: string | null
@@ -281,6 +287,9 @@ export interface Database {
           name?: string
           email?: string
           phone?: string | null
+          phone_e164?: string | null
+          opted_in_sms?: boolean
+          opted_in_whatsapp?: boolean
           address?: string | null
           city?: string | null
           postal_code?: string | null
