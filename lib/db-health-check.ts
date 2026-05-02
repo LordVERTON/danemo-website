@@ -106,7 +106,7 @@ export async function testDatabaseOperations(): Promise<{
 
     // Test d'écriture (avec rollback)
     const testItem = {
-      type: 'test' as const,
+      type: 'colis' as const,
       reference: `TEST-${Date.now()}`,
       description: 'Test item for health check',
       client: 'Health Check',
