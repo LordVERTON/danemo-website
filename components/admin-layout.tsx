@@ -5,7 +5,7 @@ import type React from "react"
 import { useEffect, useState, memo, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LogOut, Package, Truck, BarChart3, Users, QrCode, BookOpen } from "lucide-react"
+import { LogOut, Package, Truck, BarChart3, Users, QrCode, BookOpen, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import QRScanner from "@/components/qr-scanner"
 
@@ -189,6 +189,12 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                   </Link>
                 )}
                 {role === 'admin' && (
+                  <Link href="/admin/messages" className="flex items-center gap-2 text-gray-600 hover:text-orange-600">
+                    <MessageSquare className="h-4 w-4" />
+                    Messages
+                  </Link>
+                )}
+                {role === 'admin' && (
                   <Link href="/admin/blogs" className="flex items-center gap-2 text-gray-600 hover:text-orange-600">
                     <BookOpen className="h-4 w-4" />
                     Blogs
@@ -286,6 +292,20 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             >
               <BarChart3 className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5" />
               <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Analyses</span>
+            </Link>
+          )}
+
+          {role === 'admin' && (
+            <Link
+              href="/admin/messages"
+              className={`flex flex-col items-center py-1 sm:py-2 px-1 sm:px-2 rounded-lg transition-colors min-w-0 flex-1 ${
+                currentPath === "/admin/messages"
+                  ? "text-orange-600 bg-orange-50"
+                  : "text-gray-600 hover:text-orange-600"
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5" />
+              <span className="text-[10px] xs:text-xs sm:text-xs mt-0.5 sm:mt-1 truncate">Messages</span>
             </Link>
           )}
 

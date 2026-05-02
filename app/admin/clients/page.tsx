@@ -58,6 +58,8 @@ interface Customer {
   country?: string | null
   tax_id?: string | null
   notes?: string | null
+  opted_in_sms?: boolean
+  opted_in_whatsapp?: boolean
   status: 'active' | 'inactive' | 'archived'
   orders: Order[]
   created_at: string
@@ -87,6 +89,8 @@ export default function ClientsPage() {
     country: string
     tax_id: string
     notes: string
+    opted_in_sms: boolean
+    opted_in_whatsapp: boolean
     status: 'active' | 'inactive' | 'archived'
   }>({
     name: "",
@@ -99,6 +103,8 @@ export default function ClientsPage() {
     country: "",
     tax_id: "",
     notes: "",
+    opted_in_sms: false,
+    opted_in_whatsapp: false,
     status: "active"
   })
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
@@ -136,6 +142,8 @@ export default function ClientsPage() {
     country: "",
     tax_id: "",
     notes: "",
+    opted_in_sms: false,
+    opted_in_whatsapp: false,
     status: "active" as const
   })
   
@@ -278,6 +286,8 @@ export default function ClientsPage() {
       country: customer.country || "",
       tax_id: customer.tax_id || "",
       notes: customer.notes || "",
+      opted_in_sms: Boolean(customer.opted_in_sms),
+      opted_in_whatsapp: Boolean(customer.opted_in_whatsapp),
       status: customer.status || "active"
     })
     setError("")
@@ -377,6 +387,8 @@ export default function ClientsPage() {
         country: "",
         tax_id: "",
         notes: "",
+        opted_in_sms: false,
+        opted_in_whatsapp: false,
         status: "active"
       })
       setNewOrders([{
@@ -729,6 +741,24 @@ export default function ClientsPage() {
                       onChange={(e) => setNewCustomer({ ...newCustomer, company: e.target.value })}
                     />
                   </div>
+                  <label className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={newCustomer.opted_in_sms}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, opted_in_sms: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    SMS newsletter
+                  </label>
+                  <label className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={newCustomer.opted_in_whatsapp}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, opted_in_whatsapp: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    WhatsApp newsletter
+                  </label>
                   <div>
                     <Label htmlFor="customer_address">Adresse</Label>
                     <Input
@@ -1026,6 +1056,24 @@ export default function ClientsPage() {
                     onChange={(e) => setEditCustomer({ ...editCustomer, company: e.target.value })}
                   />
                 </div>
+                <label className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editCustomer.opted_in_sms}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, opted_in_sms: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  SMS newsletter
+                </label>
+                <label className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editCustomer.opted_in_whatsapp}
+                    onChange={(e) => setEditCustomer({ ...editCustomer, opted_in_whatsapp: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  WhatsApp newsletter
+                </label>
                 <div>
                   <Label htmlFor="edit_address">Adresse</Label>
                   <Input

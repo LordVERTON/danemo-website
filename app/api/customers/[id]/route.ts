@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { customersApi } from '@/lib/database'
 import { authenticateRequest } from '@/lib/auth-middleware'
+import { normalizePhoneE164 } from '@/lib/messaging'
 
 // GET /api/customers/[id] - Récupérer un client avec ses commandes
 export async function GET(
@@ -56,6 +57,7 @@ export async function PUT(
       name: body.name?.trim(),
       email: emailValue ? emailValue.toLowerCase() : null,
       phone: body.phone?.trim() || null,
+      phone_e164: normalizePhoneE164(body.phone),
       address: body.address?.trim() || null,
       city: body.city?.trim() || null,
       postal_code: body.postal_code?.trim() || null,
@@ -63,6 +65,8 @@ export async function PUT(
       company: body.company?.trim() || null,
       tax_id: body.tax_id?.trim() || null,
       notes: body.notes?.trim() || null,
+      opted_in_sms: Boolean(body.opted_in_sms),
+      opted_in_whatsapp: Boolean(body.opted_in_whatsapp),
       status: body.status,
     })
     

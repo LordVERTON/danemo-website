@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { customersApi } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
+import { normalizePhoneE164 } from '@/lib/messaging'
 
 async function syncOrdersWithoutCustomer() {
   const { data: danglingOrders, error } = await (supabaseAdmin as any)
@@ -52,6 +53,7 @@ async function syncOrdersWithoutCustomer() {
           name: name || email,
           email: email || null,
           phone: phone || null,
+          phone_e164: normalizePhoneE164(phone),
           address: String(order.client_address || '').trim() || null,
           city: String(order.client_city || '').trim() || null,
           postal_code: String(order.client_postal_code || '').trim() || null,
@@ -93,12 +95,27 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
 
     // Récupérer tous les clients
-    let customers = await customersApi.getAll()
+    let customersQuery = (supabaseAdmin as any)
+      .from('customers')
+      .select('*, orders (*)')
+      .order('created_at', { ascending: false })
 
     // Filtrer par statut si fourni
     if (status && status !== 'all') {
-      customers = customers.filter(c => c.status === status)
+      customersQuery = customersQuery.eq('status', status)
     }
+
+    const { data: customersData, error: customersError } = await customersQuery
+    if (customersError) throw customersError
+
+    let customers = (customersData || []) as Array<{
+      name?: string | null
+      email?: string | null
+      company?: string | null
+      phone?: string | null
+      status?: string | null
+      orders?: unknown[]
+    }>
 
     // Filtrer par recherche si fourni
     if (search) {
@@ -112,14 +129,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Récupérer les commandes pour chaque client
-    const customersWithOrders = await Promise.all(
-      customers.map(async (customer) => {
-        const customerWithOrders = await customersApi.getWithOrders(customer.id)
-        return customerWithOrders || { ...customer, orders: [] }
-      })
-    )
-
-    return NextResponse.json({ success: true, data: customersWithOrders })
+    return NextResponse.json({ success: true, data: customers })
   } catch (error) {
     console.error('Error fetching customers:', error)
     return NextResponse.json(
@@ -156,6 +166,7 @@ export async function POST(request: NextRequest) {
       name: body.name.trim(),
       email: emailValue ? emailValue.toLowerCase() : null,
       phone: body.phone?.trim() || null,
+      phone_e164: normalizePhoneE164(body.phone),
       address: body.address?.trim() || null,
       city: body.city?.trim() || null,
       postal_code: body.postal_code?.trim() || null,
@@ -163,6 +174,8 @@ export async function POST(request: NextRequest) {
       company: body.company?.trim() || null,
       tax_id: body.tax_id?.trim() || null,
       notes: body.notes?.trim() || null,
+      opted_in_sms: Boolean(body.opted_in_sms),
+      opted_in_whatsapp: Boolean(body.opted_in_whatsapp),
       status: body.status || 'active',
     })
     
