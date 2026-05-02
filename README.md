@@ -50,6 +50,7 @@ Avant de commencer, assurez-vous d'avoir installé :
 - **Node.js** (version 18.0 ou supérieure)
 - **npm** ou **yarn** ou **pnpm**
 - **Git**
+- **Docker** (requis pour `npx supabase start` en local)
 
 ## 🛠️ Installation et lancement en local
 
@@ -75,7 +76,13 @@ pnpm install
 
 ### 3. Configuration de l'environnement
 
-Créez un fichier `.env.local` à la racine du projet avec vos clés Supabase :
+À la racine du projet, copiez le modèle de variables puis éditez `.env.local` :
+
+```bash
+cp .env.example .env.local
+```
+
+Renseignez au minimum les clés Supabase (voir [Project Settings → API](https://supabase.com/dashboard) sur votre projet cloud, ou les URLs affichées par Supabase en local après `npx supabase start`) :
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
@@ -83,251 +90,58 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 ```
 
-### 4. Configuration de la base de données
+### 4. Base de données Supabase en local (Docker)
 
-1. Créez un projet sur [supabase.com](https://supabase.com)
-2. Exécutez le script SQL suivant dans l'éditeur SQL de Supabase :
+Le schéma applicatif est versionné dans le dépôt :
 
-```sql
--- Activer l'extension UUID
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+- `supabase/migrations/` — structure de la base (tables, contraintes, index, fonctions, triggers, RLS).
+- `supabase/seed.sql` — données de test minimales et cohérentes (sans données réelles ni sensibles).
 
--- Table des commandes
-CREATE TABLE orders (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_number VARCHAR(50) UNIQUE NOT NULL,
-  client_name VARCHAR(255) NOT NULL,
-  client_email VARCHAR(255) NOT NULL,
-  client_phone VARCHAR(50),
-  service_type VARCHAR(100) NOT NULL,
-  origin VARCHAR(255) NOT NULL,
-  destination VARCHAR(255) NOT NULL,
-  weight DECIMAL(10,2),
-  value DECIMAL(10,2),
-  status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'in_progress', 'completed', 'cancelled')),
-  estimated_delivery DATE,
-  container_id UUID REFERENCES containers(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+Depuis la racine du projet :
 
--- Table des événements de suivi
-CREATE TABLE tracking_events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
-  status VARCHAR(50) NOT NULL,
-  location VARCHAR(255),
-  description TEXT,
-  operator VARCHAR(255),
-  event_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Table des utilisateurs admin
-CREATE TABLE admin_users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  name VARCHAR(255),
-  role VARCHAR(50) DEFAULT 'admin',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Table d'inventaire
-CREATE TABLE inventory (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  type VARCHAR(50) NOT NULL CHECK (type IN ('colis', 'vehicule', 'marchandise')),
-  reference VARCHAR(100) UNIQUE NOT NULL,
-  description TEXT NOT NULL,
-  client VARCHAR(255) NOT NULL,
-  status VARCHAR(50) NOT NULL CHECK (status IN ('en_stock', 'en_transit', 'livre', 'en_attente')),
-  location VARCHAR(255) NOT NULL,
-  poids VARCHAR(100),
-  dimensions VARCHAR(255),
-  valeur VARCHAR(100) NOT NULL,
-  date_ajout DATE DEFAULT CURRENT_DATE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Index pour améliorer les performances
-CREATE INDEX idx_orders_status ON orders(status);
-CREATE INDEX idx_orders_client_email ON orders(client_email);
-CREATE INDEX idx_orders_created_at ON orders(created_at);
-CREATE INDEX idx_orders_container_id ON orders(container_id);
-CREATE INDEX idx_tracking_events_order_id ON tracking_events(order_id);
-CREATE INDEX idx_tracking_events_event_date ON tracking_events(event_date);
-CREATE INDEX idx_inventory_type ON inventory(type);
-CREATE INDEX idx_inventory_status ON inventory(status);
-CREATE INDEX idx_inventory_client ON inventory(client);
-CREATE INDEX idx_inventory_date_ajout ON inventory(date_ajout);
-
--- Table des clients (customers)
-CREATE TABLE customers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  phone VARCHAR(50),
-  address TEXT,
-  city VARCHAR(255),
-  postal_code VARCHAR(20),
-  country VARCHAR(100),
-  company VARCHAR(255),
-  tax_id VARCHAR(100),
-  notes TEXT,
-  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Table des factures (invoices)
-CREATE TABLE invoices (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  invoice_number VARCHAR(50) UNIQUE NOT NULL,
-  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-  order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
-  issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  due_date DATE,
-  status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled')),
-  subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
-  tax_rate DECIMAL(5,2) DEFAULT 0,
-  tax_amount DECIMAL(10,2) DEFAULT 0,
-  total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-  currency VARCHAR(3) DEFAULT 'EUR',
-  payment_method VARCHAR(50),
-  payment_date DATE,
-  notes TEXT,
-  pdf_path TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Ajouter customer_id à orders si nécessaire
-ALTER TABLE orders 
-ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET NULL;
-
--- Index pour customers et invoices
-CREATE INDEX idx_customers_email ON customers(email);
-CREATE INDEX idx_customers_status ON customers(status);
-CREATE INDEX idx_invoices_customer_id ON invoices(customer_id);
-CREATE INDEX idx_invoices_order_id ON invoices(order_id);
-CREATE INDEX idx_invoices_invoice_number ON invoices(invoice_number);
-CREATE INDEX idx_invoices_status ON invoices(status);
-CREATE INDEX idx_orders_customer_id ON orders(customer_id);
-
--- Fonction pour mettre à jour automatiquement updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Triggers pour mettre à jour automatiquement updated_at
-CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_admin_users_updated_at BEFORE UPDATE ON admin_users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_inventory_updated_at BEFORE UPDATE ON inventory
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_invoices_updated_at BEFORE UPDATE ON invoices
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- RLS (Row Level Security)
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tracking_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
-
--- Politiques RLS
-CREATE POLICY "Orders are viewable by everyone" ON orders FOR SELECT USING (true);
-CREATE POLICY "Orders are insertable by authenticated users" ON orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Orders are updatable by authenticated users" ON orders FOR UPDATE USING (true);
-
-CREATE POLICY "Tracking events are viewable by everyone" ON tracking_events FOR SELECT USING (true);
-CREATE POLICY "Tracking events are insertable by authenticated users" ON tracking_events FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Admin users are viewable by authenticated users" ON admin_users FOR SELECT USING (true);
-
-CREATE POLICY "Inventory is viewable by everyone" ON inventory FOR SELECT USING (true);
-CREATE POLICY "Inventory is insertable by authenticated users" ON inventory FOR INSERT WITH CHECK (true);
-CREATE POLICY "Inventory is updatable by authenticated users" ON inventory FOR UPDATE USING (true);
-CREATE POLICY "Inventory is deletable by authenticated users" ON inventory FOR DELETE USING (true);
-
-CREATE POLICY "Customers are viewable by authenticated users" ON customers FOR SELECT USING (true);
-CREATE POLICY "Customers are insertable by authenticated users" ON customers FOR INSERT WITH CHECK (true);
-CREATE POLICY "Customers are updatable by authenticated users" ON customers FOR UPDATE USING (true);
-CREATE POLICY "Customers are deletable by authenticated users" ON customers FOR DELETE USING (true);
-
-CREATE POLICY "Invoices are viewable by authenticated users" ON invoices FOR SELECT USING (true);
-CREATE POLICY "Invoices are insertable by authenticated users" ON invoices FOR INSERT WITH CHECK (true);
-CREATE POLICY "Invoices are updatable by authenticated users" ON invoices FOR UPDATE USING (true);
-CREATE POLICY "Invoices are deletable by authenticated users" ON invoices FOR DELETE USING (true);
-
--- Insérer un utilisateur admin par défaut
-INSERT INTO admin_users (email, password_hash, name, role) 
-VALUES ('admin@danemo.be', '$2a$10$rQZ8K9vL2mN3pO4qR5sT6uV7wX8yZ9aB0cD1eF2gH3iJ4kL5mN6oP7qR8sT9uV', 'Admin DANEMO', 'admin');
+```bash
+npm install
+cp .env.example .env.local
+npx supabase start
+npx supabase db reset
+npm run dev
 ```
 
-### 5. Remplir la base de données avec des données de test (Seeds)
+- **`npx supabase start`** démarre la stack Supabase locale (PostgreSQL, API, Studio, etc.) via Docker.
+- **`npx supabase db reset`** recrée la base locale en appliquant les fichiers dans `supabase/migrations/`, puis recharge `supabase/seed.sql`.
+- Pour **repartir d’une base propre**, relancez `npx supabase db reset` (cela réapplique migrations + seed).
 
-#### Option 1 : Supprimer et recréer les données (Recommandé pour un reset complet)
+Après `supabase start`, la CLI affiche l’URL du projet et les clés ; copiez-les dans `.env.local` pour pointer l’app Next.js vers la base locale.
 
-**Via SQL :**
-1. Exécutez d'abord `delete-orders-customers-containers.sql` pour supprimer toutes les données existantes
-2. Exécutez ensuite `seed-15-customers-3-containers.sql` pour créer :
-   - 15 clients différents
-   - 3 conteneurs
-   - Entre 1 et 5 commandes par client (aléatoire)
+### 5. (Optionnel) Appliquer le schéma sur un projet Supabase Cloud
 
-**Via API :**
+Pour pousser les migrations vers un projet hébergé sur Supabase :
+
 ```bash
-# Supprimer toutes les données et recréer avec 15 clients, 3 conteneurs, et 1-5 commandes par client
+npx supabase login
+npx supabase link --project-ref <project-ref>
+npx supabase db push
+```
+
+Si vous souhaitez aussi charger les données de test sur ce projet distant :
+
+```bash
+npx supabase db push --include-seed
+```
+
+### 6. Données de test supplémentaires (API admin)
+
+Pour générer des jeux de données plus volumineux (après configuration de `ADMIN_SEED_KEY` dans `.env.local`), vous pouvez utiliser les routes API documentées dans le code, par exemple :
+
+```bash
 curl -X POST http://localhost:3000/api/admin/reseed-data \
   -H "Content-Type: application/json" \
   -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
 ```
 
-#### Option 2 : Autres scripts de seed disponibles
+Voir également `/api/admin/seed-containers`, `/api/admin/seed-customers`, `/api/admin/seed-orders`.
 
-**Via SQL :**
-- `seed-containers.sql` - Créer uniquement des conteneurs de test
-- `seed-customers-from-orders.sql` - Extraire les clients des commandes existantes et créer des factures
-- `seed-orders-with-containers.sql` - Créer des commandes complètes avec des clients et des conteneurs liés
-
-**Via API :**
-```bash
-# Créer des conteneurs de test
-curl -X POST http://localhost:3000/api/admin/seed-containers \
-  -H "Content-Type: application/json" \
-  -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
-
-# Créer des clients et factures depuis les commandes existantes
-curl -X POST http://localhost:3000/api/admin/seed-customers \
-  -H "Content-Type: application/json" \
-  -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
-
-# Créer des commandes avec clients et conteneurs
-curl -X POST http://localhost:3000/api/admin/seed-orders \
-  -H "Content-Type: application/json" \
-  -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
-```
-
-**Note** : 
-- Assurez-vous d'avoir défini la variable d'environnement `ADMIN_SEED_KEY` dans votre fichier `.env.local`.
-- Si vous rencontrez une erreur avec la fonction `generate_invoice_number()`, exécutez d'abord le script `fix-invoice-number-function.sql` pour corriger la fonction.
-- Le script `seed-15-customers-3-containers.sql` crée un dataset complet avec 15 clients, 3 conteneurs, et des commandes aléatoires (1-5 par client).
-
-### 6. Lancer le serveur de développement
+### 7. Lancer le serveur de développement
 
 ```bash
 # Avec npm
@@ -342,7 +156,7 @@ pnpm dev
 
 Le serveur de développement se lancera automatiquement sur le port 3000.
 
-### 6.1 Tester sur téléphone en HTTPS (Alternative : ngrok)
+### 7.1 Tester sur téléphone en HTTPS (Alternative : ngrok)
 
 ```bash
 npm run dev -- --hostname 0.0.0.0 --port 3000
@@ -365,7 +179,7 @@ npx ngrok http 3000
 
 Si vous utilisez déjà ngrok sur un autre projet, démarrez l'autre projet sur un port différent (ex: `3001`) pour obtenir une URL différente.
 
-### 7. Ouvrir l'application
+### 8. Ouvrir l'application
 
 Ouvrez votre navigateur et allez sur [http://localhost:3000](http://localhost:3000)
 
@@ -375,6 +189,9 @@ Ouvrez votre navigateur et allez sur [http://localhost:3000](http://localhost:30
 
 ```
 danemo-website/
+├── supabase/               # CLI Supabase : migrations SQL, seed local
+│   ├── migrations/
+│   └── seed.sql
 ├── app/                    # Pages et layouts (App Router)
 │   ├── admin/             # Interface d'administration
 │   │   ├── analytics/     # Page des analyses
