@@ -126,10 +126,23 @@ VALUES
   ('e2222222-2222-4222-8222-222222222202', 'Opérateur démo', 'operator@danemo.be', 'operator', 3200.00, 'Opérateur logistique', DATE '2024-01-15', TRUE),
   ('e3333333-3333-4333-8333-333333333303', 'Opérateur démo 2', 'operator2@danemo.be', 'operator', 3100.00, 'Opérateur logistique', DATE '2024-03-01', TRUE);
 
-INSERT INTO public.customers (name, email, phone, address, city, postal_code, country, company, status)
+INSERT INTO public.customers (
+  name,
+  email,
+  phone,
+  phone_e164,
+  address,
+  city,
+  postal_code,
+  country,
+  company,
+  status,
+  opted_in_sms,
+  opted_in_whatsapp
+)
 VALUES
-  ('Client Démo Alpha', 'demo.alpha@example.com', '+32000000001', 'Rue de la Loi 1', 'Bruxelles', '1000', 'Belgique', 'Alpha Demo SPRL', 'active'),
-  ('Client Démo Beta', 'demo.beta@example.com', '+32000000002', 'Meir 10', 'Anvers', '2000', 'Belgique', NULL, 'active')
+  ('Client Démo Alpha', 'demo.alpha@example.com', '+32000000001', '+32000000001', 'Rue de la Loi 1', 'Bruxelles', '1000', 'Belgique', 'Alpha Demo SPRL', 'active', TRUE, FALSE),
+  ('Client Démo Beta', 'demo.beta@example.com', '+32000000002', '+32000000002', 'Meir 10', 'Anvers', '2000', 'Belgique', NULL, 'active', TRUE, FALSE)
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO public.containers (code, vessel, departure_port, arrival_port, status, client_id)
@@ -229,8 +242,7 @@ INSERT INTO public.inventory (
   status,
   location,
   poids,
-  valeur,
-  container_id
+  valeur
 )
 SELECT
   'colis',
@@ -240,37 +252,10 @@ SELECT
   'en_stock',
   'Entrepôt principal',
   '12 kg',
-  '250',
-  ct.id
-FROM public.containers ct
-WHERE ct.code = 'DEMOMSKU01'
-LIMIT 1
-ON CONFLICT (reference) DO NOTHING;
-
-INSERT INTO public.packages (
-  qr_code,
-  reference,
-  description,
-  client_id,
-  container_id,
-  weight,
-  value,
-  status
-)
-SELECT
-  'PKG-DEMO-QR-0001',
-  'COLIS-DEMO-01',
-  'Colis paquet démo',
-  c.id,
-  ct.id,
-  12.5,
-  250.00,
-  'preparation'
-FROM public.customers c
-JOIN public.containers ct ON ct.code = 'DEMOMSKU01'
-WHERE c.email = 'demo.alpha@example.com'
-LIMIT 1
-ON CONFLICT (qr_code) DO NOTHING;
+  '250'
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.inventory WHERE reference = 'INV-DEMO-0001'
+);
 
 INSERT INTO public.invoices (
   customer_id,
