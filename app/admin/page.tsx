@@ -176,7 +176,7 @@ export default function AdminDashboard() {
               </Card>
             </Link>
           )}
-          {role === 'admin' && (
+          {(role === 'admin' || role === 'operator') && (
             <Link href="/admin/blogs">
               <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>

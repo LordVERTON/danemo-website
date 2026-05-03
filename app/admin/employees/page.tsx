@@ -445,20 +445,20 @@ export default function EmployeesPage() {
                     />
                   </div>
                 </div>
-                {!editingEmployee && (
-                  <div>
-                    <Label htmlFor="password">Mot de passe temporaire *</Label>
+                <div>
+                    <Label htmlFor="password">
+                      {editingEmployee ? "Nouveau mot de passe" : "Mot de passe temporaire *"}
+                    </Label>
                     <Input
                       id="password"
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      placeholder="L'employé devra le changer à la première connexion"
-                      required
+                      placeholder={editingEmployee ? "Laissez vide pour conserver le mot de passe actuel" : "L'employé devra le changer à la première connexion"}
+                      required={!editingEmployee}
                       className="text-base sm:text-sm"
                     />
                   </div>
-                )}
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"

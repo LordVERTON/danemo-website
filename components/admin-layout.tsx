@@ -194,7 +194,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                     Messages
                   </Link>
                 )}
-                {role === 'admin' && (
+                {(role === 'admin' || role === 'operator') && (
                   <Link href="/admin/blogs" className="flex items-center gap-2 text-gray-600 hover:text-orange-600">
                     <BookOpen className="h-4 w-4" />
                     Blogs
@@ -309,7 +309,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             </Link>
           )}
 
-          {role === 'admin' && (
+          {(role === 'admin' || role === 'operator') && (
             <Link
               href="/admin/blogs"
               className={`flex flex-col items-center py-1 sm:py-2 px-1 sm:px-2 rounded-lg transition-colors min-w-0 flex-1 ${

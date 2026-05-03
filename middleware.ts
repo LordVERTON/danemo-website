@@ -2,9 +2,9 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 const PUBLIC_PATHS = new Set(["/admin/login"])
-const ADMIN_ONLY_PREFIXES = ["/admin/analytics", "/admin/employees", "/admin/blogs"]
+const ADMIN_ONLY_PREFIXES = ["/admin/analytics", "/admin/employees"]
 const AUTH_REQUIRED_API_PREFIXES = ["/api/stats", "/api/employees", "/api/admin", "/api/blog-posts", "/api/blog-media"]
-const ADMIN_ONLY_API_PREFIXES = ["/api/stats", "/api/employees", "/api/admin", "/api/blog-posts", "/api/blog-media"]
+const ADMIN_ONLY_API_PREFIXES = ["/api/stats", "/api/employees", "/api/admin"]
 
 function hasPortalSession(request: NextRequest): boolean {
   const sessionCookie = request.cookies.get("danemo_admin_session")?.value

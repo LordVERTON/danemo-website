@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 })
   }
-  if (user.role !== "admin") {
+  if (user.role !== "admin" && user.role !== "operator") {
     return NextResponse.json({ success: false, error: "Insufficient permissions" }, { status: 403 })
   }
 

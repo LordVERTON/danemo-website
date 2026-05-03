@@ -1,9 +1,114 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+type EmployeeRole = 'admin' | 'operator'
+
+function normalizeEmail(email: string | null | undefined) {
+  return String(email || '').trim().toLowerCase()
+}
+
+function normalizeRole(role: unknown): EmployeeRole {
+  return role === 'admin' ? 'admin' : 'operator'
+}
+
+function nameFromAuthUser(user: any) {
+  const metadata = user.user_metadata || {}
+  const metadataName = metadata.name || metadata.full_name || metadata.display_name
+  if (typeof metadataName === 'string' && metadataName.trim()) {
+    return metadataName.trim()
+  }
+
+  const emailName = String(user.email || '').split('@')[0]
+  return emailName
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ') || 'Collaborateur'
+}
+
+async function listAllAuthUsers() {
+  const users: any[] = []
+  let page = 1
+  const perPage = 1000
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+    if (error) throw error
+
+    users.push(...(data.users || []))
+    if (!data.users || data.users.length < perPage) break
+    page += 1
+  }
+
+  return users
+}
+
+async function syncAuthUsersToEmployees() {
+  const [authUsers, existingEmployeesResult] = await Promise.all([
+    listAllAuthUsers(),
+    supabaseAdmin.from('employees').select('id,user_id,email'),
+  ])
+
+  if (existingEmployeesResult.error) throw existingEmployeesResult.error
+
+  const existingEmployees = existingEmployeesResult.data || []
+  const byUserId = new Map(existingEmployees.map((employee: any) => [employee.user_id, employee]))
+  const byEmail = new Map(
+    existingEmployees
+      .filter((employee: any) => employee.email)
+      .map((employee: any) => [normalizeEmail(employee.email), employee]),
+  )
+  const now = new Date().toISOString()
+  const today = now.split('T')[0]
+
+  for (const authUser of authUsers) {
+    const email = normalizeEmail(authUser.email)
+    if (!email || byUserId.has(authUser.id)) continue
+
+    const existingByEmail = byEmail.get(email)
+    if (existingByEmail) {
+      const { error } = await (supabaseAdmin as any)
+        .from('employees')
+        .update({
+          user_id: authUser.id,
+          email,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', (existingByEmail as any).id)
+
+      if (error) throw error
+      byUserId.set(authUser.id, { ...existingByEmail, user_id: authUser.id, email })
+      continue
+    }
+
+    const { data: insertedEmployee, error } = await (supabaseAdmin as any)
+      .from('employees')
+      .insert({
+        user_id: authUser.id,
+        name: nameFromAuthUser(authUser),
+        email,
+        role: normalizeRole(authUser.user_metadata?.role),
+        salary: 0,
+        position: 'Collaborateur',
+        hire_date: today,
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+      } as any)
+      .select('id,user_id,email')
+      .single()
+
+    if (error) throw error
+    byUserId.set(authUser.id, insertedEmployee)
+    byEmail.set(email, insertedEmployee)
+  }
+}
+
 // GET /api/employees - Récupérer tous les employés
 export async function GET(request: NextRequest) {
   try {
+    await syncAuthUsersToEmployees()
+
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const role = searchParams.get('role')

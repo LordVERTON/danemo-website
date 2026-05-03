@@ -4,7 +4,7 @@ import { readBlogPosts, writeBlogPosts, type BlogPost, type BlogSection } from "
 import { authenticateRequest } from "@/lib/auth-middleware"
 
 function canManageBlogs(userRole: string | undefined): boolean {
-  return userRole === "admin"
+  return userRole === "admin" || userRole === "operator"
 }
 
 function sanitizePayload(body: Partial<BlogPost>) {
