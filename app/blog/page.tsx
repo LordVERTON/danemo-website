@@ -2,7 +2,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import Image from "next/image"
 import Link from "next/link"
-import { readBlogPosts } from "@/lib/blog-posts"
+import { readPublicBlogPosts } from "@/lib/public-blog-posts"
 
 function toSortableDate(value: string): number {
   const parts = value.split("/")
@@ -17,8 +17,7 @@ function toSortableDate(value: string): number {
 }
 
 export default async function BlogPage() {
-  const blogPosts = (await readBlogPosts())
-    .filter((post) => post.isActive)
+  const blogPosts = (await readPublicBlogPosts())
     .sort((a, b) => toSortableDate(b.date) - toSortableDate(a.date))
   const recentPosts = blogPosts.slice(0, 2)
 

@@ -2,7 +2,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import Link from "next/link"
 import Image from "next/image"
-import { readBlogPosts } from "@/lib/blog-posts"
+import { readPublicBlogPosts } from "@/lib/public-blog-posts"
 
 function toSortableDate(value: string): number {
   const parts = value.split("/")
@@ -23,8 +23,7 @@ export default async function AnciensArticles({
 }) {
   const resolvedSearchParams = (await searchParams) ?? {}
   const POSTS_PER_PAGE = 2
-  const oldPosts = (await readBlogPosts())
-    .filter((post) => post.isActive)
+  const oldPosts = (await readPublicBlogPosts())
     .sort((a, b) => toSortableDate(b.date) - toSortableDate(a.date))
     .slice(2)
   const totalPages = Math.max(1, Math.ceil(oldPosts.length / POSTS_PER_PAGE))
