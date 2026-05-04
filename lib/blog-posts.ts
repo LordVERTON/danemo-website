@@ -2,7 +2,25 @@ import path from "path"
 import { promises as fs } from "fs"
 
 export type BlogPostType = "blog"
-export type BlogSectionType = "heading2" | "heading3" | "paragraph" | "bullet_list" | "numbered_list" | "media" | "highlight"
+export type BlogSectionType =
+  | "heading2"
+  | "heading3"
+  | "paragraph"
+  | "bullet_list"
+  | "numbered_list"
+  | "media"
+  | "highlight"
+  | "text_image"
+  | "columns"
+  | "gallery"
+  | "divider"
+  | "spacer"
+  | "button"
+  | "html"
+  | "faq"
+  | "contact"
+  | "newsletter"
+  | "recent_posts"
 
 export interface BlogSection {
   id: string
@@ -12,6 +30,18 @@ export interface BlogSection {
   items?: string[]
   mediaUrl?: string
   mediaType?: "image" | "video"
+  columns?: string[]
+  images?: string[]
+  buttonLabel?: string
+  buttonHref?: string
+  html?: string
+  settings?: {
+    background?: "white" | "soft" | "dark"
+    columns?: 2 | 3
+    height?: "small" | "medium" | "large"
+    align?: "left" | "center" | "right"
+    width?: number
+  }
 }
 
 export interface BlogPost {

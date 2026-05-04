@@ -37,9 +37,11 @@ function validatePayload(payload: Omit<BlogPost, "id">): string | null {
   if (!payload.mediaUrl) return "Le media (image ou video) est requis"
   if (!payload.href) return "Le lien est requis"
 
-  // Enforce Supabase media persistence for all new/updated blog content.
-  const isMainMediaSupabase = payload.mediaUrl.includes("/storage/v1/object/public/blog-media/")
-  if (!isMainMediaSupabase) {
+  const isPersistedBlogMedia = (mediaUrl: string) =>
+    mediaUrl.includes("/storage/v1/object/public/blog-media/") || mediaUrl.startsWith("/blogs/")
+
+  // Supabase remains preferred for new uploads, while existing public blog assets stay editable.
+  if (!isPersistedBlogMedia(payload.mediaUrl)) {
     return "Le media principal doit etre uploade sur Supabase via le champ d'upload"
   }
 
@@ -47,8 +49,7 @@ function validatePayload(payload: Omit<BlogPost, "id">): string | null {
     if (section?.type !== "media") continue
     const sectionMediaUrl = String(section.mediaUrl || "").trim()
     if (!sectionMediaUrl) return "Chaque section media doit contenir une URL"
-    const isSectionMediaSupabase = sectionMediaUrl.includes("/storage/v1/object/public/blog-media/")
-    if (!isSectionMediaSupabase) {
+    if (!isPersistedBlogMedia(sectionMediaUrl)) {
       return "Les medias de section doivent etre uploades sur Supabase via le champ d'upload"
     }
   }
