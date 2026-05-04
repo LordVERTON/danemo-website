@@ -29,6 +29,7 @@ interface Order {
   client_name: string
   client_email: string
   service_type: string
+  description?: string | null
   origin: string
   destination: string
   weight?: number
@@ -384,6 +385,9 @@ export default function TrackingPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">{tracking.order.shipmentDetails}</h3>
+                    <p className="text-sm text-gray-600">
+                      <strong>Description:</strong> {order.description || 'Non spécifiée'}
+                    </p>
                     <p className="text-sm text-gray-600">
                       <strong>Poids:</strong> {order.weight ? `${order.weight} kg` : 'Non spécifié'}
                     </p>

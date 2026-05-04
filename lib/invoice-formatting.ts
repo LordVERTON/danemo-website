@@ -11,6 +11,7 @@ export type InvoiceLineInput = {
 
 export type OrderFallbackForTotals = {
   service_type: string;
+  description?: string | null;
   value?: number;
 };
 
@@ -58,7 +59,7 @@ export function computeInvoiceAmounts(params: {
     subtotal = params.orderFallback.value ?? 0;
     lines = [
       {
-        description: params.orderFallback.service_type,
+        description: params.orderFallback.description || params.orderFallback.service_type,
         quantity: 1,
         unitPrice: subtotal,
         total: subtotal,

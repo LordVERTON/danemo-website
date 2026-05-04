@@ -35,7 +35,14 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useCurrentUser } from "@/lib/use-current-user"
+import { getTariffItemsForLang } from "@/lib/tariff-items"
 import QRCode from "qrcode"
+
+const TARIFF_DESCRIPTION_OPTIONS = getTariffItemsForLang("fr").map((item) => ({
+  value: `${item.label} - ${item.price}`,
+  label: `${item.label} - ${item.price}`,
+}))
+const CUSTOM_DESCRIPTION_VALUE = "__custom_description__"
 
 interface Order {
   id: string
@@ -150,6 +157,7 @@ export default function ClientsPage() {
   // Formulaire de création de commande(s)
   const [newOrders, setNewOrders] = useState([{
     service_type: "",
+    description: "",
     origin: "",
     destination: "",
     weight: "",
@@ -347,7 +355,7 @@ export default function ClientsPage() {
       
       // Créer les commandes si elles sont renseignées
       const validOrders = newOrders.filter(order => 
-        order.service_type && order.origin && order.destination
+        order.service_type && order.description?.trim() && order.origin && order.destination
       )
       
       if (validOrders.length > 0) {
@@ -362,6 +370,7 @@ export default function ClientsPage() {
               client_email: newCustomer.email,
               client_phone: newCustomer.phone || null,
               service_type: order.service_type,
+              description: order.description?.trim() || null,
               origin: order.origin,
               destination: order.destination,
               weight: order.weight ? parseFloat(order.weight) : null,
@@ -393,6 +402,7 @@ export default function ClientsPage() {
       })
       setNewOrders([{
         service_type: "",
+        description: "",
         origin: "",
         destination: "",
         weight: "",
@@ -411,6 +421,7 @@ export default function ClientsPage() {
   const addOrderForm = () => {
     setNewOrders([...newOrders, {
       service_type: "",
+      description: "",
       origin: "",
       destination: "",
       weight: "",
@@ -865,9 +876,50 @@ export default function ClientsPage() {
                             <SelectItem value="fret_maritime">Fret maritime</SelectItem>
                             <SelectItem value="fret_aerien">Fret aérien</SelectItem>
                             <SelectItem value="demenagement">Déménagement</SelectItem>
-                            <SelectItem value="colis">Colis</SelectItem>
+                            <SelectItem value="dedouanement">Dédouanement</SelectItem>
+                            <SelectItem value="negoce">Négoce</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="sm:col-span-2 space-y-3">
+                        <div>
+                          <Label htmlFor={`order_description_choice_${index}`}>Description du colis</Label>
+                          <Select
+                            value={
+                              TARIFF_DESCRIPTION_OPTIONS.some((option) => option.value === order.description)
+                                ? order.description
+                                : CUSTOM_DESCRIPTION_VALUE
+                            }
+                            onValueChange={(value) =>
+                              updateOrderForm(
+                                index,
+                                'description',
+                                value === CUSTOM_DESCRIPTION_VALUE ? "" : value
+                              )
+                            }
+                          >
+                            <SelectTrigger id={`order_description_choice_${index}`} className="h-auto min-h-10 whitespace-normal text-left [&_[data-slot=select-value]]:line-clamp-2 [&_[data-slot=select-value]]:whitespace-normal">
+                              <SelectValue placeholder="Choisir dans la grille tarifaire" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-72">
+                              {TARIFF_DESCRIPTION_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value={CUSTOM_DESCRIPTION_VALUE}>Autre article / texte libre</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor={`order_description_${index}`}>Texte de description</Label>
+                          <Textarea
+                            id={`order_description_${index}`}
+                            value={order.description}
+                            onChange={(e) => updateOrderForm(index, 'description', e.target.value)}
+                            placeholder="Ex: Canapé 2 places à partir de - 250 €"
+                          />
+                        </div>
                       </div>
                       <div>
                         <Label htmlFor={`order_container_${index}`}>Conteneur</Label>

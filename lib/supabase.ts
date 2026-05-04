@@ -56,6 +56,7 @@ export interface Database {
           recipient_postal_code: string | null
           recipient_country: string | null
           service_type: string
+          description: string | null
           origin: string
           destination: string
           weight: number | null
@@ -89,6 +90,7 @@ export interface Database {
           recipient_postal_code?: string | null
           recipient_country?: string | null
           service_type: string
+          description?: string | null
           origin: string
           destination: string
           weight?: number | null
@@ -122,6 +124,7 @@ export interface Database {
           recipient_postal_code?: string | null
           recipient_country?: string | null
           service_type?: string
+          description?: string | null
           origin?: string
           destination?: string
           weight?: number | null

@@ -49,6 +49,7 @@ import { generateProformaDocx, generateProformaPdf } from "@/lib/proforma-utils"
 import { generateQRPrintPDF } from "@/lib/qr-print-utils"
 import QRCode from "qrcode"
 import { supabase } from "@/lib/supabase"
+import { getTariffItemsForLang } from "@/lib/tariff-items"
 
 interface Order {
   id: string
@@ -68,6 +69,7 @@ interface Order {
   recipient_postal_code?: string
   recipient_country?: string
   service_type: string
+  description?: string | null
   origin: string
   destination: string
   weight?: number
@@ -114,6 +116,12 @@ interface ClientSummary {
 
 type ClientRole = "sender" | "recipient" | "both" | "none"
 
+const TARIFF_DESCRIPTION_OPTIONS = getTariffItemsForLang("fr").map((item) => ({
+  value: `${item.label} - ${item.price}`,
+  label: `${item.label} - ${item.price}`,
+}))
+const CUSTOM_DESCRIPTION_VALUE = "__custom_description__"
+
 const getDefaultNewOrderData = (customer: Customer | null) => ({
   client_name: customer?.name || "",
   client_email: customer?.email || "",
@@ -130,6 +138,7 @@ const getDefaultNewOrderData = (customer: Customer | null) => ({
   recipient_postal_code: customer?.postal_code || "",
   recipient_country: customer?.country || "",
   service_type: "",
+  description: "",
   origin: "",
   destination: "",
   weight: "",
@@ -254,6 +263,7 @@ export default function ClientDetailPage() {
     recipient_postal_code: "",
     recipient_country: "",
     service_type: "",
+    description: "",
     origin: "",
     destination: "",
     weight: "",
@@ -741,6 +751,7 @@ const copyClientToRecipientForEdit = () => {
     recipient_postal_code: order.recipient_postal_code || "",
     recipient_country: order.recipient_country || "",
       service_type: order.service_type,
+      description: order.description || "",
       origin: order.origin,
       destination: order.destination,
       weight: order.weight ? String(order.weight) : "",
@@ -833,6 +844,10 @@ const copyClientToRecipientForEdit = () => {
       }
       if (!newOrder.service_type) {
         setError("Sélectionne un type de service pour la commande.")
+        return
+      }
+      if (!newOrder.description?.trim()) {
+        setError("Sélectionne une description d'article ou renseigne un texte libre.")
         return
       }
       const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
@@ -955,6 +970,7 @@ const copyClientToRecipientForEdit = () => {
         recipient_postal_code: customer.postal_code ?? undefined,
         recipient_country: customer.country ?? undefined,
         service_type: ordersForInvoice.length > 1 ? "Services multiples" : referenceOrder.service_type,
+        description: ordersForInvoice.length > 1 ? "Commandes multiples" : referenceOrder.description,
         origin: ordersForInvoice.length > 1 ? "Multiples" : referenceOrder.origin,
         destination: ordersForInvoice.length > 1 ? "Multiples" : referenceOrder.destination,
         weight: totalWeight || referenceOrder.weight,
@@ -969,7 +985,7 @@ const copyClientToRecipientForEdit = () => {
       }
 
       const items = ordersForInvoice.map((order) => ({
-        description: getServiceTypeLabel(order.service_type),
+        description: order.description || getServiceTypeLabel(order.service_type),
         quantity: 1,
         unitPrice: Number(order.value) || 0,
         total: Number(order.value) || 0,
@@ -1040,7 +1056,7 @@ const copyClientToRecipientForEdit = () => {
         },
         items: [
           {
-            description: getServiceTypeLabel(order.service_type),
+            description: order.description || getServiceTypeLabel(order.service_type),
             quantity: 1,
             unitPrice: Number(order.value) || 0,
             total: Number(order.value) || 0,
@@ -1159,6 +1175,7 @@ const copyClientToRecipientForEdit = () => {
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.destination.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || order.status === filterStatus
@@ -1375,11 +1392,11 @@ const copyClientToRecipientForEdit = () => {
           </CardHeader>
           <CardContent>
             <div className="w-full overflow-x-auto">
-            <Table className="min-w-[720px]">
+            <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Numéro</TableHead>
-                  <TableHead>Service</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead>Trajet</TableHead>
                   <TableHead>Colis</TableHead>
                   <TableHead>Conteneur</TableHead>
@@ -1399,7 +1416,9 @@ const copyClientToRecipientForEdit = () => {
                     <TableCell className="font-mono font-medium">
                       {order.order_number}
                     </TableCell>
-                    <TableCell>{getServiceTypeLabel(order.service_type)}</TableCell>
+                    <TableCell className="max-w-[240px]">
+                      <span className="line-clamp-2 text-sm">{order.description || "-"}</span>
+                    </TableCell>
                     <TableCell>
                       <div className="text-sm">
                         <div>{order.origin}</div>
@@ -1644,6 +1663,45 @@ const copyClientToRecipientForEdit = () => {
                       <SelectItem value="cancelled">Annulée</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="space-y-3 rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+                <div>
+                  <Label htmlFor="edit_description_choice">Description du colis</Label>
+                  <Select
+                    value={
+                      TARIFF_DESCRIPTION_OPTIONS.some((option) => option.value === editOrder.description)
+                        ? editOrder.description
+                        : CUSTOM_DESCRIPTION_VALUE
+                    }
+                    onValueChange={(value) =>
+                      setEditOrder({
+                        ...editOrder,
+                        description: value === CUSTOM_DESCRIPTION_VALUE ? "" : value,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="edit_description_choice" className="h-auto min-h-10 whitespace-normal text-left [&_[data-slot=select-value]]:line-clamp-2 [&_[data-slot=select-value]]:whitespace-normal">
+                      <SelectValue placeholder="Choisir dans la grille tarifaire" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {TARIFF_DESCRIPTION_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={CUSTOM_DESCRIPTION_VALUE}>Autre article / texte libre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit_description">Texte de description</Label>
+                  <Textarea
+                    id="edit_description"
+                    value={editOrder.description || ""}
+                    onChange={(e) => setEditOrder({ ...editOrder, description: e.target.value })}
+                    placeholder="Ex: Canapé 2 places à partir de - 250 €"
+                  />
                 </div>
               </div>
               <div className="space-y-4">
@@ -2268,6 +2326,46 @@ const copyClientToRecipientForEdit = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="description_choice">Description du colis *</Label>
+                  <Select
+                    value={
+                      TARIFF_DESCRIPTION_OPTIONS.some((option) => option.value === newOrder.description)
+                        ? newOrder.description
+                        : CUSTOM_DESCRIPTION_VALUE
+                    }
+                    onValueChange={(value) =>
+                      setNewOrder({
+                        ...newOrder,
+                        description: value === CUSTOM_DESCRIPTION_VALUE ? "" : value,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="description_choice" className="h-auto min-h-10 whitespace-normal text-left text-base sm:text-sm [&_[data-slot=select-value]]:line-clamp-2 [&_[data-slot=select-value]]:whitespace-normal">
+                      <SelectValue placeholder="Choisir dans la grille tarifaire" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {TARIFF_DESCRIPTION_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={CUSTOM_DESCRIPTION_VALUE}>Autre article / texte libre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="description">Texte de description *</Label>
+                  <Textarea
+                    id="description"
+                    value={newOrder.description || ""}
+                    onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
+                    placeholder="Ex: Canapé 2 places à partir de - 250 €"
+                    className="text-base sm:text-sm"
+                  />
+                </div>
+              </div>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="origin">Origine *</Label>

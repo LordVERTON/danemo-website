@@ -76,6 +76,7 @@ interface OrderPayload {
     recipient_postal_code: string | null
     recipient_country: string | null
     service_type: string
+    description: string | null
     origin: string
     destination: string
     weight: number | null
@@ -690,6 +691,9 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                                   </p>
                                   <p>
                                     <span className="font-semibold">Service:</span> {(trackingData as OrderPayload).order.service_type}
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold">Description:</span> {(trackingData as OrderPayload).order.description || "Non spécifiée"}
                                   </p>
                                   <p>
                                     <span className="font-semibold">Origine:</span> {(trackingData as OrderPayload).order.origin}

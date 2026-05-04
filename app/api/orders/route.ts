@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validation du type de service
-    const validServiceTypes = ['fret_maritime', 'fret_aerien', 'demenagement', 'colis']
+    const validServiceTypes = ['fret_maritime', 'fret_aerien', 'demenagement', 'dedouanement', 'negoce', 'colis']
     if (!validServiceTypes.includes(body.service_type)) {
       return NextResponse.json(
         { success: false, error: 'Invalid service type' },
@@ -170,6 +170,7 @@ export async function POST(request: NextRequest) {
       recipient_postal_code: body.recipient_postal_code?.trim().substring(0, 20) || null,
       recipient_country: body.recipient_country?.trim().substring(0, 100) || null,
       service_type: body.service_type,
+      description: body.description?.trim().substring(0, 500) || null,
       origin: body.origin?.trim().substring(0, 100),
       destination: body.destination?.trim().substring(0, 100),
       weight: body.weight ? (typeof body.weight === 'string' ? body.weight.trim().substring(0, 20) : String(body.weight).substring(0, 20)) : null,

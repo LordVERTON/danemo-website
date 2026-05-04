@@ -273,6 +273,8 @@ export type TranslationSchema = {
     serviceFretMaritime: string
     serviceFretAerien: string
     serviceDemenagement: string
+    serviceDedouanement: string
+    serviceNegoce: string
     origin: string
     destination: string
     weightKg: string
@@ -649,6 +651,8 @@ export const translations: Record<Lang, TranslationSchema> = {
       serviceFretMaritime: "Fret maritime",
       serviceFretAerien: "Fret aérien",
       serviceDemenagement: "Déménagement",
+      serviceDedouanement: "Dédouanement",
+      serviceNegoce: "Négoce",
       origin: "Lieu de prise en charge / départ *",
       destination: "Destination *",
       weightKg: "Poids estimé (kg)",
@@ -1082,6 +1086,8 @@ export const translations: Record<Lang, TranslationSchema> = {
       serviceFretMaritime: "Sea freight",
       serviceFretAerien: "Air freight",
       serviceDemenagement: "International moving",
+      serviceDedouanement: "Customs clearance",
+      serviceNegoce: "Trading",
       origin: "Pickup / origin *",
       destination: "Destination *",
       weightKg: "Estimated weight (kg)",

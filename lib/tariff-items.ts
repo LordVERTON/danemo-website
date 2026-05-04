@@ -37,3 +37,9 @@ export function getCanonicalTariffLabel(index: number): string | null {
   if (index < 0 || index >= items.length) return null
   return items[index].label
 }
+
+export function getCanonicalTariffDescription(index: number): string | null {
+  const item = translations.fr.rates.items[index]
+  if (!item) return null
+  return `${item.label} - ${item.price}`
+}

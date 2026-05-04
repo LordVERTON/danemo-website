@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { customersApi, ordersApi, utils } from '@/lib/database'
-import { getCanonicalTariffLabel, getTariffItemCount } from '@/lib/tariff-items'
+import { getCanonicalTariffDescription, getCanonicalTariffLabel, getTariffItemCount } from '@/lib/tariff-items'
 import { sendEmail } from '@/lib/notify'
 import { buildSelfRegisterClientConfirmationEmail } from '@/lib/notification-templates'
 
-const SERVICE_TYPES = ['fret_maritime', 'fret_aerien', 'demenagement', 'colis'] as const
+const SERVICE_TYPES = ['fret_maritime', 'fret_aerien', 'demenagement', 'dedouanement', 'negoce'] as const
 
 const articleSchema = z.discriminatedUnion('source', [
   z.object({
@@ -77,6 +77,24 @@ function buildArticleNotes(
   return lines.join('\n')
 }
 
+function buildOrderDescription(
+  articles: z.infer<typeof bodySchema>['articles'],
+): string {
+  const lines: string[] = []
+  const maxIdx = getTariffItemCount() - 1
+  for (const a of articles) {
+    const qty = a.quantity ?? 1
+    if (a.source === 'catalog') {
+      if (a.index > maxIdx) continue
+      const label = getCanonicalTariffDescription(a.index)
+      if (label) lines.push(qty > 1 ? `${label} x ${qty}` : label)
+    } else {
+      lines.push(qty > 1 ? `${a.description} x ${qty}` : a.description)
+    }
+  }
+  return lines.join('\n').slice(0, 500)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const json = await request.json()
@@ -106,6 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     const articleBlock = buildArticleNotes(articles)
+    const orderDescription = buildOrderDescription(articles)
     const userNotes = customer.notes?.trim()
     const combinedNotes = userNotes ? `${articleBlock}\n\nMessage du client :\n${userNotes}` : articleBlock
 
@@ -168,6 +187,7 @@ export async function POST(request: NextRequest) {
       recipient_postal_code: recipient?.postal_code?.trim().substring(0, 20) || null,
       recipient_country: recipient?.country?.trim().substring(0, 100) || null,
       service_type: shipment.service_type,
+      description: orderDescription || null,
       origin: shipment.origin.trim().substring(0, 100),
       destination: shipment.destination.trim().substring(0, 100),
       weight: shipment.weight ?? null,

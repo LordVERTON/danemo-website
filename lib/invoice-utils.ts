@@ -50,6 +50,7 @@ export interface InvoiceData {
     recipient_country?: string | null;
 
     service_type: string;
+    description?: string | null;
     origin: string;
     destination: string;
     weight?: number;
@@ -535,7 +536,7 @@ export const generateInvoice = async (data: InvoiceData) => {
 
   const { subtotal, taxRate, taxAmount, total, lines: items } = computeInvoiceAmounts({
     items: data.items,
-    orderFallback: { service_type: data.order.service_type, value: data.order.value },
+    orderFallback: { service_type: data.order.service_type, description: data.order.description, value: data.order.value },
     taxRate: data.taxRate,
   });
 

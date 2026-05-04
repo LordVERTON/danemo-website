@@ -23,6 +23,7 @@ export interface ProformaData {
     recipient_postal_code?: string | null
     recipient_country?: string | null
     service_type: string
+    description?: string | null
     origin: string
     destination: string
     value?: number | null
@@ -57,7 +58,7 @@ export async function generateProformaDocx(data: ProformaData): Promise<Blob> {
       ? data.items
       : [
           {
-            description: `Prestations ${data.order.service_type} (${data.order.origin} → ${data.order.destination})`,
+            description: data.order.description || `Prestations ${data.order.service_type} (${data.order.origin} → ${data.order.destination})`,
             quantity: 1,
             unitPrice: data.order.value || 0,
             total: data.order.value || 0,
@@ -200,7 +201,7 @@ export async function generateProformaPdf(data: ProformaData) {
       ? data.items
       : [
           {
-            description: `Prestations ${data.order.service_type} (${data.order.origin} → ${data.order.destination})`,
+            description: data.order.description || `Prestations ${data.order.service_type} (${data.order.origin} → ${data.order.destination})`,
             quantity: 1,
             unitPrice: data.order.value || 0,
             total: data.order.value || 0,

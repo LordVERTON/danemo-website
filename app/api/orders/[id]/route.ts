@@ -166,6 +166,13 @@ export async function PUT(
 
     const sanitizedOrderData = sanitizeRecipient()
 
+    if ('description' in orderData) {
+      sanitizedOrderData.description =
+        typeof orderData.description === 'string'
+          ? orderData.description.trim().substring(0, 500) || null
+          : orderData.description || null
+    }
+
     // Sanitize parcels_count if provided
     if ('parcels_count' in orderData) {
       const v = orderData.parcels_count

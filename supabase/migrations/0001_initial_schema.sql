@@ -92,6 +92,7 @@ CREATE TABLE public.orders (
   recipient_postal_code TEXT,
   recipient_country TEXT,
   service_type VARCHAR(100) NOT NULL,
+  description TEXT,
   origin VARCHAR(255) NOT NULL,
   destination VARCHAR(255) NOT NULL,
   weight DECIMAL(10, 2),

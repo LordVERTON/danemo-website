@@ -70,7 +70,7 @@ export default function NewClientFormPage() {
   })
 
   const [shipment, setShipment] = useState({
-    service_type: 'colis' as 'fret_maritime' | 'fret_aerien' | 'demenagement' | 'colis',
+    service_type: 'fret_maritime' as 'fret_maritime' | 'fret_aerien' | 'demenagement' | 'dedouanement' | 'negoce',
     origin: '',
     destination: '',
     weight: '',
@@ -110,10 +110,11 @@ export default function NewClientFormPage() {
 
   const serviceLabels = useMemo(
     () => ({
-      colis: t.serviceColis,
       fret_maritime: t.serviceFretMaritime,
       fret_aerien: t.serviceFretAerien,
       demenagement: t.serviceDemenagement,
+      dedouanement: t.serviceDedouanement,
+      negoce: t.serviceNegoce,
     }),
     [t],
   )
