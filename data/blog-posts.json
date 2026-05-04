@@ -1,846 +1,861 @@
 [
-    {
-        "id":  "blog-entreprises-africaines",
-        "title":  "Entreprises africaines : facilitez vos achats en Europe grâce à Danemo, votre partenaire logistique de confiance",
-        "date":  "24/07/2025",
-        "excerpt":  "Vous êtes une entreprise basée au Cameroun ou ailleurs en Afrique, et vous commandez régulièrement des marchandises en Europe ? La gestion de vos expéditions peut vite devenir un casse-tête : fournisseurs multiples, colis dispersés, frais élevés, suivi compliqué... Heureusement, Danemo SRL est là pour vous simplifier la vie.",
-        "mediaUrl":  "/blogs/entreprises-africaines/hero.png",
-        "mediaType":  "image",
-        "image":  "/blogs/entreprises-africaines/hero.png",
-        "href":  "/blog/entreprises-africaines",
-        "type":  "blog",
-        "isActive":  true,
-        "sections":  [
-                         {
-                             "id":  "ea-s1",
-                             "type":  "heading2",
-                             "text":  "Danemo, l\u0027intermediaire logistique entre vos fournisseurs europeens et votre entreprise"
-                         },
-                         {
-                             "id":  "ea-s2",
-                             "type":  "paragraph",
-                             "text":  "Danemo vous propose un service sur mesure : nous centralisons vos commandes aupres de tous vos fournisseurs europeens et nous nous occupons de tout le reste. Fini les expeditions vers votre entreprise en Afrique."
-                         },
-                         {
-                             "id":  "ea-s3",
-                             "type":  "heading2",
-                             "text":  "Comment ca fonctionne ?"
-                         },
-                         {
-                             "id":  "ea-s4",
-                             "type":  "numbered_list",
-                             "items":  [
-                                           "Vous commandez vos produits aupres de fournisseurs en Europe",
-                                           "Vous faites livrer directement les colis a notre entrepot en Belgique",
-                                           "Nous receptionnons, verifions et stockons vos marchandises",
-                                           "Nous regroupons tous vos colis en un seul envoi groupe vers l\u0027Afrique",
-                                           "Nous expedions vers votre entreprise au Cameroun ou ailleurs",
-                                           "Vous recevez vos marchandises avec un seul interlocuteur"
-                                       ]
-                         },
-                         {
-                             "id":  "ea-s5",
-                             "type":  "heading2",
-                             "text":  "Quels types d\u0027entreprises peuvent faire appel a Danemo ?"
-                         },
-                         {
-                             "id":  "ea-s6",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Boutiques de gros qui s\u0027approvisionnent en Europe",
-                                           "Revendeurs de pieces detachees, materiel informatique ou electromenager",
-                                           "Entreprises qui importent du materiel professionnel",
-                                           "Pharmacies, commerces et grossistes"
-                                       ]
-                         },
-                         {
-                             "id":  "ea-s7",
-                             "type":  "heading2",
-                             "text":  "Vos avantages en travaillant avec Danemo"
-                         },
-                         {
-                             "id":  "ea-s8",
-                             "type":  "heading3",
-                             "text":  "Optimisation de leur commandes"
-                         },
-                         {
-                             "id":  "ea-s9",
-                             "type":  "paragraph",
-                             "text":  "Nous regroupons tous vos achats en un seul envoi logistique pour reduire les frais de transport."
-                         },
-                         {
-                             "id":  "ea-s10",
-                             "type":  "heading3",
-                             "text":  "Gain de temps"
-                         },
-                         {
-                             "id":  "ea-s11",
-                             "type":  "paragraph",
-                             "text":  "Vous ne perdez plus de temps a suivre chaque fournisseur. Danemo gere la logistique a votre place."
-                         },
-                         {
-                             "id":  "ea-s12",
-                             "type":  "heading3",
-                             "text":  "Reduction des couts"
-                         },
-                         {
-                             "id":  "ea-s13",
-                             "type":  "paragraph",
-                             "text":  "Avec notre systeme de groupage et nos tarifs negocies, vous beneficiez de conditions preferentielles."
-                         },
-                         {
-                             "id":  "ea-s14",
-                             "type":  "heading2",
-                             "text":  "Danemo, un partenaire logistique au service du commerce Afrique-Europe"
-                         },
-                         {
-                             "id":  "ea-s15",
-                             "type":  "highlight",
-                             "text":  "Contactez-nous des aujourd\u0027hui pour mettre en place un service sur mesure de reception et d\u0027expedition adapte a votre entreprise."
-                         }
-                     ],
-        "backLinkLabel":  "← Retour au blog",
-        "backLinkHref":  "/blog"
-    },
-    {
-        "id":  "blog-envoi-conteneur-erreurs",
-        "title":  "Envoi de conteneur vers l\u0027Afrique : 7 erreurs fréquentes à éviter absolument",
-        "date":  "24/07/2025",
-        "excerpt":  "Envoyer un conteneur vers l\u0027Afrique représente un projet important, que ce soit pour un déménagement personnel, un transfert professionnel ou un approvisionnement commercial. Mais attention : certaines erreurs courantes peuvent coûter cher, en temps comme en argent. Danemo, spécialiste du transport entre l\u0027Europe et l\u0027Afrique, vous partage les...",
-        "image":  "/blogs/envoi-conteneur-erreurs/hero.png",
-        "mediaUrl":  "/blogs/envoi-conteneur-erreurs/hero.png",
-        "mediaType":  "image",
-        "href":  "/blog/envoi-conteneur-erreurs",
-        "type":  "blog",
-        "isActive":  true,
-        "sections":  [
-                         {
-                             "id":  "ce-s1",
-                             "type":  "heading2",
-                             "text":  "1. Ne pas anticiper les delais"
-                         },
-                         {
-                             "id":  "ce-s2",
-                             "type":  "paragraph",
-                             "text":  "Beaucoup pensent qu\u0027un conteneur peut etre charge et expedie du jour au lendemain. En realite, une expedition demande du temps : preparation, formalites douanieres, reservation, logistique."
-                         },
-                         {
-                             "id":  "ce-s3",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Preparation des biens",
-                                           "Formalites douanieres",
-                                           "Reservation du conteneur",
-                                           "Logistique de chargement"
-                                       ]
-                         },
-                         {
-                             "id":  "ce-s4",
-                             "type":  "paragraph",
-                             "text":  "Conseil Danemo : contactez-nous au moins 10 jours a l\u0027avance pour une meilleure planification."
-                         },
-                         {
-                             "id":  "ce-s5",
-                             "type":  "heading2",
-                             "text":  "2. Mal estimer le volume a expedier"
-                         },
-                         {
-                             "id":  "ce-s6",
-                             "type":  "paragraph",
-                             "text":  "Une erreur frequente est de choisir un conteneur trop petit ou trop grand."
-                         },
-                         {
-                             "id":  "ce-s7",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Des frais inutiles",
-                                           "Des difficultes de chargement",
-                                           "Un gaspillage d\u0027espace ou d\u0027argent"
-                                       ]
-                         },
-                         {
-                             "id":  "ce-s8",
-                             "type":  "paragraph",
-                             "text":  "Astuce : faites un inventaire precis ou demandez notre aide pour l\u0027estimation."
-                         },
-                         {
-                             "id":  "ce-s9",
-                             "type":  "heading2",
-                             "text":  "3. Negliger l\u0027emballage et la protection"
-                         },
-                         {
-                             "id":  "ce-s10",
-                             "type":  "paragraph",
-                             "text":  "Un conteneur subit des secousses, des variations de temperature et parfois de l\u0027humidite."
-                         },
-                         {
-                             "id":  "ce-s11",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Emballage",
-                                           "Deshumidification",
-                                           "Cristallisation"
-                                       ]
-                         },
-                         {
-                             "id":  "ce-s12",
-                             "type":  "paragraph",
-                             "text":  "Danemo vous propose des solutions d\u0027emballage adaptees : caisses, cartons, palettes etanches."
-                         },
-                         {
-                             "id":  "ce-s13",
-                             "type":  "heading2",
-                             "text":  "4. Oublier certains documents administratifs"
-                         },
-                         {
-                             "id":  "ce-s14",
-                             "type":  "paragraph",
-                             "text":  "Un conteneur sans les bons papiers peut etre bloque a la douane."
-                         },
-                         {
-                             "id":  "ce-s15",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Facture ou liste de colisage",
-                                           "Copie de carte d\u0027identite",
-                                           "Attestation de demenagement"
-                                       ]
-                         },
-                         {
-                             "id":  "ce-s16",
-                             "type":  "media",
-                             "mediaUrl":  "/blogs/envoi-conteneur-erreurs/section-1.png",
-                             "mediaType":  "image"
-                         },
-                         {
-                             "id":  "ce-s17",
-                             "type":  "heading2",
-                             "text":  "5. Mettre des objets interdits dans le conteneur"
-                         },
-                         {
-                             "id":  "ce-s18",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Armes",
-                                           "Produits chimiques",
-                                           "Medicaments non declares",
-                                           "Alcool en grande quantite"
-                                       ]
-                         },
-                         {
-                             "id":  "ce-s19",
-                             "type":  "paragraph",
-                             "text":  "Resultat : votre conteneur peut etre saisi ou retarde."
-                         },
-                         {
-                             "id":  "ce-s20",
-                             "type":  "heading2",
-                             "text":  "6. Mal charger le conteneur"
-                         },
-                         {
-                             "id":  "ce-s21",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Endommager les biens pendant le transport",
-                                           "Creer des desequilibres",
-                                           "Rendre le dechargement complique a l\u0027arrivee"
-                                       ]
-                         },
-                         {
-                             "id":  "ce-s22",
-                             "type":  "heading2",
-                             "text":  "7. Ne pas assurer son envoi"
-                         },
-                         {
-                             "id":  "ce-s23",
-                             "type":  "paragraph",
-                             "text":  "Danemo propose une assurance adaptee a votre envoi, a partir de 3% du prix."
-                         },
-                         {
-                             "id":  "ce-s24",
-                             "type":  "highlight",
-                             "title":  "En resume : pour un envoi de conteneur reussi, faites confiance a des pros",
-                             "text":  "Danemo SRL vous accompagne de A a Z : estimation, documents, emballage securise, chargement et suivi, livraison."
-                         }
-                     ],
-        "backLinkLabel":  "← Retour au blog",
-        "backLinkHref":  "/blog"
-    },
-    {
-        "id":  "blog-demenagement-diplomatique",
-        "title":  "Comment organiser un demenagement diplomatique en toute serenite avec Danemo ?",
-        "date":  "24/07/2025",
-        "excerpt":  "Organiser un demenagement diplomatique peut vite devenir un casse-tete logistique, surtout lorsque chaque detail compte. Danemo vous accompagne avec une prise en charge complete.",
-        "image":  "/blogs/demenagement-diplomatique/hero.png",
-        "mediaUrl":  "/blogs/demenagement-diplomatique/hero.png",
-        "mediaType":  "image",
-        "href":  "/blog/demenagement-diplomatique",
-        "type":  "blog",
-        "isActive":  true,
-        "sections":  [
-                         {
-                             "id":  "dd-s1",
-                             "type":  "heading2",
-                             "text":  "Pourquoi un demenagement diplomatique necessite une expertise particuliere ?"
-                         },
-                         {
-                             "id":  "dd-s2",
-                             "type":  "paragraph",
-                             "text":  "Contrairement a un demenagement classique, un demenagement diplomatique implique :"
-                         },
-                         {
-                             "id":  "dd-s3",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Des objets de valeur et effets personnels sensibles",
-                                           "Des formalites administratives specifiques",
-                                           "Des delais serres souvent imposes par les mutations",
-                                           "Un niveau de service et de discretion eleve"
-                                       ]
-                         },
-                         {
-                             "id":  "dd-s4",
-                             "type":  "paragraph",
-                             "text":  "Il est recommande de faire appel a une entreprise specialisee, capable d\u0027offrir un service sur mesure, discret et fiable."
-                         },
-                         {
-                             "id":  "dd-s5",
-                             "type":  "heading2",
-                             "text":  "Danemo, votre allie logistique pour un depart sans stress"
-                         },
-                         {
-                             "id":  "dd-s6",
-                             "type":  "paragraph",
-                             "text":  "Danemo SRL propose une prise en charge complete de votre demenagement diplomatique de l\u0027Europe vers l\u0027Afrique."
-                         },
-                         {
-                             "id":  "dd-s7",
-                             "type":  "heading3",
-                             "text":  "Un accompagnement de bout en bout"
-                         },
-                         {
-                             "id":  "dd-s8",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Emballage securise des biens",
-                                           "Chargement et transport en conteneur",
-                                           "Dedouanement",
-                                           "Livraison a domicile ou dans vos nouveaux locaux"
-                                       ]
-                         },
-                         {
-                             "id":  "dd-s9",
-                             "type":  "heading3",
-                             "text":  "Des atouts certains"
-                         },
-                         {
-                             "id":  "dd-s10",
-                             "type":  "paragraph",
-                             "text":  "Nos partenaires partent tous les samedis, garantissent une grande reactivite et une organisation methodique."
-                         },
-                         {
-                             "id":  "dd-s11",
-                             "type":  "heading3",
-                             "text":  "Un service sur mesure"
-                         },
-                         {
-                             "id":  "dd-s12",
-                             "type":  "paragraph",
-                             "text":  "Danemo adapte ses prestations a vos besoins specifiques : volumes, delais, conditions particulieres."
-                         },
-                         {
-                             "id":  "dd-s13",
-                             "type":  "media",
-                             "mediaUrl":  "/blogs/demenagement-diplomatique/section-1.png",
-                             "mediaType":  "image"
-                         },
-                         {
-                             "id":  "dd-s14",
-                             "type":  "heading2",
-                             "text":  "Un reseau fiable entre l\u0027Europe et le Cameroun"
-                         },
-                         {
-                             "id":  "dd-s15",
-                             "type":  "paragraph",
-                             "text":  "Avec des equipes basees en Belgique et au Cameroun, Danemo garantit une coordination fluide entre les deux continents avec un interlocuteur unique."
-                         },
-                         {
-                             "id":  "dd-s16",
-                             "type":  "highlight",
-                             "title":  "Pret a demenager l\u0027esprit tranquille ?",
-                             "text":  "Contactez-nous des maintenant pour recevoir un devis personnalise et organiser votre demenagement diplomatique en toute serenite."
-                         }
-                     ],
-        "backLinkLabel":  "← Retour au blog",
-        "backLinkHref":  "/blog"
-    },
-    {
-        "id":  "blog-envoi-colis-afrique",
-        "title":  "Comment bien preparer un envoi de colis vers l\u0027Afrique ? Les conseils de Danemo",
-        "date":  "24/07/2025",
-        "excerpt":  "Envoyer un colis vers l\u0027Afrique demande une bonne preparation. Danemo vous guide pour eviter les erreurs et securiser vos expeditions.",
-        "image":  "/blogs/envoi-colis-afrique/hero.png",
-        "mediaUrl":  "/blogs/envoi-colis-afrique/hero.png",
-        "mediaType":  "image",
-        "href":  "/blog/envoi-colis-afrique",
-        "type":  "blog",
-        "isActive":  true,
-        "sections":  [
-                         {
-                             "id":  "ec-s1",
-                             "type":  "heading2",
-                             "text":  "Pourquoi anticiper son envoi de colis ?"
-                         },
-                         {
-                             "id":  "ec-s2",
-                             "type":  "paragraph",
-                             "text":  "Beaucoup de gens s\u0027imaginent qu\u0027envoyer un colis a l\u0027etranger a la derniere minute est aussi simple que l\u0027envoyer en France. En realite :"
-                         },
-                         {
-                             "id":  "ec-s3",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Vous choisissez la meilleure date de depart",
-                                           "Vous evitez les risques de blocage administratif",
-                                           "Vous beneficiez des meilleurs tarifs de groupage"
-                                       ]
-                         },
-                         {
-                             "id":  "ec-s4",
-                             "type":  "heading2",
-                             "text":  "1. Choisissez un emballage solide et securise"
-                         },
-                         {
-                             "id":  "ec-s5",
-                             "type":  "paragraph",
-                             "text":  "Un bon emballage, c\u0027est la base. Utilisez :"
-                         },
-                         {
-                             "id":  "ec-s6",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Des cartons renforces",
-                                           "Du papier bulle ou des protections internes",
-                                           "Du papier adhesif de qualite"
-                                       ]
-                         },
-                         {
-                             "id":  "ec-s7",
-                             "type":  "paragraph",
-                             "text":  "Evitez les sacs en emballage fragile : ils ne resistent pas facilement pendant le transport."
-                         },
-                         {
-                             "id":  "ec-s8",
-                             "type":  "heading2",
-                             "text":  "2. Etiquetez correctement votre colis"
-                         },
-                         {
-                             "id":  "ec-s9",
-                             "type":  "paragraph",
-                             "text":  "Assurez l\u0027etiquetage :"
-                         },
-                         {
-                             "id":  "ec-s10",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Le nom complet du destinataire",
-                                           "Son adresse precise (quartier, rue, telephone)",
-                                           "Le pays de destination",
-                                           "Votre adresse de retour en cas de probleme"
-                                       ]
-                         },
-                         {
-                             "id":  "ec-s11",
-                             "type":  "heading2",
-                             "text":  "3. Preparez la liste de contenu"
-                         },
-                         {
-                             "id":  "ec-s12",
-                             "type":  "paragraph",
-                             "text":  "Danemo vous demande une liste detaillee des objets envoyes. Cette etape permet :"
-                         },
-                         {
-                             "id":  "ec-s13",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "De faciliter le passage en douane",
-                                           "D\u0027assurer vos objets interdits",
-                                           "D\u0027estimer votre colis a sa juste valeur"
-                                       ]
-                         },
-                         {
-                             "id":  "ec-s14",
-                             "type":  "heading2",
-                             "text":  "4. Verifiez les objets autorises a l\u0027envoi"
-                         },
-                         {
-                             "id":  "ec-s15",
-                             "type":  "paragraph",
-                             "text":  "Chaque pays a ses restrictions. Certains produits electroniques, medicaments ou cosmetiques peuvent etre interdits ou soumis a des conditions d\u0027entree."
-                         },
-                         {
-                             "id":  "ec-s16",
-                             "type":  "paragraph",
-                             "text":  "Assurez-vous d\u0027envoyer des produits autorises ou de grande valeur sans protection particuliere."
-                         },
-                         {
-                             "id":  "ec-s17",
-                             "type":  "heading2",
-                             "text":  "5. Choisissez un prestataire fiable"
-                         },
-                         {
-                             "id":  "ec-s18",
-                             "type":  "paragraph",
-                             "text":  "Avec Danemo :"
-                         },
-                         {
-                             "id":  "ec-s19",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Vos colis sont charges en toute securite",
-                                           "Vous beneficiez d\u0027un suivi personnalise",
-                                           "Vous etes informe des delais de depart et des delais estimes de livraison"
-                                       ]
-                         },
-                         {
-                             "id":  "ec-s20",
-                             "type":  "highlight",
-                             "title":  "Pret a envoyer votre colis ?",
-                             "text":  "Contactez Danemo des maintenant pour connaitre les prochaines dates de depart, recevoir un devis, et preparer votre colis en toute serenite."
-                         }
-                     ],
-        "backLinkLabel":  "← Retour au blog",
-        "backLinkHref":  "/blog"
-    },
-    {
-        "id":  "blog-importer-voiture-cameroun-2026",
-        "title":  "Importer une voiture au Cameroun en 2026 : Âge limite, Taxes et Documents (Guide Complet)",
-        "date":  "14/02/2026",
-        "excerpt":  "Vous avez repéré une belle occasion en Belgique ou en Allemagne et vous rêvez de la rouler à Yaoundé ou Douala ? Attention : importer un véhicule au Cameroun ne s\u0027improvise pas. Voici les règles essentielles pour éviter les pièges.",
-        "image":  "/blogs/importer-voiture-cameroun-2026/image1.webp",
-        "mediaUrl":  "/blogs/importer-voiture-cameroun-2026/image1.webp",
-        "mediaType":  "image",
-        "href":  "/blog/importer-voiture-cameroun-2026",
-        "type":  "blog",
-        "isActive":  true,
-        "sections":  [
-                         {
-                             "id":  "ivc-s1",
-                             "type":  "paragraph",
-                            "text":  "Vous avez repéré une belle occasion en Belgique ou en Allemagne et vous rêvez de la rouler à Yaoundé ou Douala ? Attention ! Importer un véhicule au Cameroun ne s\u0027improvise pas. En 2026, la réglementation douanière reste stricte, et une simple erreur sur l\u0027âge du véhicule ou un document manquant peut transformer votre projet en cauchemar financier (voiture bloquée au port, pénalités...)."
-                         },
-                         {
-                             "id":  "ivc-s2",
-                             "type":  "paragraph",
-                            "text":  "Chez Danemo, nous gérons le transport et le dédouanement de centaines de véhicules chaque année. Voici tout ce que vous devez savoir pour éviter les pièges."
-                         },
-                         {
-                             "id":  "ivc-s2-media",
-                             "type":  "media",
-                            "mediaUrl":  "/blogs/importer-voiture-cameroun-2026/image2-importation.webp",
-                             "mediaType":  "image"
-                         },
-                         {
-                             "id":  "ivc-s3",
-                             "type":  "heading2",
-                            "text":  "1. La Règle d\u0027Or : l\u0027âge du véhicule"
-                         },
-                         {
-                             "id":  "ivc-s4",
-                             "type":  "paragraph",
-                            "text":  "C\u0027est la première question à vous poser : quel âge a la voiture ? Pour bénéficier du tarif douanier standard, votre véhicule de tourisme doit avoir moins de 10 ans (date de première mise en circulation)."
-                         },
-                         {
-                             "id":  "ivc-s5",
-                             "type":  "bullet_list",
-                             "items":  [
-                                          "Véhicules de 0 à 10 ans : dédouanement standard.",
-                                          "Véhicules de plus de 10 ans : attention, ils sont soumis à des pénalités très lourdes, voire interdits selon la catégorie.",
-                                          "Conseil Danemo : avant d\u0027acheter, envoyez-nous la carte grise (copie) pour une vérification gratuite de l\u0027éligibilité."
-                                       ]
-                         },
-                         {
-                             "id":  "ivc-s6",
-                             "type":  "heading2",
-                             "text":  "2. Les documents obligatoires"
-                         },
-                         {
-                             "id":  "ivc-s7",
-                             "type":  "paragraph",
-                            "text":  "Pour que Danemo puisse effectuer le dédouanement sans délai à Douala, vous devez nous fournir le dossier parfait :"
-                         },
-                         {
-                             "id":  "ivc-s8",
-                             "type":  "numbered_list",
-                             "items":  [
-                                           "La carte grise originale (certificat d\u0027immatriculation).",
-                                          "La facture d\u0027achat (ou certificat de vente) avec la valeur du véhicule.",
-                                          "Le certificat de non-gage (pour prouver que la voiture n\u0027est pas volée ou gagée en Europe).",
-                                          "Le BESC (bordereau électronique de suivi des cargaisons), document de traçabilité obligatoire pour le Cameroun."
-                                       ]
-                         },
-                         {
-                             "id":  "ivc-s9",
-                             "type":  "heading2",
-                             "text":  "3. Comprendre le calcul de la douane (valeur Argus)"
-                         },
-                         {
-                             "id":  "ivc-s10",
-                             "type":  "paragraph",
-                            "text":  "C\u0027est ici que 90% des gens se trompent. Idée reçue : \"J\u0027ai acheté la voiture 2.000 EUR, donc la douane sera calculée sur 2.000 EUR.\""
-                         },
-                         {
-                             "id":  "ivc-s11",
-                             "type":  "paragraph",
-                            "text":  "Réalité : NON. La douane camerounaise (SGS) se base sur la valeur Argus (la cote officielle du véhicule sur le marché), et non sur le prix que vous avez payé à votre vendeur en Belgique."
-                         },
-                         {
-                             "id":  "ivc-s12",
-                             "type":  "paragraph",
-                            "text":  "Si vous faites une trop bonne affaire en Europe, la douane ne la prendra pas en compte. Elle appliquera le tarif officiel. C\u0027est pourquoi il est crucial de demander une cotation prévisionnelle à Danemo avant d\u0027expédier."
-                         },
-                         {
-                             "id":  "ivc-s12-media",
-                             "type":  "media",
-                             "mediaUrl":  "/blogs/importer-voiture-cameroun-2026/image3.webp",
-                             "mediaType":  "image"
-                         },
-                         {
-                             "id":  "ivc-s13",
-                             "type":  "highlight",
-                             "title":  "Besoin d\u0027accompagnement ?",
-                            "text":  "Ne prenez pas de risques avec votre investissement. Danemo s\u0027occupe de tout : du chargement à Bruxelles jusqu\u0027à la sortie du port à Douala."
-                         },
-                         {
-                             "id":  "ivc-s14",
-                             "type":  "paragraph",
-                            "text":  "Entrepôt : Avenue du Port 108-110, 1000 Bruxelles (quai numéro 20, à côté d\u0027Euro Cavi)"
-                         },
-                         {
-                             "id":  "ivc-s15",
-                             "type":  "paragraph",
-                             "text":  "WhatsApp : +32 488 64 51 83"
-                         },
-                         {
-                             "id":  "ivc-s16",
-                             "type":  "paragraph",
-                            "text":  "Rapprocher l\u0027Afrique de la Diaspora, chaque semaine. Réservez votre place dès maintenant !"
-                         }
-                     ],
-        "backLinkLabel":  "← Retour au blog",
-        "backLinkHref":  "/blog"
-    },
-    {
-        "id":  "blog-colis-europe-afrique-quelle-option",
-        "title":  "📦 Colis Europe → Afrique : avion ou bateau, quelle est la meilleure option ?",
-        "date":  "04/03/2026",
-        "excerpt":  "Envoyer un colis de l'Europe vers l'Afrique soulève toujours la même question : faut-il choisir le transport aérien ou le transport maritime ? Voici un guide clair pour choisir selon le délai, le coût et le volume.",
-        "image":  "/blogs/colis-europe-afrique-quelle-option/image1.webp",
-        "mediaUrl":  "/blogs/colis-europe-afrique-quelle-option/image1.webp",
-        "mediaType":  "image",
-        "href":  "/blog/colis-europe-afrique-quelle-option",
-        "type":  "blog",
-        "isActive":  true,
-        "sections":  [
-                         {
-                             "id":  "cea-s1",
-                             "type":  "paragraph",
-                             "text":  "Envoyer un colis de l'Europe vers l'Afrique soulève toujours la même question :\n✈️ Faut-il choisir le transport aérien ?\n🚢 Ou le transport maritime est-il plus avantageux ?"
-                         },
-                         {
-                             "id":  "cea-s2",
-                             "type":  "paragraph",
-                             "text":  "Le choix dépend principalement de trois facteurs essentiels : le délai, le coût et le volume du colis."
-                         },
-                         {
-                             "id":  "cea-s3",
-                             "type":  "paragraph",
-                             "text":  "Dans cet article, nous vous expliquons clairement les différences afin de vous aider à choisir la meilleure option pour votre expédition."
-                         },
-                         {
-                             "id":  "cea-s4",
-                             "type":  "heading2",
-                             "text":  "✈️ Le transport aérien : rapidité et urgence"
-                         },
-                         {
-                             "id":  "cea-s5",
-                             "type":  "paragraph",
-                             "text":  "Le transport par avion est la solution idéale lorsque :"
-                         },
-                         {
-                             "id":  "cea-s6",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Le colis est urgent",
-                                           "Il s'agit de documents importants",
-                                           "Le volume est petit ou moyen",
-                                           "Le destinataire a besoin d'une livraison rapide"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s7",
-                             "type":  "heading3",
-                             "text":  "✅ Avantages du transport aérien"
-                         },
-                         {
-                             "id":  "cea-s8",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Délais rapides (quelques jours)",
-                                           "Moins d'exposition aux aléas portuaires",
-                                           "Idéal pour colis de valeur ou sensibles et les petits objets de valeur (documents, téléphones, ordinateurs)",
-                                           "Ultra rapide"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s9",
-                             "type":  "heading3",
-                             "text":  "❌ Inconvénients"
-                         },
-                         {
-                             "id":  "cea-s10",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Coût plus élevé",
-                                           "Limite sur les volumes importants",
-                                           "Tarification basée sur le poids volumétrique"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s11",
-                             "type":  "paragraph",
-                             "text":  "👉 Le transport aérien est recommandé pour les envois urgents vers des villes comme Douala ou Yaoundé."
-                         },
-                         {
-                             "id":  "cea-s12",
-                             "type":  "heading2",
-                             "text":  "🚢 Le transport maritime : économique et volumineux"
-                         },
-                         {
-                             "id":  "cea-s13",
-                             "type":  "paragraph",
-                             "text":  "Le transport maritime est la meilleure solution lorsque :"
-                         },
-                         {
-                             "id":  "cea-s14",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Le colis est volumineux",
-                                           "Il s'agit d'un déménagement",
-                                           "Vous envoyez des marchandises commerciales",
-                                           "Le délai n'est pas urgent"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s15",
-                             "type":  "heading3",
-                             "text":  "✅ Avantages du transport maritime"
-                         },
-                         {
-                             "id":  "cea-s16",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Coût plus économique",
-                                           "Idéal pour gros volumes",
-                                           "Solution adaptée aux envois réguliers"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s17",
-                             "type":  "heading3",
-                             "text":  "❌ Inconvénients"
-                         },
-                         {
-                             "id":  "cea-s18",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Délais plus longs (plusieurs semaines)",
-                                           "Dépendance aux calendriers portuaires",
-                                           "Formalités douanières plus longues"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s19",
-                             "type":  "paragraph",
-                             "text":  "👉 Le maritime est particulièrement avantageux pour les expéditions importantes vers l'Afrique centrale."
-                         },
-                         {
-                             "id":  "cea-s20",
-                             "type":  "media",
-                             "mediaUrl":  "/blogs/colis-europe-afrique-quelle-option/image2.webp",
-                             "mediaType":  "image"
-                         },
-                         {
-                             "id":  "cea-s21",
-                             "type":  "heading2",
-                             "text":  "📊 Avion vs Bateau : comparatif rapide"
-                         },
-                         {
-                             "id":  "cea-s22",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Délai : avion rapide / bateau plus long",
-                                           "Coût : avion plus élevé / bateau plus économique",
-                                           "Volume : avion petit à moyen / bateau grand à très grand",
-                                           "Urgence : avion idéal / bateau non recommandé",
-                                           "Déménagement : avion peu adapté / bateau idéal"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s23",
-                             "type":  "heading2",
-                             "text":  "🧾 Quel est le meilleur choix pour vous ?"
-                         },
-                         {
-                             "id":  "cea-s24",
-                             "type":  "paragraph",
-                             "text":  "Il n'y a pas de solution universelle."
-                         },
-                         {
-                             "id":  "cea-s25",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "Besoin rapide → choisissez l'avion",
-                                           "Volume important et budget maîtrisé → choisissez le bateau"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s26",
-                             "type":  "paragraph",
-                             "text":  "L'idéal reste de demander un devis personnalisé, car chaque envoi est différent."
-                         },
-                         {
-                             "id":  "cea-s27",
-                             "type":  "heading2",
-                             "text":  "📌 Conclusion"
-                         },
-                         {
-                             "id":  "cea-s28",
-                             "type":  "paragraph",
-                             "text":  "Le choix entre avion et bateau dépend de votre priorité : rapidité ou économie."
-                         },
-                         {
-                             "id":  "cea-s29",
-                             "type":  "bullet_list",
-                             "items":  [
-                                           "du poids",
-                                           "du volume",
-                                           "de la nature des marchandises",
-                                           "de la destination finale en Afrique"
-                                       ]
-                         },
-                         {
-                             "id":  "cea-s30",
-                             "type":  "paragraph",
-                             "text":  "Dites-nous en commentaire : vous privilégiez la rapidité ou le budget ?"
-                         },
-                         {
-                             "id":  "cea-s31",
-                             "type":  "paragraph",
-                             "text":  "Besoin d'un devis personnalisé ? Écrivez-nous en message privé.\n📞 Devis gratuit WhatsApp : +32 488 64 51 83"
-                         }
-                     ],
-        "backLinkLabel":  "← Retour au blog",
-        "backLinkHref":  "/blog"
-    }
+  {
+    "id": "blog-entreprises-africaines",
+    "title": "Entreprises africaines : facilitez vos achats en Europe grâce à Danemo, votre partenaire logistique de confiance",
+    "date": "24/07/2025",
+    "excerpt": "Vous êtes une entreprise basée au Cameroun ou ailleurs en Afrique, et vous commandez régulièrement des marchandises en Europe ? La gestion de vos expéditions peut vite devenir un casse-tête : fournisseurs multiples, colis dispersés, frais élevés, suivi compliqué... Heureusement, Danemo SRL est là pour vous simplifier la vie.",
+    "mediaUrl": "/blogs/entreprises-africaines/hero.png",
+    "mediaType": "image",
+    "image": "/blogs/entreprises-africaines/hero.png",
+    "href": "/blog/entreprises-africaines",
+    "type": "blog",
+    "isActive": true,
+    "sections": [
+      {
+        "id": "ea-s1",
+        "type": "heading2",
+        "text": "Danemo, l'intermediaire logistique entre vos fournisseurs europeens et votre entreprise"
+      },
+      {
+        "id": "ea-s2",
+        "type": "paragraph",
+        "text": "Danemo vous propose un service sur mesure : nous centralisons vos commandes aupres de tous vos fournisseurs europeens et nous nous occupons de tout le reste. Fini les expéditions vers votre entreprise en Afrique."
+      },
+      {
+        "id": "ea-s3",
+        "type": "heading2",
+        "text": "Comment ca fonctionne ?"
+      },
+      {
+        "id": "ea-s4",
+        "type": "numbered_list",
+        "items": [
+          "Vous commandez vos produits aupres de fournisseurs en Europe",
+          "Vous faites livrer directement les colis a notre entrepot en Belgique",
+          "Nous réceptionnons, verifions et stockons vos marchandises",
+          "Nous regroupons tous vos colis en un seul envoi groupe vers l'Afrique",
+          "Nous expedions vers votre entreprise au Cameroun ou ailleurs",
+          "Vous recevez vos marchandises avec un seul interlocuteur"
+        ]
+      },
+      {
+        "id": "ea-s5",
+        "type": "heading2",
+        "text": "Quels types d'entreprises peuvent faire appel a Danemo ?"
+      },
+      {
+        "id": "ea-s6",
+        "type": "bullet_list",
+        "items": [
+          "Boutiques de gros qui s'approvisionnent en Europe",
+          "Revendeurs de pieces detachees, materiel informatique ou electromenager",
+          "Entreprises qui importent du materiel professionnel",
+          "Pharmacies, commerces et grossistes"
+        ]
+      },
+      {
+        "id": "ea-s7",
+        "type": "heading2",
+        "text": "Vos avantages en travaillant avec Danemo"
+      },
+      {
+        "id": "ea-s8",
+        "type": "heading3",
+        "text": "Optimisation de leur commandes"
+      },
+      {
+        "id": "ea-s9",
+        "type": "paragraph",
+        "text": "Nous regroupons tous vos achats en un seul envoi logistique pour reduire les frais de transport."
+      },
+      {
+        "id": "ea-s10",
+        "type": "heading3",
+        "text": "Gain de temps"
+      },
+      {
+        "id": "ea-s11",
+        "type": "paragraph",
+        "text": "Vous ne perdez plus de temps a suivre chaque fournisseur. Danemo gere la logistique a votre place."
+      },
+      {
+        "id": "ea-s12",
+        "type": "heading3",
+        "text": "Reduction des couts"
+      },
+      {
+        "id": "ea-s13",
+        "type": "paragraph",
+        "text": "Avec notre systeme de groupage et nos tarifs negocies, vous beneficiez de conditions preferentielles."
+      },
+      {
+        "id": "ea-s14",
+        "type": "heading2",
+        "text": "Danemo, un partenaire logistique au service du commerce Afrique-Europe"
+      },
+      {
+        "id": "ea-s15",
+        "type": "highlight",
+        "text": "Contactez-nous des aujourd'hui pour mettre en place un service sur mesure de reception et d'expedition adapte a votre entreprise."
+      }
+    ],
+    "backLinkLabel": "← Retour au blog",
+    "backLinkHref": "/blog",
+    "updatedAt": "2026-05-04T10:27:14.337Z",
+    "updatedByName": "Operator Local",
+    "updatedByEmail": "local@danemo.be"
+  },
+  {
+    "id": "blog-envoi-conteneur-erreurs",
+    "title": "Envoi de conteneur vers l'Afrique : 7 erreurs fréquentes à éviter absolument",
+    "date": "24/07/2025",
+    "excerpt": "Envoyer un conteneur vers l'Afrique représente un projet important, que ce soit pour un déménagement personnel, un transfert professionnel ou un approvisionnement commercial. Mais attention : certaines erreurs courantes peuvent coûter cher, en temps comme en argent. Danemo, spécialiste du transport entre l'Europe et l'Afrique, vous partage les...",
+    "mediaUrl": "/blogs/envoi-conteneur-erreurs/hero.png",
+    "mediaType": "image",
+    "image": "/blogs/envoi-conteneur-erreurs/hero.png",
+    "href": "/blog/envoi-conteneur-erreurs",
+    "type": "blog",
+    "isActive": true,
+    "sections": [
+      {
+        "id": "ce-s1",
+        "type": "heading2",
+        "text": "1. Ne pas anticiper les delais"
+      },
+      {
+        "id": "ce-s2",
+        "type": "paragraph",
+        "text": "Beaucoup pensent qu'un conteneur peut etre charge et expedie du jour au lendemain. En realite, une expedition demande du temps : preparation, formalites douanieres, reservation, logistique."
+      },
+      {
+        "id": "ce-s3",
+        "type": "bullet_list",
+        "items": [
+          "Preparation des biens",
+          "Formalites douanieres",
+          "Reservation du conteneur",
+          "Logistique de chargement"
+        ]
+      },
+      {
+        "id": "ce-s4",
+        "type": "paragraph",
+        "text": "Conseil Danemo : contactez-nous au moins 10 jours a l'avance pour une meilleure planification."
+      },
+      {
+        "id": "ce-s5",
+        "type": "heading2",
+        "text": "2. Mal estimer le volume a expedier"
+      },
+      {
+        "id": "ce-s6",
+        "type": "paragraph",
+        "text": "Une erreur frequente est de choisir un conteneur trop petit ou trop grand."
+      },
+      {
+        "id": "ce-s7",
+        "type": "bullet_list",
+        "items": [
+          "Des frais inutiles",
+          "Des difficultes de chargement",
+          "Un gaspillage d'espace ou d'argent"
+        ]
+      },
+      {
+        "id": "ce-s8",
+        "type": "paragraph",
+        "text": "Astuce : faites un inventaire precis ou demandez notre aide pour l'estimation."
+      },
+      {
+        "id": "ce-s9",
+        "type": "heading2",
+        "text": "3. Negliger l'emballage et la protection"
+      },
+      {
+        "id": "ce-s10",
+        "type": "paragraph",
+        "text": "Un conteneur subit des secousses, des variations de temperature et parfois de l'humidite."
+      },
+      {
+        "id": "ce-s11",
+        "type": "bullet_list",
+        "items": [
+          "Emballage",
+          "Deshumidification",
+          "Cristallisation"
+        ]
+      },
+      {
+        "id": "ce-s12",
+        "type": "paragraph",
+        "text": "Danemo vous propose des solutions d'emballage adaptees : caisses, cartons, palettes etanches."
+      },
+      {
+        "id": "ce-s13",
+        "type": "heading2",
+        "text": "4. Oublier certains documents administratifs"
+      },
+      {
+        "id": "ce-s14",
+        "type": "paragraph",
+        "text": "Un conteneur sans les bons papiers peut etre bloque a la douane."
+      },
+      {
+        "id": "ce-s15",
+        "type": "bullet_list",
+        "items": [
+          "Facture ou liste de colisage",
+          "Copie de carte d'identite",
+          "Attestation de demenagement"
+        ]
+      },
+      {
+        "id": "ce-s16",
+        "type": "media",
+        "mediaUrl": "/blogs/envoi-conteneur-erreurs/section-1.png",
+        "mediaType": "image"
+      },
+      {
+        "id": "ce-s17",
+        "type": "heading2",
+        "text": "5. Mettre des objets interdits dans le conteneur"
+      },
+      {
+        "id": "ce-s18",
+        "type": "bullet_list",
+        "items": [
+          "Armes",
+          "Produits chimiques",
+          "Medicaments non declares",
+          "Alcool en grande quantite"
+        ]
+      },
+      {
+        "id": "ce-s19",
+        "type": "paragraph",
+        "text": "Resultat : votre conteneur peut etre saisi ou retarde."
+      },
+      {
+        "id": "ce-s20",
+        "type": "heading2",
+        "text": "6. Mal charger le conteneur"
+      },
+      {
+        "id": "ce-s21",
+        "type": "bullet_list",
+        "items": [
+          "Endommager les biens pendant le transport",
+          "Creer des desequilibres",
+          "Rendre le dechargement complique a l'arrivee"
+        ]
+      },
+      {
+        "id": "ce-s22",
+        "type": "heading2",
+        "text": "7. Ne pas assurer son envoi"
+      },
+      {
+        "id": "ce-s23",
+        "type": "paragraph",
+        "text": "Danemo propose une assurance adaptee a votre envoi, a partir de 3% du prix."
+      },
+      {
+        "id": "section-copy-1777888664305-e9832341b9912",
+        "type": "highlight",
+        "title": "En résumé : pour un envoi de conteneur reussi, faites confiance a des pros",
+        "text": "Danemo SRL vous accompagne de A a Z : estimation, documents, emballage securise, chargement et suivi, livraison."
+      }
+    ],
+    "backLinkLabel": "← Retour au blog",
+    "backLinkHref": "/blog",
+    "updatedAt": "2026-05-04T09:58:43.401Z",
+    "updatedByName": "Operator Local",
+    "updatedByEmail": "local@danemo.be"
+  },
+  {
+    "id": "blog-demenagement-diplomatique",
+    "title": "Comment organiser un demenagement diplomatique en toute serenite avec Danemo ?",
+    "date": "24/07/2025",
+    "excerpt": "Organiser un demenagement diplomatique peut vite devenir un casse-tete logistique, surtout lorsque chaque detail compte. Danemo vous accompagne avec une prise en charge complete.",
+    "mediaUrl": "/blogs/demenagement-diplomatique/hero.png",
+    "mediaType": "image",
+    "image": "/blogs/demenagement-diplomatique/hero.png",
+    "href": "/blog/demenagement-diplomatique",
+    "type": "blog",
+    "isActive": true,
+    "sections": [
+      {
+        "id": "dd-s1",
+        "type": "heading2",
+        "text": "Pourquoi un demenagement diplomatique necessite une expertise particuliere ?"
+      },
+      {
+        "id": "dd-s2",
+        "type": "paragraph",
+        "text": "Contrairement à un demenagement classique, un demenagement diplomatique implique :"
+      },
+      {
+        "id": "dd-s3",
+        "type": "bullet_list",
+        "items": [
+          "Des objets de valeur et effets personnels sensibles",
+          "Des formalites administratives specifiques",
+          "Des delais serres souvent imposes par les mutations",
+          "Un niveau de service et de discretion eleve"
+        ]
+      },
+      {
+        "id": "dd-s4",
+        "type": "paragraph",
+        "text": "Il est recommande de faire appel a une entreprise specialisee, capable d'offrir un service sur mesure, discret et fiable."
+      },
+      {
+        "id": "dd-s5",
+        "type": "heading2",
+        "text": "Danemo, votre allie logistique pour un depart sans stress"
+      },
+      {
+        "id": "dd-s6",
+        "type": "paragraph",
+        "text": "Danemo SRL propose une prise en charge complete de votre demenagement diplomatique de l'Europe vers l'Afrique."
+      },
+      {
+        "id": "dd-s7",
+        "type": "heading3",
+        "text": "Un accompagnement de bout en bout"
+      },
+      {
+        "id": "dd-s8",
+        "type": "bullet_list",
+        "items": [
+          "Emballage securise des biens",
+          "Chargement et transport en conteneur",
+          "Dedouanement",
+          "Livraison a domicile ou dans vos nouveaux locaux"
+        ]
+      },
+      {
+        "id": "dd-s9",
+        "type": "heading3",
+        "text": "Des atouts certains"
+      },
+      {
+        "id": "dd-s10",
+        "type": "paragraph",
+        "text": "Nos partenaires partent tous les samedis, garantissent une grande reactivite et une organisation methodique."
+      },
+      {
+        "id": "dd-s11",
+        "type": "heading3",
+        "text": "Un service sur mesure"
+      },
+      {
+        "id": "dd-s12",
+        "type": "paragraph",
+        "text": "Danemo adapte ses prestations a vos besoins specifiques : volumes, delais, conditions particulieres."
+      },
+      {
+        "id": "dd-s13",
+        "type": "media",
+        "mediaUrl": "/blogs/demenagement-diplomatique/section-1.png",
+        "mediaType": "image"
+      },
+      {
+        "id": "dd-s14",
+        "type": "heading2",
+        "text": "Un reseau fiable entre l'Europe et le Cameroun"
+      },
+      {
+        "id": "dd-s15",
+        "type": "paragraph",
+        "text": "Avec des equipes basees en Belgique et au Cameroun, Danemo garantit une coordination fluide entre les deux continents avec un interlocuteur unique."
+      },
+      {
+        "id": "dd-s16",
+        "type": "highlight",
+        "title": "Pret a demenager l'esprit tranquille ?",
+        "text": "Contactez-nous des maintenant pour recevoir un devis personnalise et organiser votre demenagement diplomatique en toute serenite."
+      }
+    ],
+    "backLinkLabel": "← Retour au blog",
+    "backLinkHref": "/blog",
+    "updatedAt": "2026-05-04T10:27:35.759Z",
+    "updatedByName": "Operator Local",
+    "updatedByEmail": "local@danemo.be"
+  },
+  {
+    "id": "blog-envoi-colis-afrique",
+    "title": "Comment bien preparer un envoi de colis vers l'Afrique ? Les conseils de Danemo",
+    "date": "24/07/2025",
+    "excerpt": "Envoyer un colis vers l'Afrique demande une bonne préparation. Danemo vous guide pour eviter les erreurs et securiser vos expeditions.",
+    "mediaUrl": "/blogs/envoi-colis-afrique/hero.png",
+    "mediaType": "image",
+    "image": "/blogs/envoi-colis-afrique/hero.png",
+    "href": "/blog/envoi-colis-afrique",
+    "type": "blog",
+    "isActive": true,
+    "sections": [
+      {
+        "id": "ec-s1",
+        "type": "heading2",
+        "text": "Pourquoi anticiper son envoi de colis ?"
+      },
+      {
+        "id": "ec-s2",
+        "type": "paragraph",
+        "text": "Beaucoup de gens s'imaginent qu'envoyer un colis a l'etranger a la derniere minute est aussi simple que l'envoyer en France. En realite :"
+      },
+      {
+        "id": "ec-s3",
+        "type": "bullet_list",
+        "items": [
+          "Vous choisissez la meilleure date de depart",
+          "Vous evitez les risques de blocage administratif",
+          "Vous beneficiez des meilleurs tarifs de groupage"
+        ]
+      },
+      {
+        "id": "ec-s4",
+        "type": "heading2",
+        "text": "1. Choisissez un emballage solide et securise"
+      },
+      {
+        "id": "ec-s5",
+        "type": "paragraph",
+        "text": "Un bon emballage, c'est la base. Utilisez :"
+      },
+      {
+        "id": "ec-s6",
+        "type": "bullet_list",
+        "items": [
+          "Des cartons renforces",
+          "Du papier bulle ou des protections internes",
+          "Du papier adhesif de qualite"
+        ]
+      },
+      {
+        "id": "ec-s7",
+        "type": "paragraph",
+        "text": "Evitez les sacs en emballage fragile : ils ne resistent pas facilement pendant le transport."
+      },
+      {
+        "id": "ec-s8",
+        "type": "heading2",
+        "text": "2. Etiquetez correctement votre colis"
+      },
+      {
+        "id": "ec-s9",
+        "type": "paragraph",
+        "text": "Assurez l'etiquetage :"
+      },
+      {
+        "id": "ec-s10",
+        "type": "bullet_list",
+        "items": [
+          "Le nom complet du destinataire",
+          "Son adresse precise (quartier, rue, telephone)",
+          "Le pays de destination",
+          "Votre adresse de retour en cas de probleme"
+        ]
+      },
+      {
+        "id": "ec-s11",
+        "type": "heading2",
+        "text": "3. Preparez la liste de contenu"
+      },
+      {
+        "id": "ec-s12",
+        "type": "paragraph",
+        "text": "Danemo vous demande une liste detaillee des objets envoyes. Cette etape permet :"
+      },
+      {
+        "id": "ec-s13",
+        "type": "bullet_list",
+        "items": [
+          "De faciliter le passage en douane",
+          "D'assurer vos objets interdits",
+          "D'estimer votre colis a sa juste valeur"
+        ]
+      },
+      {
+        "id": "ec-s14",
+        "type": "heading2",
+        "text": "4. Verifiez les objets autorises a l'envoi"
+      },
+      {
+        "id": "ec-s15",
+        "type": "paragraph",
+        "text": "Chaque pays a ses restrictions. Certains produits electroniques, medicaments ou cosmetiques peuvent etre interdits ou soumis a des conditions d'entree."
+      },
+      {
+        "id": "ec-s16",
+        "type": "paragraph",
+        "text": "Assurez-vous d'envoyer des produits autorises ou de grande valeur sans protection particuliere."
+      },
+      {
+        "id": "ec-s17",
+        "type": "heading2",
+        "text": "5. Choisissez un prestataire fiable"
+      },
+      {
+        "id": "ec-s18",
+        "type": "paragraph",
+        "text": "Avec Danemo :"
+      },
+      {
+        "id": "ec-s19",
+        "type": "bullet_list",
+        "items": [
+          "Vos colis sont charges en toute securite",
+          "Vous beneficiez d'un suivi personnalise",
+          "Vous etes informe des delais de depart et des delais estimes de livraison"
+        ]
+      },
+      {
+        "id": "ec-s20",
+        "type": "highlight",
+        "title": "Pret a envoyer votre colis ?",
+        "text": "Contactez Danemo des maintenant pour connaitre les prochaines dates de depart, recevoir un devis, et preparer votre colis en toute serenite."
+      }
+    ],
+    "backLinkLabel": "← Retour au blog",
+    "backLinkHref": "/blog",
+    "updatedAt": "2026-05-04T10:17:22.758Z",
+    "updatedByName": "Operator Local",
+    "updatedByEmail": "local@danemo.be"
+  },
+  {
+    "id": "blog-importer-voiture-cameroun-2026",
+    "title": "Importer une voiture au Cameroun en 2026 : Âge limite, Taxes et Documents (Guide Complet)",
+    "date": "14/02/2026",
+    "excerpt": "Vous avez repéré une belle occasion en Belgique ou en Allemagne et vous rêvez de la rouler à Yaoundé ou Douala ? Attention : importer un véhicule au Cameroun ne s'improvise pas. Voici les règles essentielles pour éviter les pièges.",
+    "mediaUrl": "/blogs/importer-voiture-cameroun-2026/image1.webp",
+    "mediaType": "image",
+    "image": "/blogs/importer-voiture-cameroun-2026/image1.webp",
+    "href": "/blog/importer-voiture-cameroun-2026",
+    "type": "blog",
+    "isActive": true,
+    "sections": [
+      {
+        "id": "ivc-s1",
+        "type": "paragraph",
+        "text": "Vous avez repéré une belle occasion en Belgique ou en Allemagne et vous rêvez de la rouler à Yaoundé ou Douala ? Attention ! Importer un véhicule au Cameroun ne s'improvise pas. En 2026, la réglementation douanière reste stricte, et une simple erreur sur l'âge du véhicule ou un document manquant peut transformer votre projet en cauchemar financier (voiture bloquée au port, pénalités...)."
+      },
+      {
+        "id": "ivc-s2",
+        "type": "paragraph",
+        "text": "Chez Danemo, nous gérons le transport et le dédouanement de centaines de véhicules chaque année. Voici tout ce que vous devez savoir pour éviter les pièges."
+      },
+      {
+        "id": "ivc-s2-media",
+        "type": "media",
+        "mediaUrl": "/blogs/importer-voiture-cameroun-2026/image2-importation.webp",
+        "mediaType": "image"
+      },
+      {
+        "id": "ivc-s3",
+        "type": "heading2",
+        "text": "1. La Règle d'Or : l'âge du véhicule"
+      },
+      {
+        "id": "ivc-s4",
+        "type": "paragraph",
+        "text": "C'est la première question à vous poser : quel âge a la voiture ? Pour bénéficier du tarif douanier standard, votre véhicule de tourisme doit avoir moins de 10 ans (date de première mise en circulation)."
+      },
+      {
+        "id": "ivc-s5",
+        "type": "bullet_list",
+        "items": [
+          "Véhicules de 0 à 10 ans : dédouanement standard.",
+          "Véhicules de plus de 10 ans : attention, ils sont soumis à des pénalités très lourdes, voire interdits selon la catégorie.",
+          "Conseil Danemo : avant d'acheter, envoyez-nous la carte grise (copie) pour une vérification gratuite de l'éligibilité."
+        ]
+      },
+      {
+        "id": "ivc-s6",
+        "type": "heading2",
+        "text": "2. Les documents obligatoires"
+      },
+      {
+        "id": "ivc-s7",
+        "type": "paragraph",
+        "text": "Pour que Danemo puisse effectuer le dédouanement sans délai à Douala, vous devez nous fournir le dossier parfait :"
+      },
+      {
+        "id": "ivc-s8",
+        "type": "numbered_list",
+        "items": [
+          "La carte grise originale (certificat d'immatriculation).",
+          "La facture d'achat (ou certificat de vente) avec la valeur du véhicule.",
+          "Le certificat de non-gage (pour prouver que la voiture n'est pas volée ou gagée en Europe).",
+          "Le BESC (bordereau électronique de suivi des cargaisons), document de traçabilité obligatoire pour le Cameroun."
+        ]
+      },
+      {
+        "id": "ivc-s9",
+        "type": "heading2",
+        "text": "3. Comprendre le calcul de la douane (valeur Argus)"
+      },
+      {
+        "id": "ivc-s10",
+        "type": "paragraph",
+        "text": "C'est ici que 90% des gens se trompent. Idée reçue : \"J'ai acheté la voiture 2.000 EUR, donc la douane sera calculée sur 2.000 EUR.\""
+      },
+      {
+        "id": "ivc-s11",
+        "type": "paragraph",
+        "text": "Réalité : NON. La douane camerounaise (SGS) se base sur la valeur Argus (la cote officielle du véhicule sur le marché), et non sur le prix que vous avez payé à votre vendeur en Belgique."
+      },
+      {
+        "id": "ivc-s12",
+        "type": "paragraph",
+        "text": "Si vous faites une trop bonne affaire en Europe, la douane ne la prendra pas en compte. Elle appliquera le tarif officiel. C'est pourquoi il est crucial de demander une cotation prévisionnelle à Danemo avant d'expédier."
+      },
+      {
+        "id": "ivc-s12-media",
+        "type": "media",
+        "mediaUrl": "/blogs/importer-voiture-cameroun-2026/image3.webp",
+        "mediaType": "image"
+      },
+      {
+        "id": "ivc-s13",
+        "type": "highlight",
+        "title": "Besoin d'accompagnement ?",
+        "text": "Ne prenez pas de risques avec votre investissement. Danemo s'occupe de tout : du chargement à Bruxelles jusqu'à la sortie du port à Douala."
+      },
+      {
+        "id": "ivc-s14",
+        "type": "paragraph",
+        "text": "Entrepôt : Avenue du Port 108-110, 1000 Bruxelles (quai numéro 20, à côté d'Euro Cavi)"
+      },
+      {
+        "id": "ivc-s15",
+        "type": "paragraph",
+        "text": "WhatsApp : +32 488 64 51 83"
+      },
+      {
+        "id": "ivc-s16",
+        "type": "paragraph",
+        "text": "Rapprocher l'Afrique de la Diaspora, chaque semaine. Réservez votre place dès maintenant !"
+      }
+    ],
+    "backLinkLabel": "← Retour au blog",
+    "backLinkHref": "/blog",
+    "updatedAt": "2026-05-04T08:48:04.676Z",
+    "updatedByName": "Operator Local",
+    "updatedByEmail": "local@danemo.be"
+  },
+  {
+    "id": "blog-colis-europe-afrique-quelle-option",
+    "title": "📦 Colis Europe → Afrique : avion ou bateau, quelle est la meilleure option ?",
+    "date": "04/03/2026",
+    "excerpt": "Envoyer un colis de l'Europe vers l'Afrique soulève toujours la même question : faut-il choisir le transport aérien ou le transport maritime ? Voici un guide clair pour choisir selon le délai, le coût et le volume.",
+    "image": "/blogs/colis-europe-afrique-quelle-option/image1.webp",
+    "mediaUrl": "/blogs/colis-europe-afrique-quelle-option/image1.webp",
+    "mediaType": "image",
+    "href": "/blog/colis-europe-afrique-quelle-option",
+    "type": "blog",
+    "isActive": true,
+    "sections": [
+      {
+        "id": "cea-s1",
+        "type": "paragraph",
+        "text": "Envoyer un colis de l'Europe vers l'Afrique soulève toujours la même question :\n✈️ Faut-il choisir le transport aérien ?\n🚢 Ou le transport maritime est-il plus avantageux ?"
+      },
+      {
+        "id": "cea-s2",
+        "type": "paragraph",
+        "text": "Le choix dépend principalement de trois facteurs essentiels : le délai, le coût et le volume du colis."
+      },
+      {
+        "id": "cea-s3",
+        "type": "paragraph",
+        "text": "Dans cet article, nous vous expliquons clairement les différences afin de vous aider à choisir la meilleure option pour votre expédition."
+      },
+      {
+        "id": "cea-s4",
+        "type": "heading2",
+        "text": "✈️ Le transport aérien : rapidité et urgence"
+      },
+      {
+        "id": "cea-s5",
+        "type": "paragraph",
+        "text": "Le transport par avion est la solution idéale lorsque :"
+      },
+      {
+        "id": "cea-s6",
+        "type": "bullet_list",
+        "items": [
+          "Le colis est urgent",
+          "Il s'agit de documents importants",
+          "Le volume est petit ou moyen",
+          "Le destinataire a besoin d'une livraison rapide"
+        ]
+      },
+      {
+        "id": "cea-s7",
+        "type": "heading3",
+        "text": "✅ Avantages du transport aérien"
+      },
+      {
+        "id": "cea-s8",
+        "type": "bullet_list",
+        "items": [
+          "Délais rapides (quelques jours)",
+          "Moins d'exposition aux aléas portuaires",
+          "Idéal pour colis de valeur ou sensibles et les petits objets de valeur (documents, téléphones, ordinateurs)",
+          "Ultra rapide"
+        ]
+      },
+      {
+        "id": "cea-s9",
+        "type": "heading3",
+        "text": "❌ Inconvénients"
+      },
+      {
+        "id": "cea-s10",
+        "type": "bullet_list",
+        "items": [
+          "Coût plus élevé",
+          "Limite sur les volumes importants",
+          "Tarification basée sur le poids volumétrique"
+        ]
+      },
+      {
+        "id": "cea-s11",
+        "type": "paragraph",
+        "text": "👉 Le transport aérien est recommandé pour les envois urgents vers des villes comme Douala ou Yaoundé."
+      },
+      {
+        "id": "cea-s12",
+        "type": "heading2",
+        "text": "🚢 Le transport maritime : économique et volumineux"
+      },
+      {
+        "id": "cea-s13",
+        "type": "paragraph",
+        "text": "Le transport maritime est la meilleure solution lorsque :"
+      },
+      {
+        "id": "cea-s14",
+        "type": "bullet_list",
+        "items": [
+          "Le colis est volumineux",
+          "Il s'agit d'un déménagement",
+          "Vous envoyez des marchandises commerciales",
+          "Le délai n'est pas urgent"
+        ]
+      },
+      {
+        "id": "cea-s15",
+        "type": "heading3",
+        "text": "✅ Avantages du transport maritime"
+      },
+      {
+        "id": "cea-s16",
+        "type": "bullet_list",
+        "items": [
+          "Coût plus économique",
+          "Idéal pour gros volumes",
+          "Solution adaptée aux envois réguliers"
+        ]
+      },
+      {
+        "id": "cea-s17",
+        "type": "heading3",
+        "text": "❌ Inconvénients"
+      },
+      {
+        "id": "cea-s18",
+        "type": "bullet_list",
+        "items": [
+          "Délais plus longs (plusieurs semaines)",
+          "Dépendance aux calendriers portuaires",
+          "Formalités douanières plus longues"
+        ]
+      },
+      {
+        "id": "cea-s19",
+        "type": "paragraph",
+        "text": "👉 Le maritime est particulièrement avantageux pour les expéditions importantes vers l'Afrique centrale."
+      },
+      {
+        "id": "cea-s20",
+        "type": "media",
+        "mediaUrl": "/blogs/colis-europe-afrique-quelle-option/image2.webp",
+        "mediaType": "image"
+      },
+      {
+        "id": "cea-s21",
+        "type": "heading2",
+        "text": "📊 Avion vs Bateau : comparatif rapide"
+      },
+      {
+        "id": "cea-s22",
+        "type": "bullet_list",
+        "items": [
+          "Délai : avion rapide / bateau plus long",
+          "Coût : avion plus élevé / bateau plus économique",
+          "Volume : avion petit à moyen / bateau grand à très grand",
+          "Urgence : avion idéal / bateau non recommandé",
+          "Déménagement : avion peu adapté / bateau idéal"
+        ]
+      },
+      {
+        "id": "cea-s23",
+        "type": "heading2",
+        "text": "🧾 Quel est le meilleur choix pour vous ?"
+      },
+      {
+        "id": "cea-s24",
+        "type": "paragraph",
+        "text": "Il n'y a pas de solution universelle."
+      },
+      {
+        "id": "cea-s25",
+        "type": "bullet_list",
+        "items": [
+          "Besoin rapide → choisissez l'avion",
+          "Volume important et budget maîtrisé → choisissez le bateau"
+        ]
+      },
+      {
+        "id": "cea-s26",
+        "type": "paragraph",
+        "text": "L'idéal reste de demander un devis personnalisé, car chaque envoi est différent."
+      },
+      {
+        "id": "cea-s27",
+        "type": "heading2",
+        "text": "📌 Conclusion"
+      },
+      {
+        "id": "cea-s28",
+        "type": "paragraph",
+        "text": "Le choix entre avion et bateau dépend de votre priorité : rapidité ou économie."
+      },
+      {
+        "id": "cea-s29",
+        "type": "bullet_list",
+        "items": [
+          "du poids",
+          "du volume",
+          "de la nature des marchandises",
+          "de la destination finale en Afrique"
+        ]
+      },
+      {
+        "id": "cea-s30",
+        "type": "paragraph",
+        "text": "Dites-nous en commentaire : vous privilégiez la rapidité ou le budget ?"
+      },
+      {
+        "id": "cea-s31",
+        "type": "paragraph",
+        "text": "Besoin d'un devis personnalisé ? Écrivez-nous en message privé.\n📞 Devis gratuit WhatsApp : +32 488 64 51 83"
+      }
+    ],
+    "backLinkLabel": "← Retour au blog",
+    "backLinkHref": "/blog"
+  }
 ]
