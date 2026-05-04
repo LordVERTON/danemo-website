@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useEffect, useState, memo, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { signOut, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { LogOut, Package, Truck, BarChart3, Users, QrCode, BookOpen, MessageSquare } from "lucide-react"
 import Link from "next/link"
@@ -19,10 +20,17 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const [role, setRole] = useState<string | null>(null)
   const [currentPath, setCurrentPath] = useState("")
   const router = useRouter()
+  const { data: session, status } = useSession()
 
   useEffect(() => {
-    const session = localStorage.getItem("danemo_admin_session")
-    if (session === "authenticated") {
+    if (status === "loading") return
+
+    const legacySession = localStorage.getItem("danemo_admin_session")
+    const nextAuthRole = session?.user?.role
+    if (status === "authenticated") {
+      setIsAuthenticated(true)
+      setRole(nextAuthRole || localStorage.getItem("danemo_admin_role"))
+    } else if (legacySession === "authenticated") {
       setIsAuthenticated(true)
       setRole(localStorage.getItem("danemo_admin_role"))
     } else {
@@ -31,13 +39,14 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     
     // Définir le chemin actuel
     setCurrentPath(window.location.pathname)
-  }, [router])
+  }, [router, session?.user?.role, status])
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     localStorage.removeItem("danemo_admin_session")
     localStorage.removeItem("danemo_admin_role")
     document.cookie = "danemo_admin_session=; path=/; max-age=0"
     document.cookie = "danemo_admin_role=; path=/; max-age=0"
+    await signOut({ redirect: false })
     router.push("/admin/login")
   }, [router])
 

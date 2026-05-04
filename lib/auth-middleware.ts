@@ -56,8 +56,10 @@ export async function authenticateRequest(request: NextRequest): Promise<Authent
   }
 }
 
-export function requireAuth(handler: (request: NextRequest, user: AuthenticatedUser) => Promise<Response>) {
-  return async (request: NextRequest) => {
+export function requireAuth<TContext = unknown>(
+  handler: (request: NextRequest, user: AuthenticatedUser, context?: TContext) => Promise<Response>
+) {
+  return async (request: NextRequest, context?: TContext) => {
     const user = await authenticateRequest(request)
     
     if (!user) {
@@ -70,13 +72,15 @@ export function requireAuth(handler: (request: NextRequest, user: AuthenticatedU
       )
     }
 
-    return handler(request, user)
+    return handler(request, user, context)
   }
 }
 
 export function requireRole(allowedRoles: ('admin' | 'operator' | 'client')[]) {
-  return (handler: (request: NextRequest, user: AuthenticatedUser) => Promise<Response>) => {
-    return async (request: NextRequest) => {
+  return <TContext = unknown>(
+    handler: (request: NextRequest, user: AuthenticatedUser, context?: TContext) => Promise<Response>
+  ) => {
+    return async (request: NextRequest, context?: TContext) => {
       const user = await authenticateRequest(request)
       
       if (!user) {
@@ -99,7 +103,7 @@ export function requireRole(allowedRoles: ('admin' | 'operator' | 'client')[]) {
         )
       }
 
-      return handler(request, user)
+      return handler(request, user, context)
     }
   }
 }

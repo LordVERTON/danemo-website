@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { signIn, useSession } from "next-auth/react"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,17 +19,19 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { status } = useSession()
 
   useEffect(() => {
     const hasCookieSession = document.cookie.split(";").some((cookie) => cookie.trim().startsWith("danemo_admin_session=authenticated"))
     const hasLocalSession = localStorage.getItem("danemo_admin_session") === "authenticated"
-    if (hasCookieSession || hasLocalSession) {
+    if (status === "loading") return
+    if (status === "authenticated" || hasCookieSession || hasLocalSession) {
       const params = new URLSearchParams(window.location.search)
       const returnTo = params.get("returnTo")
       const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
       router.replace(redirectTarget)
     }
-  }, [router])
+  }, [router, status])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,14 +49,24 @@ export default function AdminLoginPage() {
       document.cookie = `danemo_admin_role=${role}; path=/; max-age=${maxAge}; SameSite=Lax`
     }
 
+    const createNextAuthSession = async () => {
+      await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+    }
+
     // Vérification des identifiants en dur d'abord
     if (email === "admin@danemo.be" && password === "admin123") {
+      await createNextAuthSession()
       setSession("admin")
       router.push(redirectTarget)
       return
     }
     
     if (email === "operator@danemo.be" && password === "operator123") {
+      await createNextAuthSession()
       setSession("operator")
       router.push(redirectTarget)
       return
@@ -67,6 +80,7 @@ export default function AdminLoginPage() {
       } else {
         const roleFromMetadata = (data.user?.user_metadata as any)?.role
         const derivedRole = roleFromMetadata || (email === "operator@danemo.be" ? "operator" : "admin")
+        await createNextAuthSession()
         setSession(derivedRole)
         router.push(redirectTarget)
       }

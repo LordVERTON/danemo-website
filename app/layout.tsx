@@ -1,7 +1,9 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Playfair_Display, Bona_Nova as Proxima_Nova } from "next/font/google"
+import "@measured/puck/puck.css"
 import "./globals.css"
+import { AuthSessionProvider } from "@/components/auth-session-provider"
 import { I18nProvider } from "@/lib/i18n"
 import { SupabaseRealtimeListener } from "@/app/components/SupabaseRealtimeListener"
 
@@ -39,7 +41,9 @@ export default function RootLayout({
     <html lang="fr" className={`${playfairDisplay.variable} ${proximaNova.variable}`}>
       <body className="font-sans antialiased">
         <SupabaseRealtimeListener>
-          <I18nProvider>{children}</I18nProvider>
+          <AuthSessionProvider>
+            <I18nProvider>{children}</I18nProvider>
+          </AuthSessionProvider>
         </SupabaseRealtimeListener>
       </body>
     </html>

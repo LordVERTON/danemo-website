@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { signOut, useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Package, Truck, BarChart3, Users, LogOut, BookOpen } from "lucide-react"
@@ -12,17 +13,24 @@ export default function AdminDashboard() {
   const [role, setRole] = useState<string | null>(null)
   const [stats, setStats] = useState<any>(null)
   const router = useRouter()
+  const { data: session, status } = useSession()
 
   useEffect(() => {
-    const session = localStorage.getItem("danemo_admin_session")
-    if (session === "authenticated") {
+    if (status === "loading") return
+
+    const legacySession = localStorage.getItem("danemo_admin_session")
+    if (status === "authenticated") {
+      setIsAuthenticated(true)
+      setRole(session?.user?.role || localStorage.getItem("danemo_admin_role"))
+      fetchStats()
+    } else if (legacySession === "authenticated") {
       setIsAuthenticated(true)
       setRole(localStorage.getItem("danemo_admin_role"))
       fetchStats()
     } else {
       router.push("/admin/login")
     }
-  }, [router])
+  }, [router, session?.user?.role, status])
 
   const fetchStats = async () => {
     try {
@@ -36,11 +44,12 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem("danemo_admin_session")
     localStorage.removeItem("danemo_admin_role")
     document.cookie = "danemo_admin_session=; path=/; max-age=0"
     document.cookie = "danemo_admin_role=; path=/; max-age=0"
+    await signOut({ redirect: false })
     router.push("/admin/login")
   }
 
