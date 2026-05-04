@@ -100,3 +100,7 @@ CREATE TRIGGER set_articles_updated_at
 BEFORE UPDATE ON public.articles
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.article_revisions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.media_library ENABLE ROW LEVEL SECURITY;
