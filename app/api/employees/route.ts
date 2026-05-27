@@ -44,10 +44,15 @@ async function listAllAuthUsers() {
 }
 
 async function syncAuthUsersToEmployees() {
-  const [authUsers, existingEmployeesResult] = await Promise.all([
-    listAllAuthUsers(),
-    supabaseAdmin.from('employees').select('id,user_id,email'),
-  ])
+  let authUsers: any[]
+  try {
+    authUsers = await listAllAuthUsers()
+  } catch (error: any) {
+    console.warn('Could not sync auth users to employees:', error?.message || error)
+    return
+  }
+
+  const existingEmployeesResult = await supabaseAdmin.from('employees').select('id,user_id,email')
 
   if (existingEmployeesResult.error) throw existingEmployeesResult.error
 
