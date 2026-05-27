@@ -51,6 +51,22 @@ export async function PUT(
 
     const { id } = await context.params
     const body = await request.json()
+
+    const requiredFields = [
+      ['name', 'Le nom complet est requis'],
+      ['phone', 'Le téléphone est requis'],
+      ['address', 'L’adresse est requise'],
+      ['city', 'La ville est requise'],
+      ['postal_code', 'Le code postal est requis'],
+      ['country', 'Le pays est requis'],
+    ] as const
+    const missingField = requiredFields.find(([field]) => !body[field]?.trim())
+    if (missingField) {
+      return NextResponse.json(
+        { success: false, error: missingField[1] },
+        { status: 400 }
+      )
+    }
     
     const emailValue = body.email?.trim()
     const customer = await customersApi.update(id, {

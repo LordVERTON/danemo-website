@@ -62,8 +62,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Validation des champs requis
-    const requiredFields = ['client_name', 'client_email', 'service_type', 'origin', 'destination']
-    const missingFields = requiredFields.filter(field => !body[field])
+    const requiredFields = [
+      'client_name',
+      'client_phone',
+      'client_address',
+      'client_city',
+      'client_postal_code',
+      'client_country',
+      'recipient_name',
+      'recipient_phone',
+      'recipient_address',
+      'recipient_city',
+      'recipient_postal_code',
+      'recipient_country',
+      'service_type',
+      'origin',
+      'destination',
+    ]
+    const missingFields = requiredFields.filter(field => !String(body[field] ?? '').trim())
     
     if (missingFields.length > 0) {
       return NextResponse.json(
@@ -72,9 +88,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validation de l'email
+    // Validation des emails facultatifs
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(body.client_email)) {
+    if (body.client_email && !emailRegex.test(body.client_email)) {
       return NextResponse.json(
         { success: false, error: 'Invalid email format' },
         { status: 400 }
@@ -100,13 +116,11 @@ export async function POST(request: NextRequest) {
 
     // Sanitisation des données
     const sanitizedClientName = body.client_name?.trim().substring(0, 100) || ''
-    const sanitizedClientEmail = body.client_email?.trim().toLowerCase()
-    const sanitizedRecipientName = body.recipient_name
-      ? body.recipient_name.trim().substring(0, 100)
-      : sanitizedClientName
+    const sanitizedClientEmail = body.client_email?.trim().toLowerCase() || ''
+    const sanitizedRecipientName = body.recipient_name.trim().substring(0, 100)
     const sanitizedRecipientEmail = body.recipient_email
       ? body.recipient_email.trim().toLowerCase()
-      : sanitizedClientEmail
+      : ''
 
     const sanitizedClientAddress = body.client_address?.trim().substring(0, 200) || null
     const sanitizedClientCity = body.client_city?.trim().substring(0, 100) || null
@@ -160,15 +174,11 @@ export async function POST(request: NextRequest) {
       client_country: sanitizedClientCountry,
       recipient_name: sanitizedRecipientName || null,
       recipient_email: sanitizedRecipientEmail || null,
-      recipient_phone: body.recipient_phone
-        ? body.recipient_phone.trim().substring(0, 20)
-        : body.client_phone
-        ? body.client_phone.trim().substring(0, 20)
-        : null,
-      recipient_address: body.recipient_address?.trim().substring(0, 200) || null,
-      recipient_city: body.recipient_city?.trim().substring(0, 100) || null,
-      recipient_postal_code: body.recipient_postal_code?.trim().substring(0, 20) || null,
-      recipient_country: body.recipient_country?.trim().substring(0, 100) || null,
+      recipient_phone: body.recipient_phone.trim().substring(0, 20),
+      recipient_address: body.recipient_address.trim().substring(0, 200),
+      recipient_city: body.recipient_city.trim().substring(0, 100),
+      recipient_postal_code: body.recipient_postal_code.trim().substring(0, 20),
+      recipient_country: body.recipient_country.trim().substring(0, 100),
       service_type: body.service_type,
       description: body.description?.trim().substring(0, 500) || null,
       origin: body.origin?.trim().substring(0, 100),

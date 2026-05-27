@@ -144,10 +144,18 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Validation des champs requis (nom uniquement, email optionnel)
-    if (!body.name?.trim()) {
+    const requiredFields = [
+      ['name', 'Le nom complet est requis'],
+      ['phone', 'Le téléphone est requis'],
+      ['address', 'L’adresse est requise'],
+      ['city', 'La ville est requise'],
+      ['postal_code', 'Le code postal est requis'],
+      ['country', 'Le pays est requis'],
+    ] as const
+    const missingField = requiredFields.find(([field]) => !body[field]?.trim())
+    if (missingField) {
       return NextResponse.json(
-        { success: false, error: 'Le nom est requis' },
+        { success: false, error: missingField[1] },
         { status: 400 }
       )
     }

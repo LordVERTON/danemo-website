@@ -25,12 +25,12 @@ const bodySchema = z.object({
   company_website: z.string().max(200).optional(),
   customer: z.object({
     name: z.string().trim().min(2).max(200),
-    email: z.string().trim().email().max(200),
-    phone: z.string().trim().max(50).optional().nullable(),
-    address: z.string().trim().max(500).optional().nullable(),
-    city: z.string().trim().max(100).optional().nullable(),
-    postal_code: z.string().trim().max(20).optional().nullable(),
-    country: z.string().trim().max(100).optional().nullable(),
+    email: z.string().trim().email().max(200).optional().or(z.literal('')),
+    phone: z.string().trim().min(2).max(50),
+    address: z.string().trim().min(2).max(500),
+    city: z.string().trim().min(2).max(100),
+    postal_code: z.string().trim().min(2).max(20),
+    country: z.string().trim().min(2).max(100),
     company: z.string().trim().max(200).optional().nullable(),
     tax_id: z.string().trim().max(100).optional().nullable(),
     notes: z.string().trim().max(2000).optional().nullable(),
@@ -45,18 +45,15 @@ const bodySchema = z.object({
     parcels_count: z.number().int().min(1).max(9999).optional().nullable(),
     estimated_delivery: z.string().trim().max(40).optional().nullable(),
   }),
-  recipient: z
-    .object({
-      name: z.string().trim().max(200).optional().nullable(),
-      email: z.string().trim().email().max(200).optional().nullable(),
-      phone: z.string().trim().max(50).optional().nullable(),
-      address: z.string().trim().max(200).optional().nullable(),
-      city: z.string().trim().max(100).optional().nullable(),
-      postal_code: z.string().trim().max(20).optional().nullable(),
-      country: z.string().trim().max(100).optional().nullable(),
-    })
-    .optional()
-    .nullable(),
+  recipient: z.object({
+    name: z.string().trim().min(2).max(200),
+    email: z.string().trim().email().max(200).optional().or(z.literal('')),
+    phone: z.string().trim().min(2).max(50),
+    address: z.string().trim().min(2).max(200),
+    city: z.string().trim().min(2).max(100),
+    postal_code: z.string().trim().min(2).max(20),
+    country: z.string().trim().min(2).max(100),
+  }),
 })
 
 function buildArticleNotes(
@@ -132,7 +129,7 @@ export async function POST(request: NextRequest) {
     try {
       createdCustomer = await customersApi.create({
         name: customer.name.trim(),
-        email: customer.email.trim().toLowerCase(),
+        email: customer.email?.trim() ? customer.email.trim().toLowerCase() : null,
         phone: customer.phone?.trim() || null,
         address: customer.address?.trim() || null,
         city: customer.city?.trim() || null,
@@ -159,13 +156,13 @@ export async function POST(request: NextRequest) {
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const clientEmail = customer.email.trim().toLowerCase()
-    const recEmail = recipient?.email?.trim()
+    const clientEmail = customer.email?.trim().toLowerCase() || ''
+    const recEmail = recipient.email?.trim()
     if (recEmail && !emailRegex.test(recEmail)) {
       return NextResponse.json({ success: false, error: 'E-mail destinataire invalide' }, { status: 400 })
     }
 
-    const sanitizedRecipientName = recipient?.name?.trim() || null
+    const sanitizedRecipientName = recipient.name.trim()
     const sanitizedRecipientEmail = recEmail ? recEmail.toLowerCase() : null
 
     const orderNumber = await utils.generateOrderNumber()
@@ -181,11 +178,11 @@ export async function POST(request: NextRequest) {
       client_country: customer.country?.trim().substring(0, 100) || null,
       recipient_name: sanitizedRecipientName,
       recipient_email: sanitizedRecipientEmail,
-      recipient_phone: recipient?.phone?.trim().substring(0, 50) || null,
-      recipient_address: recipient?.address?.trim().substring(0, 200) || null,
-      recipient_city: recipient?.city?.trim().substring(0, 100) || null,
-      recipient_postal_code: recipient?.postal_code?.trim().substring(0, 20) || null,
-      recipient_country: recipient?.country?.trim().substring(0, 100) || null,
+      recipient_phone: recipient.phone.trim().substring(0, 50),
+      recipient_address: recipient.address.trim().substring(0, 200),
+      recipient_city: recipient.city.trim().substring(0, 100),
+      recipient_postal_code: recipient.postal_code.trim().substring(0, 20),
+      recipient_country: recipient.country.trim().substring(0, 100),
       service_type: shipment.service_type,
       description: orderDescription || null,
       origin: shipment.origin.trim().substring(0, 100),
@@ -203,7 +200,7 @@ export async function POST(request: NextRequest) {
         orderNumber: order.order_number,
         destination: shipment.destination.trim(),
       })
-      await sendEmail(clientEmail, subject, html)
+      if (clientEmail) await sendEmail(clientEmail, subject, html)
     } catch (mailErr) {
       console.error('[public/self-register] confirmation email failed:', mailErr)
     }

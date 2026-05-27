@@ -166,6 +166,30 @@ export async function PUT(
 
     const sanitizedOrderData = sanitizeRecipient()
 
+    const requiredValues = {
+      client_name: orderData.client_name ?? oldOrder.client_name,
+      client_phone: orderData.client_phone ?? oldOrder.client_phone,
+      client_address: orderData.client_address ?? oldOrder.client_address,
+      client_city: orderData.client_city ?? oldOrder.client_city,
+      client_postal_code: orderData.client_postal_code ?? oldOrder.client_postal_code,
+      client_country: orderData.client_country ?? oldOrder.client_country,
+      recipient_name: sanitizedOrderData.recipient_name ?? oldOrder.recipient_name,
+      recipient_phone: sanitizedOrderData.recipient_phone ?? oldOrder.recipient_phone,
+      recipient_address: sanitizedOrderData.recipient_address ?? oldOrder.recipient_address,
+      recipient_city: sanitizedOrderData.recipient_city ?? oldOrder.recipient_city,
+      recipient_postal_code: sanitizedOrderData.recipient_postal_code ?? oldOrder.recipient_postal_code,
+      recipient_country: sanitizedOrderData.recipient_country ?? oldOrder.recipient_country,
+    }
+    const missingRequired = Object.entries(requiredValues)
+      .filter(([, value]) => !String(value ?? '').trim())
+      .map(([field]) => field)
+    if (missingRequired.length > 0) {
+      return NextResponse.json(
+        { success: false, error: `Missing required fields: ${missingRequired.join(', ')}` },
+        { status: 400 },
+      )
+    }
+
     if ('description' in orderData) {
       sanitizedOrderData.description =
         typeof orderData.description === 'string'
