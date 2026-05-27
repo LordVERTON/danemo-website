@@ -134,7 +134,7 @@ npx supabase db push --include-seed
 Pour générer des jeux de données plus volumineux (après configuration de `ADMIN_SEED_KEY` dans `.env.local`), vous pouvez utiliser les routes API documentées dans le code, par exemple :
 
 ```bash
-curl -X POST http://localhost:3000/api/admin/reseed-data \
+curl -k -X POST https://localhost:3000/api/admin/reseed-data \
   -H "Content-Type: application/json" \
   -H "x-admin-seed-key: YOUR_ADMIN_SEED_KEY"
 ```
@@ -144,44 +144,60 @@ Voir également `/api/admin/seed-containers`, `/api/admin/seed-customers`, `/api
 ### 7. Lancer le serveur de développement
 
 ```bash
-# Avec npm
-npm run dev
-
-# Avec yarn
-yarn dev
-
-# Avec pnpm
-pnpm dev
+npm run dev                         # https://localhost:3000
+npm run build && npm run start      # prod locale
 ```
 
-Le serveur de développement se lancera automatiquement sur le port 3000.
+Le script `dev` utilise `next dev --experimental-https`. Next.js génère un certificat local auto-signé et le réutilise aux prochains démarrages. C'est utile pour tester les cookies `Secure`, OAuth, LiveKit, les service workers et les APIs navigateur qui demandent un contexte sécurisé.
 
-### 7.1 Tester sur téléphone en HTTPS (Alternative : ngrok)
+Avec un certificat auto-signé, le navigateur peut afficher un avertissement de sécurité au premier accès. C'est normal en développement local.
+
+### 7.1 Ouvrir le localhost sur un téléphone mobile
+
+Le téléphone ne peut pas ouvrir `localhost`, car `localhost` pointe vers le téléphone lui-même. Il faut utiliser l'adresse IP locale du PC.
+
+1. Connecter le PC et le téléphone au même réseau Wi-Fi.
+
+2. Lancer Next.js en mode accessible sur le réseau :
 
 ```bash
-npm run dev -- --hostname 0.0.0.0 --port 3000
-npx ngrok http 3000
+npm run dev -- -H 0.0.0.0
 ```
 
-Ouvrez ensuite l’URL `https://...ngrok-free.app` affichée par ngrok sur votre téléphone.
-
-> Si `ngrok` n'est pas reconnu sur Windows, utilisez `npx ngrok` (ci-dessus) ou installez-le globalement.
-
-#### Fix rapide si ngrok échoue (Windows)
-
-Si vous voyez une erreur `ERR_NGROK_334` (endpoint déjà en ligne), fermez les anciens processus ngrok puis relancez :
+3. Récupérer l'adresse IP locale du PC :
 
 ```bash
-taskkill /IM ngrok.exe /F
-npm run dev -- --hostname 0.0.0.0 --port 3000
-npx ngrok http 3000
+ipconfig
 ```
 
-Si vous utilisez déjà ngrok sur un autre projet, démarrez l'autre projet sur un port différent (ex: `3001`) pour obtenir une URL différente.
+Chercher l'adresse IPv4 de la carte Wi-Fi. Sur ce poste, l'adresse à utiliser est anonymisée ici :
+
+```text
+<adresse-ip-wifi-du-pc>
+```
+
+Ne pas utiliser :
+
+- l'adresse VPN ;
+- l'adresse WSL / Hyper-V.
+
+Sur le téléphone, ouvrir dans le navigateur :
+
+```text
+https://<adresse-ip-wifi-du-pc>:3000
+```
+
+Si la page ne charge pas :
+
+- vérifier que le PC et le téléphone sont bien sur le même Wi-Fi ;
+- accepter l'autorisation du pare-feu Windows pour Node.js / Next.js ;
+- couper temporairement le VPN si le téléphone n'arrive pas à joindre le PC ;
+- vérifier que l'adresse `Network` affichée par `npm run dev` correspond bien à la carte Wi-Fi ;
+- éviter les réseaux invités ou partages de connexion qui bloquent parfois les appareils entre eux.
 
 ### 8. Ouvrir l'application
 
-Ouvrez votre navigateur et allez sur [http://localhost:3000](http://localhost:3000)
+Ouvrez votre navigateur et allez sur [https://localhost:3000](https://localhost:3000)
 
 **Note** : La plateforme de production est accessible sur [danemo.app](https://danemo.app)
 
