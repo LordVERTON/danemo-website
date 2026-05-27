@@ -15,7 +15,7 @@ export default function Header() {
   return (
     <header className="relative">
       {/* Header Bar */}
-      <div className="bg-gray-100 py-2 px-4">
+      <div className="hidden bg-gray-100 py-2 px-4 md:block">
         <div className="max-w-7xl mx-auto flex justify-between items-center text-sm">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
