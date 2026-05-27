@@ -15,6 +15,7 @@ export function getTariffItemsForLang(lang: Lang) {
   return translations[lang].rates.items.map((item, index) => ({
     index,
     label: item.label,
+    descriptionLabel: getTariffDescriptionLabel(item.label),
     price: item.price,
     unitPriceEur: prices[index] ?? null,
   }))
@@ -38,8 +39,15 @@ export function getCanonicalTariffLabel(index: number): string | null {
   return items[index].label
 }
 
+export function getTariffDescriptionLabel(label: string): string {
+  return label
+    .replace(/\s*(?:,\s*)?(?:à|a) partir de$/i, '')
+    .replace(/\s*,?\s*from$/i, '')
+    .trim()
+}
+
 export function getCanonicalTariffDescription(index: number): string | null {
   const item = translations.fr.rates.items[index]
   if (!item) return null
-  return `${item.label} - ${item.price}`
+  return getTariffDescriptionLabel(item.label)
 }

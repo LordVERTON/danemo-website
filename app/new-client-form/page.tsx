@@ -21,7 +21,13 @@ import { useI18n } from '@/lib/i18n'
 import type { Lang } from '@/lib/translations'
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 
-type TariffItem = { index: number; label: string; price: string; unitPriceEur: number | null }
+type TariffItem = {
+  index: number
+  label: string
+  descriptionLabel: string
+  price: string
+  unitPriceEur: number | null
+}
 
 type ArticleRow = {
   key: string
@@ -108,17 +114,6 @@ export default function NewClientFormPage() {
     }))
   }, [lang, shipment.origin, shipment.destination])
 
-  const serviceLabels = useMemo(
-    () => ({
-      fret_maritime: t.serviceFretMaritime,
-      fret_aerien: t.serviceFretAerien,
-      demenagement: t.serviceDemenagement,
-      dedouanement: t.serviceDedouanement,
-      negoce: t.serviceNegoce,
-    }),
-    [t],
-  )
-
   const updateRow = useCallback((key: string, patch: Partial<ArticleRow>) => {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   }, [])
@@ -187,7 +182,7 @@ export default function NewClientFormPage() {
       if (lineEur != null) catalogTotal += lineEur
       lines.push({
         key: row.key,
-        articleLabel: item?.label ?? '…',
+        articleLabel: item?.descriptionLabel ?? '…',
         qty,
         unitEur: unitNum,
         lineEur,
@@ -240,21 +235,15 @@ export default function NewClientFormPage() {
 
     setSubmitting(true)
     try {
-      const recipientPayload =
-        recipient.name.trim() ||
-        recipient.email.trim() ||
-        recipient.phone.trim() ||
-        recipient.address.trim()
-          ? {
-              name: recipient.name.trim() || null,
-              email: recipient.email.trim() || null,
-              phone: recipient.phone.trim() || null,
-              address: recipient.address.trim() || null,
-              city: recipient.city.trim() || null,
-              postal_code: recipient.postal_code.trim() || null,
-              country: recipient.country.trim() || null,
-            }
-          : null
+      const recipientPayload = {
+        name: recipient.name.trim(),
+        email: recipient.email.trim(),
+        phone: recipient.phone.trim(),
+        address: recipient.address.trim(),
+        city: recipient.city.trim(),
+        postal_code: recipient.postal_code.trim(),
+        country: recipient.country.trim(),
+      }
 
       const res = await fetch('/api/public/self-register', {
         method: 'POST',
@@ -264,11 +253,11 @@ export default function NewClientFormPage() {
           customer: {
             name: customer.name.trim(),
             email: customer.email.trim(),
-            phone: customer.phone.trim() || null,
-            address: customer.address.trim() || null,
-            city: customer.city.trim() || null,
-            postal_code: customer.postal_code.trim() || null,
-            country: customer.country.trim() || null,
+            phone: customer.phone.trim(),
+            address: customer.address.trim(),
+            city: customer.city.trim(),
+            postal_code: customer.postal_code.trim(),
+            country: customer.country.trim(),
             company: customer.company.trim() || null,
             tax_id: customer.tax_id.trim() || null,
             notes: customer.notes.trim() || null,
@@ -276,8 +265,8 @@ export default function NewClientFormPage() {
           articles,
           shipment: {
             service_type: shipment.service_type,
-            origin: shipment.origin.trim(),
-            destination: shipment.destination.trim(),
+            origin: shipment.origin.trim() || (lang === 'en' ? 'Belgium / Brussels' : 'Belgique / Bruxelles'),
+            destination: shipment.destination.trim() || (lang === 'en' ? 'Cameroon / Douala' : 'Cameroun / Douala'),
             weight: (() => {
               const raw = shipment.weight.trim()
               if (!raw) return null
@@ -397,17 +386,17 @@ export default function NewClientFormPage() {
                   <Input
                     id="ncf-email"
                     type="email"
-                    required
                     value={customer.email}
                     onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ncf-phone">{t.phone}</Label>
+                  <Label htmlFor="ncf-phone">{t.phone} *</Label>
                   <Input
                     id="ncf-phone"
                     inputMode="tel"
+                    required
                     value={customer.phone}
                     onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
@@ -423,36 +412,40 @@ export default function NewClientFormPage() {
                   />
                 </div>
                 <div className="sm:col-span-2 space-y-2">
-                  <Label htmlFor="ncf-address">{t.address}</Label>
+                  <Label htmlFor="ncf-address">{t.address} *</Label>
                   <Input
                     id="ncf-address"
+                    required
                     value={customer.address}
                     onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ncf-city">{t.city}</Label>
+                  <Label htmlFor="ncf-city">{t.city} *</Label>
                   <Input
                     id="ncf-city"
+                    required
                     value={customer.city}
                     onChange={(e) => setCustomer((c) => ({ ...c, city: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ncf-postal">{t.postalCode}</Label>
+                  <Label htmlFor="ncf-postal">{t.postalCode} *</Label>
                   <Input
                     id="ncf-postal"
+                    required
                     value={customer.postal_code}
                     onChange={(e) => setCustomer((c) => ({ ...c, postal_code: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ncf-country">{t.country}</Label>
+                  <Label htmlFor="ncf-country">{t.country} *</Label>
                   <Input
                     id="ncf-country"
+                    required
                     value={customer.country}
                     onChange={(e) => setCustomer((c) => ({ ...c, country: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
@@ -556,7 +549,7 @@ export default function NewClientFormPage() {
                           <SelectContent className="max-h-[70vh] max-w-[calc(100vw-2rem)] sm:max-h-72 sm:max-w-none">
                             {tariffItems.map((it) => (
                               <SelectItem key={it.index} value={String(it.index)}>
-                                {it.label} — {it.price}
+                                {it.descriptionLabel}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -694,110 +687,14 @@ export default function NewClientFormPage() {
 
             <Card className="gap-0 py-0 sm:gap-6 sm:py-6">
               <CardHeader className="px-4 pb-2 pt-4 sm:px-6 sm:pt-6">
-                <CardTitle className="text-lg sm:text-xl">{t.sections.shipment}</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 px-4 pb-4 pt-0 sm:grid-cols-2 sm:px-6 sm:pb-6">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t.serviceType}</Label>
-                  <Select
-                    value={shipment.service_type}
-                    onValueChange={(v) =>
-                      setShipment((s) => ({
-                        ...s,
-                        service_type: v as typeof shipment.service_type,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="h-auto min-h-11 w-full text-base sm:min-h-9 sm:text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(Object.keys(serviceLabels) as Array<keyof typeof serviceLabels>).map((k) => (
-                        <SelectItem key={k} value={k}>
-                          {serviceLabels[k]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="ncf-origin">{t.origin}</Label>
-                  <Input
-                    id="ncf-origin"
-                    required
-                    value={shipment.origin}
-                    onChange={(e) => setShipment((s) => ({ ...s, origin: e.target.value }))}
-                    className="min-h-11 text-base sm:min-h-9 sm:text-sm"
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="ncf-dest">{t.destination}</Label>
-                  <Input
-                    id="ncf-dest"
-                    required
-                    value={shipment.destination}
-                    onChange={(e) => setShipment((s) => ({ ...s, destination: e.target.value }))}
-                    className="min-h-11 text-base sm:min-h-9 sm:text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ncf-weight">{t.weightKg}</Label>
-                  <Input
-                    id="ncf-weight"
-                    inputMode="decimal"
-                    value={shipment.weight}
-                    onChange={(e) => setShipment((s) => ({ ...s, weight: e.target.value }))}
-                    className="min-h-11 text-base sm:min-h-9 sm:text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ncf-value">{t.valueEur}</Label>
-                  <Input
-                    id="ncf-value"
-                    inputMode="decimal"
-                    value={shipment.value}
-                    onChange={(e) => setShipment((s) => ({ ...s, value: e.target.value }))}
-                    className="min-h-11 text-base sm:min-h-9 sm:text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ncf-parcels">{t.parcelsCount}</Label>
-                  <Input
-                    id="ncf-parcels"
-                    type="number"
-                    min={1}
-                    inputMode="numeric"
-                    value={shipment.parcels_count}
-                    onChange={(e) => setShipment((s) => ({ ...s, parcels_count: e.target.value }))}
-                    className="min-h-11 text-base sm:min-h-9 sm:text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ncf-eta">{t.estimatedDelivery}</Label>
-                  <Input
-                    id="ncf-eta"
-                    value={shipment.estimated_delivery}
-                    onChange={(e) =>
-                      setShipment((s) => ({ ...s, estimated_delivery: e.target.value }))
-                    }
-                    className="min-h-11 text-base sm:min-h-9 sm:text-sm"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="gap-0 py-0 sm:gap-6 sm:py-6">
-              <CardHeader className="px-4 pb-2 pt-4 sm:px-6 sm:pt-6">
                 <CardTitle className="text-lg sm:text-xl">{t.sections.recipient}</CardTitle>
-                <CardDescription className="text-xs leading-relaxed sm:text-sm">
-                  {t.recipientHint}
-                </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 px-4 pb-4 pt-0 sm:grid-cols-2 sm:px-6 sm:pb-6">
                 <div className="space-y-2">
-                  <Label htmlFor="ncf-r-name">{t.recipientName}</Label>
+                  <Label htmlFor="ncf-r-name">{t.recipientName} *</Label>
                   <Input
                     id="ncf-r-name"
+                    required
                     value={recipient.name}
                     onChange={(e) => setRecipient((r) => ({ ...r, name: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
@@ -814,46 +711,51 @@ export default function NewClientFormPage() {
                   />
                 </div>
                 <div className="sm:col-span-2 space-y-2">
-                  <Label htmlFor="ncf-r-phone">{t.recipientPhone}</Label>
+                  <Label htmlFor="ncf-r-phone">{t.recipientPhone} *</Label>
                   <Input
                     id="ncf-r-phone"
                     inputMode="tel"
+                    required
                     value={recipient.phone}
                     onChange={(e) => setRecipient((r) => ({ ...r, phone: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
                   />
                 </div>
                 <div className="sm:col-span-2 space-y-2">
-                  <Label htmlFor="ncf-r-addr">{t.recipientAddress}</Label>
+                  <Label htmlFor="ncf-r-addr">{t.recipientAddress} *</Label>
                   <Input
                     id="ncf-r-addr"
+                    required
                     value={recipient.address}
                     onChange={(e) => setRecipient((r) => ({ ...r, address: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ncf-r-city">{t.recipientCity}</Label>
+                  <Label htmlFor="ncf-r-city">{t.recipientCity} *</Label>
                   <Input
                     id="ncf-r-city"
+                    required
                     value={recipient.city}
                     onChange={(e) => setRecipient((r) => ({ ...r, city: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ncf-r-postal">{t.recipientPostalCode}</Label>
+                  <Label htmlFor="ncf-r-postal">{t.recipientPostalCode} *</Label>
                   <Input
                     id="ncf-r-postal"
+                    required
                     value={recipient.postal_code}
                     onChange={(e) => setRecipient((r) => ({ ...r, postal_code: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="ncf-r-country">{t.recipientCountry}</Label>
+                  <Label htmlFor="ncf-r-country">{t.recipientCountry} *</Label>
                   <Input
                     id="ncf-r-country"
+                    required
                     value={recipient.country}
                     onChange={(e) => setRecipient((r) => ({ ...r, country: e.target.value }))}
                     className="min-h-11 text-base sm:min-h-9 sm:text-sm"

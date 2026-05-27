@@ -117,8 +117,9 @@ interface ClientSummary {
 type ClientRole = "sender" | "recipient" | "both" | "none"
 
 const TARIFF_DESCRIPTION_OPTIONS = getTariffItemsForLang("fr").map((item) => ({
-  value: `${item.label} - ${item.price}`,
-  label: `${item.label} - ${item.price}`,
+  value: item.descriptionLabel,
+  label: item.descriptionLabel,
+  unitPriceEur: item.unitPriceEur,
 }))
 const CUSTOM_DESCRIPTION_VALUE = "__custom_description__"
 
@@ -770,6 +771,28 @@ const copyClientToRecipientForEdit = () => {
     if (!selectedOrder) return
 
     try {
+      if (
+        !editOrder.client_name?.trim() ||
+        !editOrder.client_phone?.trim() ||
+        !editOrder.client_address?.trim() ||
+        !editOrder.client_city?.trim() ||
+        !editOrder.client_postal_code?.trim() ||
+        !editOrder.client_country?.trim()
+      ) {
+        setError("Renseigne le nom complet, téléphone, adresse, ville, code postal et pays de l’expéditeur.")
+        return
+      }
+      if (
+        !editOrder.recipient_name?.trim() ||
+        !editOrder.recipient_phone?.trim() ||
+        !editOrder.recipient_address?.trim() ||
+        !editOrder.recipient_city?.trim() ||
+        !editOrder.recipient_postal_code?.trim() ||
+        !editOrder.recipient_country?.trim()
+      ) {
+        setError("Renseigne le nom, téléphone, adresse, ville, code postal et pays du destinataire.")
+        return
+      }
       const selectedContainer = containers.find((container) => container.id === editOrder.container_id)
       const orderData = {
         ...editOrder,
@@ -838,8 +861,26 @@ const copyClientToRecipientForEdit = () => {
     setError("")
     
     try {
-      if (!newOrder.client_name.trim() || !newOrder.client_email.trim()) {
-        setError("Renseigne le nom et l’adresse email de l’expéditeur.")
+      if (
+        !newOrder.client_name.trim() ||
+        !newOrder.client_phone.trim() ||
+        !newOrder.client_address.trim() ||
+        !newOrder.client_city.trim() ||
+        !newOrder.client_postal_code.trim() ||
+        !newOrder.client_country.trim()
+      ) {
+        setError("Renseigne le nom complet, téléphone, adresse, ville, code postal et pays de l’expéditeur.")
+        return
+      }
+      if (
+        !newOrder.recipient_name.trim() ||
+        !newOrder.recipient_phone.trim() ||
+        !newOrder.recipient_address.trim() ||
+        !newOrder.recipient_city.trim() ||
+        !newOrder.recipient_postal_code.trim() ||
+        !newOrder.recipient_country.trim()
+      ) {
+        setError("Renseigne le nom, téléphone, adresse, ville, code postal et pays du destinataire.")
         return
       }
       if (!newOrder.service_type) {
@@ -851,18 +892,18 @@ const copyClientToRecipientForEdit = () => {
         return
       }
       const selectedContainer = containers.find((container) => container.id === newOrder.container_id)
-      const recipientName = newOrder.recipient_name?.trim() || newOrder.client_name
-      const recipientEmail = newOrder.recipient_email?.trim() || newOrder.client_email
-      const recipientPhone = newOrder.recipient_phone?.trim() || newOrder.client_phone || ""
-      const recipientAddress = newOrder.recipient_address?.trim() || ""
-      const recipientCity = newOrder.recipient_city?.trim() || ""
-      const recipientPostalCode = newOrder.recipient_postal_code?.trim() || ""
-      const recipientCountry = newOrder.recipient_country?.trim() || ""
+      const recipientName = newOrder.recipient_name.trim()
+      const recipientEmail = newOrder.recipient_email.trim()
+      const recipientPhone = newOrder.recipient_phone.trim()
+      const recipientAddress = newOrder.recipient_address.trim()
+      const recipientCity = newOrder.recipient_city.trim()
+      const recipientPostalCode = newOrder.recipient_postal_code.trim()
+      const recipientCountry = newOrder.recipient_country.trim()
       const orderData = {
         ...newOrder,
         client_name: newOrder.client_name.trim(),
         client_email: newOrder.client_email.trim(),
-        client_phone: newOrder.client_phone?.trim() || "",
+        client_phone: newOrder.client_phone.trim(),
         recipient_name: recipientName,
         recipient_email: recipientEmail,
         recipient_phone: recipientPhone,
@@ -1674,12 +1715,18 @@ const copyClientToRecipientForEdit = () => {
                         ? editOrder.description
                         : CUSTOM_DESCRIPTION_VALUE
                     }
-                    onValueChange={(value) =>
+                    onValueChange={(value) => {
+                      if (value === CUSTOM_DESCRIPTION_VALUE) {
+                        setEditOrder({ ...editOrder, description: "" })
+                        return
+                      }
+                      const option = TARIFF_DESCRIPTION_OPTIONS.find((item) => item.value === value)
                       setEditOrder({
                         ...editOrder,
-                        description: value === CUSTOM_DESCRIPTION_VALUE ? "" : value,
+                        description: value,
+                        value: option?.unitPriceEur != null ? String(option.unitPriceEur) : editOrder.value,
                       })
-                    }
+                    }}
                   >
                     <SelectTrigger id="edit_description_choice" className="h-auto min-h-10 whitespace-normal text-left [&_[data-slot=select-value]]:line-clamp-2 [&_[data-slot=select-value]]:whitespace-normal">
                       <SelectValue placeholder="Choisir dans la grille tarifaire" />
@@ -1700,7 +1747,7 @@ const copyClientToRecipientForEdit = () => {
                     id="edit_description"
                     value={editOrder.description || ""}
                     onChange={(e) => setEditOrder({ ...editOrder, description: e.target.value })}
-                    placeholder="Ex: Canapé 2 places à partir de - 250 €"
+                    placeholder="Ex: Canapé 2 places"
                   />
                 </div>
               </div>
@@ -1718,15 +1765,16 @@ const copyClientToRecipientForEdit = () => {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="edit_client_name">Nom</Label>
+                      <Label htmlFor="edit_client_name">Nom *</Label>
                       <Input
                         id="edit_client_name"
                         value={editOrder.client_name}
                         onChange={(e) => setEditOrder({ ...editOrder, client_name: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="edit_client_email">Email</Label>
+                        <Label htmlFor="edit_client_email">Email</Label>
                       <Input
                         id="edit_client_email"
                         value={editOrder.client_email}
@@ -1736,45 +1784,50 @@ const copyClientToRecipientForEdit = () => {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="edit_client_phone">Téléphone</Label>
+                      <Label htmlFor="edit_client_phone">Téléphone *</Label>
                       <Input
                         id="edit_client_phone"
                         value={editOrder.client_phone}
                         onChange={(e) => setEditOrder({ ...editOrder, client_phone: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="edit_client_country">Pays</Label>
+                      <Label htmlFor="edit_client_country">Pays *</Label>
                       <Input
                         id="edit_client_country"
                         value={editOrder.client_country || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, client_country: e.target.value })}
+                        required
                       />
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="sm:col-span-3">
-                      <Label htmlFor="edit_client_address">Adresse complète</Label>
+                      <Label htmlFor="edit_client_address">Adresse complète *</Label>
                       <Textarea
                         id="edit_client_address"
                         value={editOrder.client_address || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, client_address: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="edit_client_postal_code">Code postal</Label>
+                      <Label htmlFor="edit_client_postal_code">Code postal *</Label>
                       <Input
                         id="edit_client_postal_code"
                         value={editOrder.client_postal_code || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, client_postal_code: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="edit_client_city">Ville</Label>
+                      <Label htmlFor="edit_client_city">Ville *</Label>
                       <Input
                         id="edit_client_city"
                         value={editOrder.client_city || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, client_city: e.target.value })}
+                        required
                       />
                     </div>
                   </div>
@@ -1802,11 +1855,12 @@ const copyClientToRecipientForEdit = () => {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div>
-                      <Label htmlFor="edit_recipient_name">Nom</Label>
+                      <Label htmlFor="edit_recipient_name">Nom *</Label>
                       <Input
                         id="edit_recipient_name"
                         value={editOrder.recipient_name || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, recipient_name: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
@@ -1819,43 +1873,48 @@ const copyClientToRecipientForEdit = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="edit_recipient_phone">Téléphone</Label>
+                      <Label htmlFor="edit_recipient_phone">Téléphone *</Label>
                       <Input
                         id="edit_recipient_phone"
                         value={editOrder.recipient_phone || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, recipient_phone: e.target.value })}
+                        required
                       />
                     </div>
                     <div className="sm:col-span-3">
-                      <Label htmlFor="edit_recipient_address">Adresse complète</Label>
+                      <Label htmlFor="edit_recipient_address">Adresse complète *</Label>
                       <Textarea
                         id="edit_recipient_address"
                         value={editOrder.recipient_address || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, recipient_address: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="edit_recipient_city">Ville</Label>
+                      <Label htmlFor="edit_recipient_city">Ville *</Label>
                       <Input
                         id="edit_recipient_city"
                         value={editOrder.recipient_city || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, recipient_city: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="edit_recipient_postal_code">Code postal</Label>
+                      <Label htmlFor="edit_recipient_postal_code">Code postal *</Label>
                       <Input
                         id="edit_recipient_postal_code"
                         value={editOrder.recipient_postal_code || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, recipient_postal_code: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="edit_recipient_country">Pays</Label>
+                      <Label htmlFor="edit_recipient_country">Pays *</Label>
                       <Input
                         id="edit_recipient_country"
                         value={editOrder.recipient_country || ""}
                         onChange={(e) => setEditOrder({ ...editOrder, recipient_country: e.target.value })}
+                        required
                       />
                     </div>
                   </div>
@@ -2165,11 +2224,12 @@ const copyClientToRecipientForEdit = () => {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="new_client_name">Nom</Label>
+                      <Label htmlFor="new_client_name">Nom *</Label>
                       <Input
                         id="new_client_name"
                         value={newOrder.client_name}
                         onChange={(e) => setNewOrder({ ...newOrder, client_name: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
@@ -2184,45 +2244,50 @@ const copyClientToRecipientForEdit = () => {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="new_client_phone">Téléphone</Label>
+                      <Label htmlFor="new_client_phone">Téléphone *</Label>
                       <Input
                         id="new_client_phone"
                         value={newOrder.client_phone}
                         onChange={(e) => setNewOrder({ ...newOrder, client_phone: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="new_client_country">Pays</Label>
+                      <Label htmlFor="new_client_country">Pays *</Label>
                       <Input
                         id="new_client_country"
                         value={newOrder.client_country}
                         onChange={(e) => setNewOrder({ ...newOrder, client_country: e.target.value })}
+                        required
                       />
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="sm:col-span-3">
-                      <Label htmlFor="new_client_address">Adresse</Label>
+                      <Label htmlFor="new_client_address">Adresse *</Label>
                       <Textarea
                         id="new_client_address"
                         value={newOrder.client_address}
                         onChange={(e) => setNewOrder({ ...newOrder, client_address: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="new_client_postal_code">Code postal</Label>
+                      <Label htmlFor="new_client_postal_code">Code postal *</Label>
                       <Input
                         id="new_client_postal_code"
                         value={newOrder.client_postal_code}
                         onChange={(e) => setNewOrder({ ...newOrder, client_postal_code: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="new_client_city">Ville</Label>
+                      <Label htmlFor="new_client_city">Ville *</Label>
                       <Input
                         id="new_client_city"
                         value={newOrder.client_city}
                         onChange={(e) => setNewOrder({ ...newOrder, client_city: e.target.value })}
+                        required
                       />
                     </div>
                   </div>
@@ -2245,11 +2310,12 @@ const copyClientToRecipientForEdit = () => {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="new_recipient_name">Nom</Label>
+                      <Label htmlFor="new_recipient_name">Nom *</Label>
                       <Input
                         id="new_recipient_name"
                         value={newOrder.recipient_name}
                         onChange={(e) => setNewOrder({ ...newOrder, recipient_name: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
@@ -2264,45 +2330,50 @@ const copyClientToRecipientForEdit = () => {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="new_recipient_phone">Téléphone</Label>
+                      <Label htmlFor="new_recipient_phone">Téléphone *</Label>
                       <Input
                         id="new_recipient_phone"
                         value={newOrder.recipient_phone}
                         onChange={(e) => setNewOrder({ ...newOrder, recipient_phone: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="new_recipient_country">Pays</Label>
+                      <Label htmlFor="new_recipient_country">Pays *</Label>
                       <Input
                         id="new_recipient_country"
                         value={newOrder.recipient_country}
                         onChange={(e) => setNewOrder({ ...newOrder, recipient_country: e.target.value })}
+                        required
                       />
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="sm:col-span-3">
-                      <Label htmlFor="new_recipient_address">Adresse</Label>
+                      <Label htmlFor="new_recipient_address">Adresse *</Label>
                       <Textarea
                         id="new_recipient_address"
                         value={newOrder.recipient_address}
                         onChange={(e) => setNewOrder({ ...newOrder, recipient_address: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="new_recipient_postal_code">Code postal</Label>
+                      <Label htmlFor="new_recipient_postal_code">Code postal *</Label>
                       <Input
                         id="new_recipient_postal_code"
                         value={newOrder.recipient_postal_code}
                         onChange={(e) => setNewOrder({ ...newOrder, recipient_postal_code: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="new_recipient_city">Ville</Label>
+                      <Label htmlFor="new_recipient_city">Ville *</Label>
                       <Input
                         id="new_recipient_city"
                         value={newOrder.recipient_city}
                         onChange={(e) => setNewOrder({ ...newOrder, recipient_city: e.target.value })}
+                        required
                       />
                     </div>
                   </div>
@@ -2335,12 +2406,18 @@ const copyClientToRecipientForEdit = () => {
                         ? newOrder.description
                         : CUSTOM_DESCRIPTION_VALUE
                     }
-                    onValueChange={(value) =>
+                    onValueChange={(value) => {
+                      if (value === CUSTOM_DESCRIPTION_VALUE) {
+                        setNewOrder({ ...newOrder, description: "" })
+                        return
+                      }
+                      const option = TARIFF_DESCRIPTION_OPTIONS.find((item) => item.value === value)
                       setNewOrder({
                         ...newOrder,
-                        description: value === CUSTOM_DESCRIPTION_VALUE ? "" : value,
+                        description: value,
+                        value: option?.unitPriceEur != null ? String(option.unitPriceEur) : newOrder.value,
                       })
-                    }
+                    }}
                   >
                     <SelectTrigger id="description_choice" className="h-auto min-h-10 whitespace-normal text-left text-base sm:text-sm [&_[data-slot=select-value]]:line-clamp-2 [&_[data-slot=select-value]]:whitespace-normal">
                       <SelectValue placeholder="Choisir dans la grille tarifaire" />
@@ -2361,7 +2438,7 @@ const copyClientToRecipientForEdit = () => {
                     id="description"
                     value={newOrder.description || ""}
                     onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
-                    placeholder="Ex: Canapé 2 places à partir de - 250 €"
+                    placeholder="Ex: Canapé 2 places"
                     className="text-base sm:text-sm"
                   />
                 </div>
@@ -2687,11 +2764,12 @@ const copyClientToRecipientForEdit = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="modal_recipient_name">Nom du destinataire</Label>
+                  <Label htmlFor="modal_recipient_name">Nom du destinataire *</Label>
                   <Input
                     id="modal_recipient_name"
                     value={newOrder.recipient_name}
                     onChange={(e) => setNewOrder({ ...newOrder, recipient_name: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
@@ -2704,43 +2782,48 @@ const copyClientToRecipientForEdit = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="modal_recipient_phone">Téléphone du destinataire</Label>
+                  <Label htmlFor="modal_recipient_phone">Téléphone du destinataire *</Label>
                   <Input
                     id="modal_recipient_phone"
                     value={newOrder.recipient_phone}
                     onChange={(e) => setNewOrder({ ...newOrder, recipient_phone: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="modal_recipient_address">Adresse du destinataire</Label>
+                  <Label htmlFor="modal_recipient_address">Adresse du destinataire *</Label>
                   <Textarea
                     id="modal_recipient_address"
                     value={newOrder.recipient_address}
                     onChange={(e) => setNewOrder({ ...newOrder, recipient_address: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="modal_recipient_city">Ville du destinataire</Label>
+                  <Label htmlFor="modal_recipient_city">Ville du destinataire *</Label>
                   <Input
                     id="modal_recipient_city"
                     value={newOrder.recipient_city}
                     onChange={(e) => setNewOrder({ ...newOrder, recipient_city: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="modal_recipient_postal">Code postal du destinataire</Label>
+                  <Label htmlFor="modal_recipient_postal">Code postal du destinataire *</Label>
                   <Input
                     id="modal_recipient_postal"
                     value={newOrder.recipient_postal_code}
                     onChange={(e) => setNewOrder({ ...newOrder, recipient_postal_code: e.target.value })}
+                    required
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <Label htmlFor="modal_recipient_country">Pays du destinataire</Label>
+                  <Label htmlFor="modal_recipient_country">Pays du destinataire *</Label>
                   <Input
                     id="modal_recipient_country"
                     value={newOrder.recipient_country}
                     onChange={(e) => setNewOrder({ ...newOrder, recipient_country: e.target.value })}
+                    required
                   />
                 </div>
               </div>

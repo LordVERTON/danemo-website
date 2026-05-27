@@ -39,8 +39,9 @@ import { getTariffItemsForLang } from "@/lib/tariff-items"
 import QRCode from "qrcode"
 
 const TARIFF_DESCRIPTION_OPTIONS = getTariffItemsForLang("fr").map((item) => ({
-  value: `${item.label} - ${item.price}`,
-  label: `${item.label} - ${item.price}`,
+  value: item.descriptionLabel,
+  label: item.descriptionLabel,
+  unitPriceEur: item.unitPriceEur,
 }))
 const CUSTOM_DESCRIPTION_VALUE = "__custom_description__"
 
@@ -441,6 +442,21 @@ export default function ClientsPage() {
     setNewOrders(updated)
   }
 
+  const updateOrderDescriptionFromTariff = (index: number, value: string) => {
+    const updated = [...newOrders]
+    if (value === CUSTOM_DESCRIPTION_VALUE) {
+      updated[index] = { ...updated[index], description: "" }
+    } else {
+      const option = TARIFF_DESCRIPTION_OPTIONS.find((item) => item.value === value)
+      updated[index] = {
+        ...updated[index],
+        description: value,
+        value: option?.unitPriceEur != null ? String(option.unitPriceEur) : updated[index].value,
+      }
+    }
+    setNewOrders(updated)
+  }
+
   const handleCreateContainer = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -737,11 +753,12 @@ export default function ClientsPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="customer_phone">Téléphone</Label>
+                    <Label htmlFor="customer_phone">Téléphone *</Label>
                     <Input
                       id="customer_phone"
                       value={newCustomer.phone}
                       onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                      required
                     />
                   </div>
                   <div>
@@ -771,35 +788,39 @@ export default function ClientsPage() {
                     WhatsApp newsletter
                   </label>
                   <div>
-                    <Label htmlFor="customer_address">Adresse</Label>
+                    <Label htmlFor="customer_address">Adresse *</Label>
                     <Input
                       id="customer_address"
                       value={newCustomer.address}
                       onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                      required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="customer_city">Ville</Label>
+                    <Label htmlFor="customer_city">Ville *</Label>
                     <Input
                       id="customer_city"
                       value={newCustomer.city}
                       onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
+                      required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="customer_postal_code">Code postal</Label>
+                    <Label htmlFor="customer_postal_code">Code postal *</Label>
                     <Input
                       id="customer_postal_code"
                       value={newCustomer.postal_code}
                       onChange={(e) => setNewCustomer({ ...newCustomer, postal_code: e.target.value })}
+                      required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="customer_country">Pays</Label>
+                    <Label htmlFor="customer_country">Pays *</Label>
                     <Input
                       id="customer_country"
                       value={newCustomer.country}
                       onChange={(e) => setNewCustomer({ ...newCustomer, country: e.target.value })}
+                      required
                     />
                   </div>
                   <div>
@@ -890,13 +911,7 @@ export default function ClientsPage() {
                                 ? order.description
                                 : CUSTOM_DESCRIPTION_VALUE
                             }
-                            onValueChange={(value) =>
-                              updateOrderForm(
-                                index,
-                                'description',
-                                value === CUSTOM_DESCRIPTION_VALUE ? "" : value
-                              )
-                            }
+                            onValueChange={(value) => updateOrderDescriptionFromTariff(index, value)}
                           >
                             <SelectTrigger id={`order_description_choice_${index}`} className="h-auto min-h-10 whitespace-normal text-left [&_[data-slot=select-value]]:line-clamp-2 [&_[data-slot=select-value]]:whitespace-normal">
                               <SelectValue placeholder="Choisir dans la grille tarifaire" />
@@ -917,7 +932,7 @@ export default function ClientsPage() {
                             id={`order_description_${index}`}
                             value={order.description}
                             onChange={(e) => updateOrderForm(index, 'description', e.target.value)}
-                            placeholder="Ex: Canapé 2 places à partir de - 250 €"
+                            placeholder="Ex: Canapé 2 places"
                           />
                         </div>
                       </div>
@@ -1093,11 +1108,12 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_phone">Téléphone</Label>
+                  <Label htmlFor="edit_phone">Téléphone *</Label>
                   <Input
                     id="edit_phone"
                     value={editCustomer.phone}
                     onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
@@ -1127,35 +1143,39 @@ export default function ClientsPage() {
                   WhatsApp newsletter
                 </label>
                 <div>
-                  <Label htmlFor="edit_address">Adresse</Label>
+                  <Label htmlFor="edit_address">Adresse *</Label>
                   <Input
                     id="edit_address"
                     value={editCustomer.address}
                     onChange={(e) => setEditCustomer({ ...editCustomer, address: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_city">Ville</Label>
+                  <Label htmlFor="edit_city">Ville *</Label>
                   <Input
                     id="edit_city"
                     value={editCustomer.city}
                     onChange={(e) => setEditCustomer({ ...editCustomer, city: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_postal_code">Code postal</Label>
+                  <Label htmlFor="edit_postal_code">Code postal *</Label>
                   <Input
                     id="edit_postal_code"
                     value={editCustomer.postal_code}
                     onChange={(e) => setEditCustomer({ ...editCustomer, postal_code: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_country">Pays</Label>
+                  <Label htmlFor="edit_country">Pays *</Label>
                   <Input
                     id="edit_country"
                     value={editCustomer.country}
                     onChange={(e) => setEditCustomer({ ...editCustomer, country: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
