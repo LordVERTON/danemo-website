@@ -2,6 +2,15 @@ import { getArticles, getPublishedArticleBySlug } from "@/lib/articles"
 import { readBlogPosts, type BlogPost } from "@/lib/blog-posts"
 import type { Article } from "@/lib/article-types"
 
+function isPermissionDenied(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "42501"
+  )
+}
+
 function formatArticleDate(article: Article) {
   const value = article.published_at || article.created_at
   if (!value) return ""
@@ -54,7 +63,9 @@ export async function readPublicBlogPosts(): Promise<BlogPost[]> {
 
     if (published.length > 0) return published
   } catch (error) {
-    console.error("[public-blog-posts] Supabase fallback to JSON", error)
+    if (!isPermissionDenied(error)) {
+      console.error("[public-blog-posts] Supabase fallback to JSON", error)
+    }
   }
 
   return (await readBlogPosts()).filter((post) => post.isActive)
@@ -65,7 +76,9 @@ export async function readPublicBlogPostBySlug(slug: string): Promise<BlogPost |
     const article = await getPublishedArticleBySlug(slug)
     if (article) return articleToBlogPost(article)
   } catch (error) {
-    console.error("[public-blog-posts] Supabase article fallback to JSON", error)
+    if (!isPermissionDenied(error)) {
+      console.error("[public-blog-posts] Supabase article fallback to JSON", error)
+    }
   }
 
   const posts = await readBlogPosts()
@@ -76,7 +89,9 @@ export async function readPublicArticleBySlug(slug: string): Promise<Article | n
   try {
     return await getPublishedArticleBySlug(slug)
   } catch (error) {
-    console.error("[public-blog-posts] Supabase raw article lookup failed", error)
+    if (!isPermissionDenied(error)) {
+      console.error("[public-blog-posts] Supabase raw article lookup failed", error)
+    }
     return null
   }
 }
