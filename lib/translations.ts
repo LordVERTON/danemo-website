@@ -42,7 +42,8 @@ export type TranslationSchema = {
     }
     nextDeparture: {
       title: string
-      items: { label: string; value: string }[]
+      departureDateLabel: string
+      toBeConfirmed: string
     }
     services: {
       title: string
@@ -360,11 +361,8 @@ export const translations: Record<Lang, TranslationSchema> = {
       },
       nextDeparture: {
         title: "Prochain départ",
-        items: [
-          { label: "Date de départ :", value: "À confirmer" },
-          { label: "Date d'arrivée prévue :", value: "À confirmer" },
-          { label: "Statut du chargement :", value: "En préparation" },
-        ],
+        departureDateLabel: "Date de départ :",
+        toBeConfirmed: "À confirmer",
       },
       services: {
         title: "Nos activités",
@@ -795,11 +793,8 @@ export const translations: Record<Lang, TranslationSchema> = {
       },
       nextDeparture: {
         title: "Next departure",
-        items: [
-          { label: "Departure date:", value: "To be confirmed" },
-          { label: "Estimated arrival:", value: "To be confirmed" },
-          { label: "Loading status:", value: "In preparation" },
-        ],
+        departureDateLabel: "Departure date:",
+        toBeConfirmed: "To be confirmed",
       },
       services: {
         title: "Our services",

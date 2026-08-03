@@ -6,6 +6,18 @@
 -- Mots de passe : admin123 (admin), operator123 (opérateurs). Uniquement pour le dev local.
 -- ---------------------------------------------------------------------------
 -- pgcrypto est déjà créé dans les migrations ; fonctions typiquement dans le schéma extensions.
+-- Accès local en lecture seule nécessaire à la homepage de développement.
+-- Cette policy reste dans le seed et n'est donc pas déployée en production.
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT SELECT (id, code, vessel, departure_port, arrival_port, etd, eta, status)
+  ON public.containers TO anon;
+DROP POLICY IF EXISTS "Local public upcoming departures" ON public.containers;
+CREATE POLICY "Local public upcoming departures"
+  ON public.containers
+  FOR SELECT
+  TO anon
+  USING (status = 'planned' AND etd IS NOT NULL);
+
 DO $$
 DECLARE
   v_admin_id   UUID := 'e1111111-1111-4111-8111-111111111101';
@@ -145,12 +157,14 @@ VALUES
   ('Client Démo Beta', 'demo.beta@example.com', '+32000000002', '+32000000002', 'Meir 10', 'Anvers', '2000', 'Belgique', NULL, 'active', TRUE, FALSE)
 ON CONFLICT (email) DO NOTHING;
 
-INSERT INTO public.containers (code, vessel, departure_port, arrival_port, status, client_id)
+INSERT INTO public.containers (code, vessel, departure_port, arrival_port, etd, eta, status, client_id)
 SELECT
   'DEMOMSKU01',
   'MV Demo Ship',
   'Port d''Anvers, Belgique',
   'Port de Douala, Cameroun',
+  CURRENT_DATE + INTERVAL '14 days',
+  CURRENT_DATE + INTERVAL '44 days',
   'planned',
   c.id
 FROM public.customers c
@@ -158,10 +172,30 @@ WHERE c.email = 'demo.alpha@example.com'
 LIMIT 1
 ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO public.containers (code, vessel, departure_port, arrival_port, status)
+INSERT INTO public.containers (code, vessel, departure_port, arrival_port, etd, eta, status)
 VALUES
-  ('DEMOTCLU02', 'MV Demo Express', 'Rotterdam', 'Lagos', 'departed')
+  ('DEMOTCLU02', 'MV Demo Express', 'Rotterdam', 'Lagos', CURRENT_DATE - INTERVAL '7 days', CURRENT_DATE + INTERVAL '23 days', 'departed')
 ON CONFLICT (code) DO NOTHING;
+
+-- Conteneur local planifié pour tester le bloc « Prochain départ » de la homepage.
+INSERT INTO public.containers (code, vessel, departure_port, arrival_port, etd, eta, status)
+VALUES
+  (
+    'DEMOFUTURE03',
+    'MV Future Test',
+    'Port d''Anvers, Belgique',
+    'Port de Douala, Cameroun',
+    CURRENT_DATE + INTERVAL '7 days',
+    CURRENT_DATE + INTERVAL '37 days',
+    'planned'
+  )
+ON CONFLICT (code) DO UPDATE SET
+  vessel = EXCLUDED.vessel,
+  departure_port = EXCLUDED.departure_port,
+  arrival_port = EXCLUDED.arrival_port,
+  etd = EXCLUDED.etd,
+  eta = EXCLUDED.eta,
+  status = EXCLUDED.status;
 
 INSERT INTO public.orders (
   order_number,

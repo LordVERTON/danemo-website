@@ -20,10 +20,30 @@ interface HomePost {
   isActive: boolean
 }
 
+interface UpcomingDeparture {
+  id: string
+  code: string
+  vessel: string | null
+  departure_port: string | null
+  arrival_port: string | null
+  etd: string
+  eta: string | null
+  status: "planned"
+}
+
+const formatScheduleDate = (value: string, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Brussels",
+  }).format(new Date(value))
+
 export default function HomePage() {
-  const { messages } = useI18n()
+  const { lang, messages } = useI18n()
   const { hero, about, nextDeparture, services, testimonials, contact } = messages.home
   const [homePosts, setHomePosts] = useState<HomePost[]>([])
+  const [upcomingDeparture, setUpcomingDeparture] = useState<UpcomingDeparture | null>(null)
 
   useEffect(() => {
     const loadPosts = async () => {
@@ -39,6 +59,22 @@ export default function HomePage() {
       }
     }
     loadPosts()
+  }, [])
+
+  useEffect(() => {
+    const loadUpcomingDeparture = async () => {
+      try {
+        const response = await fetch("/api/public/upcoming-departure")
+        const result = await response.json()
+        if (response.ok && result.success) {
+          setUpcomingDeparture(result.data)
+        }
+      } catch (error) {
+        console.error("Error loading upcoming departure:", error)
+      }
+    }
+
+    loadUpcomingDeparture()
   }, [])
 
   return (
@@ -110,13 +146,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">{nextDeparture.title}</h2>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {nextDeparture.items.map((item) => (
-              <div key={item.label} className="text-center">
-                <h3 className="text-xl font-bold text-gray-700 mb-2">{item.label}</h3>
-                <p className="text-lg text-gray-600">{item.value}</p>
-              </div>
-            ))}
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-gray-700 mb-2">{nextDeparture.departureDateLabel}</h3>
+            <p className="text-lg text-gray-600">
+              {upcomingDeparture
+                ? formatScheduleDate(upcomingDeparture.etd, lang === "fr" ? "fr-BE" : "en-GB")
+                : nextDeparture.toBeConfirmed}
+            </p>
           </div>
         </div>
       </section>
