@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PackageSearch, Plus, MapPin, Clock, BadgeCheck, Loader2, Send } from "lucide-react"
+import { PackageSearch, Plus, MapPin, Clock, BadgeCheck, Loader2, Pencil, Send } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 interface Container {
@@ -246,8 +246,9 @@ export default function ContainersPage() {
       client_id: (form.client_id || null) as string | null,
     }
     if (!payload.code) return
-    const res = await fetch('/api/containers', {
-      method: 'POST',
+    const isEditing = Boolean(form.id)
+    const res = await fetch(isEditing ? `/api/containers/${form.id}` : '/api/containers', {
+      method: isEditing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
@@ -319,13 +320,16 @@ export default function ContainersPage() {
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2 shrink-0">
+              <Button
+                className="flex items-center gap-2 shrink-0"
+                onClick={() => setForm({ status: 'planned' })}
+              >
                 <Plus className="h-4 w-4" /> Nouveau conteneur
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg w-[95vw]">
               <DialogHeader>
-                <DialogTitle>Ajouter un conteneur</DialogTitle>
+                <DialogTitle>{form.id ? "Modifier le conteneur" : "Ajouter un conteneur"}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4">
                 <div className="grid gap-2">
@@ -352,7 +356,7 @@ export default function ContainersPage() {
                   <Label>ETA</Label>
                   <Input type="date" value={form.eta || ''} onChange={e => setForm({ ...form, eta: e.target.value })} />
                 </div>
-                <Button onClick={submit}>Enregistrer</Button>
+                <Button onClick={submit}>{form.id ? "Enregistrer les modifications" : "Enregistrer"}</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -478,6 +482,19 @@ export default function ContainersPage() {
               )}
               {selected && (
                 <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => {
+                        setForm(selected)
+                        setTrackingOpen(false)
+                        setOpen(true)
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" /> Modifier les informations
+                    </Button>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-lg border border-gray-100 bg-white/80 p-4 space-y-2">
                       <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Informations conteneur</p>
