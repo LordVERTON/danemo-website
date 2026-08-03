@@ -47,8 +47,8 @@ DANEMO propose une gamme complète de services logistiques :
 ## 📋 Prérequis
 
 Avant de commencer, assurez-vous d'avoir installé :
-- **Node.js** (version 18.0 ou supérieure)
-- **npm** ou **yarn** ou **pnpm**
+- **Node.js 22.x**
+- **npm 11.x**
 - **Git**
 - **Docker** (requis pour `npx supabase start` en local)
 
@@ -64,14 +64,7 @@ cd danemo-website
 ### 2. Installer les dépendances
 
 ```bash
-# Avec npm (recommandé)
 npm install
-
-# Avec yarn
-yarn install
-
-# Avec pnpm
-pnpm install
 ```
 
 ### 3. Configuration de l'environnement
