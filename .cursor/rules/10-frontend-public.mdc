@@ -1,0 +1,30 @@
+---
+description: "Conventions des pages publiques, tracking, formulaires et rendu du blog"
+globs:
+  - "app/page.tsx"
+  - "app/blog/**/*"
+  - "app/contact/**/*"
+  - "app/contactez-nous/**/*"
+  - "app/new-client-form/**/*"
+  - "app/services/**/*"
+  - "app/tarifs/**/*"
+  - "app/tracking/**/*"
+  - "components/header.tsx"
+  - "components/footer.tsx"
+  - "components/language-switcher.tsx"
+  - "components/blog-builder/BlogPuckRenderer.tsx"
+alwaysApply: false
+---
+
+# Frontend public
+
+- Préserver les URLs, métadonnées, textes, i18n et parcours publics existants.
+- Ne pas fusionner /contact et /contactez-nous sans demande ; une redirection existe dans next.config.mjs.
+- Réutiliser les composants et styles Tailwind/shadcn existants avant d’ajouter une variante.
+- Ne pas modifier la frontière client/serveur sans vérifier hooks, providers, SEO et chargement des données.
+- Utiliser les composants Next Image et Link lorsque le code voisin suit ce modèle.
+- Maintenir accessibilité, responsive, états loading/error et validation des formulaires.
+- Toute donnée publique écrite ou recherchée doit être revalidée côté serveur.
+- Ne jamais exposer de variable non NEXT_PUBLIC_*, de donnée client ou de détail interne dans le navigateur.
+- Le blog combine un flux JSON historique et un flux Supabase/Puck ; vérifier les deux consommateurs.
+- Tout HTML riche rendu doit être considéré non fiable et assaini avant dangerouslySetInnerHTML.

@@ -1,0 +1,17 @@
+---
+description: "Schéma Supabase, migrations append-only, RLS et données de seed locales"
+globs: "supabase/**/*"
+alwaysApply: false
+---
+
+# Supabase
+
+- Suivre supabase/AGENTS.md.
+- Ne jamais modifier une migration appliquée ; ajouter une migration horodatée.
+- Toute évolution sensible exige une revue des grants, RLS et policies au moindre privilège.
+- Ne pas considérer les policies dev-friendly existantes comme suffisantes pour la production.
+- Garder migrations, seed et données de production strictement séparés.
+- Ne jamais inclure secret, service-role key ou PII dans un fichier SQL versionné.
+- Ne pas éditer les sorties CLI sous supabase/.temp/ ou supabase/.branches/.
+- Ne lancer aucune commande DB locale ou distante sans demande explicite et cible confirmée.
+- Répercuter les changements de schéma sur types TypeScript, accès DB et contrats API concernés.

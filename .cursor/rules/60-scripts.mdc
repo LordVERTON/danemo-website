@@ -1,0 +1,20 @@
+---
+description: "Scripts ponctuels, sélection d’environnement et mutations de données sûres"
+globs:
+  - "scripts/**/*.mjs"
+  - "scripts/**/*.js"
+  - "scripts/**/*.cjs"
+  - "scripts/**/*.ts"
+alwaysApply: false
+---
+
+# Scripts
+
+- Suivre scripts/AGENTS.md.
+- Inspecter la cible et l’ordre de chargement dotenv avant toute exécution.
+- Ne jamais exécuter implicitement migration, seed, envoi, upload ou nettoyage.
+- Arrêter si l’environnement est ambigu, notamment lorsqu’un script charge .env.production.local.
+- Préférer dry-run, idempotence, reprise sûre et compte rendu par compteurs.
+- Échouer si une variable requise manque, sans afficher sa valeur.
+- Ne pas journaliser de secret, token ou enregistrement client complet.
+- Conserver le format .mjs et les conventions du script voisin.

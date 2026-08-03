@@ -1,0 +1,19 @@
+---
+description: "Services métier, accès DB, intégrations et frontières serveur/client de lib"
+globs:
+  - "lib/**/*.ts"
+  - "lib/**/*.tsx"
+alwaysApply: false
+---
+
+# Backend et lib
+
+- Suivre lib/AGENTS.md.
+- Vérifier les importeurs avant de changer un module partagé ou sa signature.
+- Maintenir une frontière stricte entre code client, code serveur et intégrations privilégiées.
+- supabaseAdmin et les secrets SMTP, Resend, Twilio et Cloudinary ne doivent jamais atteindre un bundle client.
+- Préserver les API métier de lib/database.ts et les types Database liés au schéma.
+- Ne pas accroître les casts any ; typer les nouvelles entrées et sorties.
+- Propager des erreurs contextualisées sans secret ni PII ; les handlers décident de la réponse HTTP.
+- Les notifications, messages, uploads et documents ont des effets externes : ne pas les exécuter implicitement.
+- Préserver calculs, numérotation et formats de facturation/document sans validation métier explicite.

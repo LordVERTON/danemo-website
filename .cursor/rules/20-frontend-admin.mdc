@@ -1,0 +1,24 @@
+---
+description: "Conventions du back-office admin et de ses composants métier"
+globs:
+  - "app/admin/**/*"
+  - "components/admin-layout.tsx"
+  - "components/export-menu.tsx"
+  - "components/qr-scanner.tsx"
+  - "components/qr-tracking-view.tsx"
+  - "components/blog-builder/BlogPuckEditor.tsx"
+  - "components/blog-builder/fields/**/*"
+alwaysApply: false
+---
+
+# Frontend admin
+
+- Suivre app/admin/AGENTS.md.
+- Préserver AdminLayout, les appels API, rôles admin/operator et workflows existants.
+- Un contrôle UI ne remplace jamais l’autorisation du handler API.
+- Ne jamais importer supabaseAdmin, service-role ou intégration secrète dans un Client Component.
+- Réutiliser components/ et components/ui/ et conserver les conventions Tailwind locales.
+- Maintenir les états loading, empty, error et les confirmations d’actions sensibles.
+- Traiter toutes les données affichées ou exportées comme PII.
+- Les pages sont volumineuses : limiter le diff et ne pas extraire du code sans demande.
+- Ne déclencher aucun email, SMS, seed, suppression, upload ou document réel pendant la validation.

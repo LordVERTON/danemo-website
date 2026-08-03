@@ -1,0 +1,51 @@
+---
+description: "Garde-fous renforcés pour auth, service-role, PII et effets externes"
+globs:
+  - ".env*"
+  - "certificates/**/*"
+  - "package-lock.json"
+  - "middleware.ts"
+  - "next-auth.d.ts"
+  - "lib/auth.ts"
+  - "lib/auth-middleware.ts"
+  - "lib/supabase.ts"
+  - "lib/use-current-user.ts"
+  - "components/auth-session-provider.tsx"
+  - "app/admin/login/**/*"
+  - "app/api/auth/**/*"
+  - "app/api/public/self-register/route.ts"
+  - "app/api/admin/seed-*/route.ts"
+  - "app/api/admin/reseed-data/route.ts"
+  - "app/api/health/route.ts"
+  - "app/api/test-connection/route.ts"
+  - "app/api/send-email/route.ts"
+  - "app/api/notifications/**/*"
+  - "app/api/admin/messages/send/route.ts"
+  - "app/api/admin/media/cloudinary/route.ts"
+  - "app/api/documents/**/*"
+  - "lib/twilio.ts"
+  - "lib/messaging.ts"
+  - "lib/notify.ts"
+  - "lib/*-notifications.ts"
+  - "lib/cloudinary.ts"
+  - "lib/*invoice*.ts"
+  - "lib/proforma-utils.ts"
+  - "lib/documents-utils.ts"
+  - "app/blog/**/page.tsx"
+  - "components/blog-builder/config.tsx"
+alwaysApply: false
+---
+
+# Sécurité et effets sensibles
+
+- Ces garde-fous s’ajoutent aux règles du dossier ; ils ne remplacent pas les contrats existants.
+- Des identifiants de développement et des cookies legacy existent : ne pas les copier, étendre ou présenter comme sûrs.
+- Un cookie ou un chemin de route n’est pas une preuve d’identité ; authentifier puis autoriser côté serveur.
+- SUPABASE_SERVICE_ROLE_KEY et supabaseAdmin restent exclusivement serveur et contournent RLS.
+- Appliquer le moindre privilège et refuser par défaut toute opération dont le rôle est ambigu.
+- Ne jamais afficher, journaliser ou renvoyer secret, token, PII ou détail interne.
+- Ne jamais éditer ou exposer .env* et certificates/ ; ne modifier package-lock.json que pour une évolution explicite des dépendances.
+- Confirmer cible et autorisation avant toute opération destructive, seed/reseed, health write ou test DB.
+- Email, SMS, Cloudinary et génération de documents sont des effets réels : pas d’appel pendant une validation.
+- Les contenus riches destinés à dangerouslySetInnerHTML doivent être assainis.
+- Toute modification auth, RLS, route privilégiée ou facturation exige une revue ciblée des consommateurs et du diff.

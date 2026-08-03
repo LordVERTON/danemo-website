@@ -1,0 +1,28 @@
+---
+description: "Socle global DANEMO : architecture, conventions et validation minimale"
+globs:
+alwaysApply: true
+---
+
+# Socle projet
+
+- Application Next.js 15.2.8 App Router, React 19, TypeScript strict, Tailwind 4, Supabase/PostgreSQL et NextAuth 4.
+- Utiliser npm 11.15.0. package.json et package-lock.json sont les références ; ne pas générer un autre lockfile.
+- Suivre AGENTS.md à la racine puis le fichier AGENTS.md le plus proche du code modifié.
+- Ne pas refactorer, renommer, déplacer ou changer un comportement métier hors demande.
+- Préserver les imports, URLs, contrats API et fichiers existants.
+
+# Conventions
+
+- Composants/types en PascalCase ; fonctions/variables en camelCase ; constantes en UPPER_SNAKE_CASE.
+- Server Component par défaut ; use client uniquement si le fichier utilise hooks, événements ou APIs navigateur.
+- Alias @/* entre zones ; imports relatifs courts dans un même module.
+- Respecter le style local et éviter tout reformatage global ou nouvel any.
+- Gérer les erreurs aux frontières, sans exposer secret, PII ou détail fournisseur.
+
+# Fin de tâche
+
+- Inspecter le code et ses consommateurs avant d’éditer, puis relire le diff.
+- Pour règles/documentation : vérifier fichiers et frontmatter seulement.
+- Pour code : exécuter npm run lint puis npm run build lorsque pertinent.
+- Aucun test, formatter ou typecheck dédié n’est configuré ; signaler ce qui n’a pas été exécuté.

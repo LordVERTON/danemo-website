@@ -1,0 +1,18 @@
+---
+description: "Contrats, validation, autorisation et effets des Route Handlers Next.js"
+globs: "app/api/**/route.ts"
+alwaysApply: false
+---
+
+# API
+
+- Suivre app/api/AGENTS.md.
+- Préserver méthodes, paramètres, statuts et formes JSON consommés par le frontend.
+- Valider les entrées avant accès DB ; ne jamais faire confiance au corps, aux query params ou aux cookies.
+- Vérifier explicitement authentification et rôle : middleware.ts ne protège pas uniformément toutes les routes.
+- Une route utilisant supabaseAdmin doit rester serveur et être autorisée avant l’accès service-role.
+- Ne pas exposer secret, PII, stack trace ou erreur brute Supabase/fournisseur.
+- Conserver un try/catch contextualisé et un statut HTTP cohérent.
+- Identifier les notifications déjà déclenchées par la couche DB pour éviter les doubles envois.
+- Ne pas rendre publique une route existante ou nouvelle sans décision explicite.
+- Ne pas appeler les routes destructives, de diagnostic ou à effet externe pendant une simple validation.
