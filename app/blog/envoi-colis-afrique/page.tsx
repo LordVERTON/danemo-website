@@ -1,7 +1,14 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+
+export const metadata: Metadata = {
+  title: "Bien préparer un envoi de colis vers l'Afrique",
+  description:
+    "Les conseils de Danemo pour bien préparer un envoi de colis vers l'Afrique : emballage, étiquetage, liste de contenu et objets autorisés.",
+}
 
 export default function EnvoiColisAfriquePage() {
   return (
@@ -11,7 +18,7 @@ export default function EnvoiColisAfriquePage() {
       <main className="max-w-4xl mx-auto px-4 py-12">
         <article className="prose prose-lg max-w-none">
           <header className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-serif text-amber-700 mb-4 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-[#14171a] mb-4 leading-tight">
               Comment bien préparer un envoi de colis vers l'Afrique ? Les conseils de Danemo
             </h1>
             <p className="text-gray-600 text-sm">24/07/2025</p>
@@ -37,7 +44,7 @@ export default function EnvoiColisAfriquePage() {
           </div>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">Pourquoi anticiper son envoi de colis ?</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Pourquoi anticiper son envoi de colis ?</h2>
             <p className="text-gray-700 mb-4">
               Beaucoup de gens s'imaginent qu'envoyer un colis à l'étranger à la dernière minute est aussi simple de
               l'envoyer en France. En réalité :
@@ -57,7 +64,7 @@ export default function EnvoiColisAfriquePage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">1. Choisissez un emballage solide et sécurisé</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">1. Choisissez un emballage solide et sécurisé</h2>
             <p className="text-gray-700 mb-4">Un bon emballage, c'est la base. Utilisez :</p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>
@@ -76,7 +83,7 @@ export default function EnvoiColisAfriquePage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">2. Étiquetez correctement votre colis</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">2. Étiquetez correctement votre colis</h2>
             <p className="text-gray-700 mb-4">Assurez l'étiquetage :</p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>
@@ -95,7 +102,7 @@ export default function EnvoiColisAfriquePage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">3. Préparez la liste de contenu</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">3. Préparez la liste de contenu</h2>
             <p className="text-gray-700 mb-4">
               <strong>Danemo</strong> vous demande une <strong>liste détaillée des objets envoyés</strong>. Cette étape
               permet :
@@ -114,7 +121,7 @@ export default function EnvoiColisAfriquePage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">4. Vérifiez les objets autorisés à l'envoi</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">4. Vérifiez les objets autorisés à l'envoi</h2>
             <p className="text-gray-700 mb-4">
               Chaque pays a ses restrictions. Par exemple : certains produits électroniques, médicaments ou cosmétiques
               peuvent être interdits ou soumis à des conditions d'entrée.
@@ -126,7 +133,7 @@ export default function EnvoiColisAfriquePage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">5. Choisissez un prestataire fiable</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">5. Choisissez un prestataire fiable</h2>
             <p className="text-gray-700 mb-4">
               Avec <strong>Danemo</strong> :
             </p>
@@ -144,7 +151,7 @@ export default function EnvoiColisAfriquePage() {
           </section>
 
           <section className="mb-8 bg-orange-50 p-6 rounded-lg">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">Prêt à envoyer votre colis ?</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Prêt à envoyer votre colis ?</h2>
             <p className="text-gray-700">
               Contactez <strong>Danemo</strong> dès maintenant pour connaître les prochaines dates de départ, recevoir
               un devis, et préparer votre colis en toute sérénité.
@@ -155,7 +162,7 @@ export default function EnvoiColisAfriquePage() {
         <div className="mt-12 text-center">
           <Link
             href="/blog"
-            className="inline-flex items-center px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-full hover:bg-orange-700 transition-colors"
           >
             ← Retour au blog
           </Link>

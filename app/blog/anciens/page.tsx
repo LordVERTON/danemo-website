@@ -1,119 +1,90 @@
+import type { Metadata } from "next"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import { Reveal } from "@/components/reveal"
 import Link from "next/link"
 import Image from "next/image"
+import { ArrowLeft, ArrowRight } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Anciens articles",
+  description: "Retrouvez les anciens articles du blog Danemo sur l'expédition et le déménagement vers l'Afrique.",
+}
+
+const olderPosts = [
+  {
+    title: "Comment organiser un déménagement diplomatique en toute sérénité avec Danemo ?",
+    date: "24/07/2025",
+    excerpt:
+      "Organiser un déménagement diplomatique peut vite devenir un casse-tête logistique, surtout lorsque chaque détail compte. Entre les délais à respecter, les formalités douanières et la protection des biens personnels, il est essentiel de faire appel à un partenaire de confiance. Danemo, spécialiste de l'import-export entre l'Europe et l'Afrique,...",
+    image: "/images/demenagement-couple-moderne.png",
+    slug: "demenagement-diplomatique",
+  },
+  {
+    title: "Comment bien préparer un envoi de colis vers l'Afrique ? Les conseils de Danemo",
+    date: "24/07/2025",
+    excerpt:
+      "Envoyer un colis vers l'Afrique, que ce soit à un proche ou pour des raisons professionnelles, demande un minimum d'organisation. Entre le choix de l'emballage, la déclaration douanière et les délais de livraison, il est important de suivre certaines étapes pour éviter les mauvaises surprises. Spécialiste de l'envoi de colis vers le Cameroun, ...",
+    image: "/images/terminal-portuaire-aerien.png",
+    slug: "envoi-colis-afrique",
+  },
+]
 
 export default function AnciensArticles() {
   return (
     <div className="min-h-screen bg-white">
       <Header />
 
-      <main className="pt-24">
-        {/* Hero Section */}
-        <section className="bg-gradient-to-r from-orange-50 to-orange-100 py-16">
-          <div className="max-w-6xl mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-orange-600 mb-4">Blog</h1>
-            <div className="w-24 h-1 bg-orange-500 mx-auto"></div>
+      <main>
+        <section className="bg-[#14171a] pt-20 pb-16">
+          <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+            <Reveal>
+              <p className="text-sm font-semibold text-orange-400 uppercase tracking-wide mb-3">Blog</p>
+              <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight text-balance">
+                Anciens articles
+              </h1>
+            </Reveal>
           </div>
         </section>
 
-        {/* Articles Section */}
-        <section className="py-16">
-          <div className="max-w-4xl mx-auto px-4">
-            <div className="space-y-12">
-              {/* Article 1 */}
-              <article className="bg-white rounded-lg overflow-hidden">
-                <div className="grid md:grid-cols-2 gap-8 items-start">
-                  <div className="order-2 md:order-1">
-                    <div className="p-6 md:p-0">
-                      <h2 className="text-2xl font-bold mb-4 text-[#B8860B] font-serif leading-tight">
+        <section className="py-16 md:py-24">
+          <div className="max-w-4xl mx-auto px-6 lg:px-8">
+            <div className="space-y-8">
+              {olderPosts.map((post, i) => (
+                <Reveal key={post.slug} delay={i * 80}>
+                  <article className="group bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="grid md:grid-cols-2">
+                      <div className="relative aspect-video md:aspect-auto">
+                        <Image src={post.image} alt={post.title} fill className="object-cover" />
+                      </div>
+                      <div className="p-7 flex flex-col justify-center">
+                        <p className="text-xs text-gray-400 mb-2">{post.date}</p>
+                        <h2 className="text-xl font-bold text-[#14171a] leading-snug">
+                          <Link href={`/blog/${post.slug}`} className="hover:text-orange-600 transition-colors">
+                            {post.title}
+                          </Link>
+                        </h2>
+                        <p className="mt-3 text-sm text-gray-600 leading-relaxed line-clamp-3">{post.excerpt}</p>
                         <Link
-                          href="/blog/demenagement-diplomatique"
-                          className="hover:text-orange-600 transition-colors"
+                          href={`/blog/${post.slug}`}
+                          className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-orange-600 group-hover:gap-2.5 transition-all"
                         >
-                          Comment organiser un déménagement diplomatique en toute sérénité avec Danemo ?
+                          Lire la suite
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
-                      </h2>
-                      <p className="text-gray-500 text-sm mb-4">24/07/2025</p>
-                      <p className="text-gray-700 leading-relaxed mb-6">
-                        Organiser un déménagement diplomatique peut vite devenir un casse-tête logistique, surtout
-                        lorsque chaque détail compte. Entre les délais à respecter, les formalités douanières et la
-                        protection des biens personnels, il est essentiel de faire appel à un partenaire de confiance.{" "}
-                        <strong>Danemo</strong>, spécialiste de l'import-export entre l'Europe et l'Afrique,...
-                      </p>
-                      <Link
-                        href="/blog/demenagement-diplomatique"
-                        className="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium transition-colors"
-                      >
-                        Lire la suite
-                        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
+                      </div>
                     </div>
-                  </div>
-                  <div className="order-1 md:order-2">
-                    <Image
-                      src="/images/demenagement-couple-moderne.png"
-                      alt="Déménagement diplomatique"
-                      width={400}
-                      height={250}
-                      className="w-full h-64 object-cover rounded-lg"
-                    />
-                  </div>
-                </div>
-              </article>
-
-              {/* Article 2 */}
-              <article className="bg-white rounded-lg overflow-hidden">
-                <div className="grid md:grid-cols-2 gap-8 items-start">
-                  <div className="order-2 md:order-1">
-                    <div className="p-6 md:p-0">
-                      <h2 className="text-2xl font-bold mb-4 text-[#B8860B] font-serif leading-tight">
-                        <Link href="/blog/envoi-colis-afrique" className="hover:text-orange-600 transition-colors">
-                          Comment bien préparer un envoi de colis vers l'Afrique ? Les conseils de Danemo
-                        </Link>
-                      </h2>
-                      <p className="text-gray-500 text-sm mb-4">24/07/2025</p>
-                      <p className="text-gray-700 leading-relaxed mb-6">
-                        Envoyer un colis vers l'Afrique, que ce soit à un proche ou pour des raisons professionnelles,
-                        demande un minimum d'organisation. Entre le choix de l'emballage, la déclaration douanière et
-                        les délais de livraison, il est important de suivre certaines étapes pour éviter les mauvaises
-                        surprises. Spécialiste de l'envoi de colis vers le Cameroun, ...
-                      </p>
-                      <Link
-                        href="/blog/envoi-colis-afrique"
-                        className="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium transition-colors"
-                      >
-                        Lire la suite
-                        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="order-1 md:order-2">
-                    <Image
-                      src="/images/terminal-portuaire-aerien.png"
-                      alt="Envoi de colis vers l'Afrique"
-                      width={400}
-                      height={250}
-                      className="w-full h-64 object-cover rounded-lg"
-                    />
-                  </div>
-                </div>
-              </article>
+                  </article>
+                </Reveal>
+              ))}
             </div>
 
-            {/* Navigation */}
             <div className="text-center mt-12">
               <Link
                 href="/blog"
-                className="inline-flex items-center text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 text-gray-600 hover:text-orange-600 font-medium transition-colors"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+                <ArrowLeft className="w-4 h-4" />
                 Articles récents
               </Link>
             </div>

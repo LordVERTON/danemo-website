@@ -1,7 +1,14 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+
+export const metadata: Metadata = {
+  title: "Envoi de conteneur vers l'Afrique : 7 erreurs à éviter",
+  description:
+    "Les 7 erreurs fréquentes à éviter lors de l'envoi d'un conteneur vers l'Afrique : délais, volume, emballage, documents et assurance.",
+}
 
 export default function EnvoiConteneurErreursPage() {
   return (
@@ -11,7 +18,7 @@ export default function EnvoiConteneurErreursPage() {
       <main className="max-w-4xl mx-auto px-4 py-12">
         <article className="prose prose-lg max-w-none">
           <header className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-serif text-amber-700 mb-4 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-[#14171a] mb-4 leading-tight">
               Envoi de conteneur vers l'Afrique : 7 erreurs fréquentes à éviter absolument
             </h1>
             <p className="text-gray-600 text-sm">24/07/2025</p>
@@ -28,7 +35,7 @@ export default function EnvoiConteneurErreursPage() {
           </div>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">1. Ne pas anticiper les délais</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">1. Ne pas anticiper les délais</h2>
             <p className="text-gray-700 mb-4">
               Beaucoup pensent qu'un conteneur peut être chargé et <strong>expédié</strong> du jour au lendemain. En
               réalité, une expédition demande du temps :
@@ -46,7 +53,7 @@ export default function EnvoiConteneurErreursPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">2. Mal estimer le volume à expédier</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">2. Mal estimer le volume à expédier</h2>
             <p className="text-gray-700 mb-4">
               Une erreur fréquente est de choisir un conteneur <strong>trop petit</strong>, ou trop grand. Cela génère :
             </p>
@@ -62,7 +69,7 @@ export default function EnvoiConteneurErreursPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">3. Négliger l'emballage et la protection</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">3. Négliger l'emballage et la protection</h2>
             <p className="text-gray-700 mb-4">
               Un conteneur subit des <strong>secousses</strong>, des <strong>variations de température</strong> et
               parfois de <strong>l'humidité</strong>. Évitez les objets mal protégés, c'est primordial en voyage :
@@ -79,7 +86,7 @@ export default function EnvoiConteneurErreursPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">4. Oublier certains documents administratifs</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">4. Oublier certains documents administratifs</h2>
             <p className="text-gray-700 mb-4">
               Un conteneur sans les bons papiers peut être <strong>bloqué à la douane</strong> pendant plusieurs jours,
               voire refoulé. Les documents à ne jamais oublier :
@@ -106,7 +113,7 @@ export default function EnvoiConteneurErreursPage() {
           </div>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">
               5. Mettre des objets interdits dans le conteneur
             </h2>
             <p className="text-gray-700 mb-4">Certains produits sont strictement interdits :</p>
@@ -125,7 +132,7 @@ export default function EnvoiConteneurErreursPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">6. Mal charger le conteneur</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">6. Mal charger le conteneur</h2>
             <p className="text-gray-700 mb-4">Le chargement mal réparti peut :</p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>Endommager les biens pendant le transport</li>
@@ -139,7 +146,7 @@ export default function EnvoiConteneurErreursPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">7. Ne pas assurer son envoi</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">7. Ne pas assurer son envoi</h2>
             <p className="text-gray-700 mb-4">
               Même avec toutes les précautions du monde, un incident peut survenir durant le transport : perte
               partielle, dégât des eaux, accident de manutention, etc. <strong>Une assurance</strong> vous couvre contre
@@ -151,7 +158,7 @@ export default function EnvoiConteneurErreursPage() {
           </section>
 
           <section className="mb-8 bg-orange-50 p-6 rounded-lg">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">
               En résumé : pour un envoi de conteneur réussi, faites confiance à des pros
             </h2>
             <p className="text-gray-700 mb-4">
@@ -174,7 +181,7 @@ export default function EnvoiConteneurErreursPage() {
         <div className="mt-12 text-center">
           <Link
             href="/blog"
-            className="inline-flex items-center px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-full hover:bg-orange-700 transition-colors"
           >
             ← Retour au blog
           </Link>

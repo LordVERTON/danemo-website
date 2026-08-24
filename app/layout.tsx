@@ -1,30 +1,50 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Playfair_Display, Bona_Nova as Proxima_Nova } from "next/font/google"
+import { Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
 
-const playfairDisplay = Playfair_Display({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-playfair-display",
-})
-
-const proximaNova = Proxima_Nova({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-proxima-nova",
-  weight: ["400", "700"],
+  variable: "--font-jakarta",
 })
 
 export const metadata: Metadata = {
-  title: "Danemo - Rapprocher plus vite l'Afrique de la Diaspora",
+  metadataBase: new URL("https://www.danemo.be"),
+  title: {
+    default: "Danemo — Fret, dédouanement et déménagement entre l'Europe et l'Afrique",
+    template: "%s | Danemo",
+  },
   description:
-    "Crée en Juin 2021, Danemo Srl est une entreprise de transport international qui s'occupe de l'envoi des colis de toute nature entre l'Europe et le Cameroun.",
+    "Danemo SRL accompagne particuliers, entreprises et diaspora entre l'Europe et le Cameroun : fret maritime et aérien, dédouanement de véhicules et marchandises, négoce et déménagement international. Devis rapide, suivi transparent.",
+  keywords: [
+    "Danemo",
+    "fret maritime Cameroun",
+    "envoi colis Afrique",
+    "dédouanement véhicule Cameroun",
+    "déménagement international Afrique",
+    "transport Europe Afrique",
+  ],
   generator: "Next.js",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
     apple: "/favicon.ico",
+  },
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: "Danemo",
+    title: "Danemo — Rapprocher plus vite l'Afrique de la diaspora",
+    description:
+      "Fret maritime et aérien, dédouanement, négoce et déménagement international entre l'Europe et le Cameroun.",
+    images: ["/images/logo.webp"],
+  },
+  twitter: {
+    card: "summary",
+    title: "Danemo — Rapprocher plus vite l'Afrique de la diaspora",
+    description:
+      "Fret maritime et aérien, dédouanement, négoce et déménagement international entre l'Europe et le Cameroun.",
   },
 }
 
@@ -34,8 +54,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="fr" className={`${playfairDisplay.variable} ${proximaNova.variable}`}>
-      <body className="font-sans antialiased">{children}</body>
+    <html lang="fr" className={jakarta.variable}>
+      <body className="font-sans antialiased">
+        <noscript>
+          <style>{"[data-reveal]{opacity:1 !important;transform:none !important}"}</style>
+        </noscript>
+        {children}
+      </body>
     </html>
   )
 }

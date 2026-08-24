@@ -2,12 +2,6 @@
 @import "tw-animate-css";
 
 :root {
-  --orange-primary: #f39c12;
-  --orange-dark: #e67e22;
-  --gray-light: #f8f9fa;
-  --gray-medium: #6c757d;
-  --gray-dark: #343a40;
-  --blue-overlay: rgba(0, 0, 0, 0.4);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -79,10 +73,8 @@
 }
 
 @theme inline {
-  --font-playfair-display: var(--font-playfair-display);
-  --font-proxima-nova: var(--font-proxima-nova);
-  --font-sans: var(--font-proxima-nova);
-  --font-serif: var(--font-playfair-display);
+  --font-jakarta: var(--font-jakarta);
+  --font-sans: var(--font-jakarta);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -128,46 +120,28 @@
   body {
     @apply bg-background text-foreground;
   }
-}
-
-.hero-overlay {
-  background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4));
-}
-
-.claim-text {
-  font-family: var(--font-playfair-display), serif;
-  font-weight: 400;
-}
-
-.claim-slogan {
-  font-family: var(--font-proxima-nova), sans-serif;
-  font-weight: 700;
-  font-style: italic;
-}
-
-.section-bg {
-  background-color: #f8f9fa;
-}
-
-.orange-bg {
-  background-color: var(--orange-primary);
-}
-
-.orange-text {
-  color: var(--orange-primary);
-}
-
-.service-card:hover {
-  transform: translateY(-5px);
-  transition: transform 0.3s ease;
-}
-
-@media (max-width: 768px) {
-  .hero-title {
-    font-size: 2rem;
+  html {
+    scroll-behavior: smooth;
   }
+}
 
-  .hero-slogan {
-    font-size: 1.2rem;
+/* Scroll-reveal: paired with the <Reveal> client component. Elements
+   start hidden only once JS confirms it can animate them, so content
+   never disappears if the observer fails to run. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  [data-reveal].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }

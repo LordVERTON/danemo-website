@@ -1,7 +1,14 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+
+export const metadata: Metadata = {
+  title: "Entreprises africaines : facilitez vos achats en Europe",
+  description:
+    "Comment Danemo simplifie la logistique des entreprises africaines qui commandent régulièrement en Europe : groupage, suivi et livraison au Cameroun.",
+}
 
 export default function EntreprisesAfricainesPage() {
   return (
@@ -11,7 +18,7 @@ export default function EntreprisesAfricainesPage() {
       <main className="max-w-4xl mx-auto px-4 py-12">
         <article className="prose prose-lg max-w-none">
           <header className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-serif text-amber-700 mb-4 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-[#14171a] mb-4 leading-tight">
               Entreprises africaines : facilitez vos achats en Europe grâce à Danemo, votre partenaire logistique de
               confiance
             </h1>
@@ -38,7 +45,7 @@ export default function EntreprisesAfricainesPage() {
           </div>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">
               Danemo, l'intermédiaire logistique entre vos fournisseurs européens et votre entreprise
             </h2>
             <p className="text-gray-700 leading-relaxed mb-4">
@@ -53,7 +60,7 @@ export default function EntreprisesAfricainesPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">Comment ça fonctionne ?</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Comment ça fonctionne ?</h2>
             <ol className="list-decimal list-inside space-y-2 text-gray-700">
               <li>
                 Vous commandez vos produits auprès de fournisseurs en France, Belgique, Allemagne (ou dans pays
@@ -68,7 +75,7 @@ export default function EntreprisesAfricainesPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">
               Quels types d'entreprises peuvent faire appel à Danemo ?
             </h2>
             <ul className="list-disc list-inside space-y-2 text-gray-700">
@@ -83,32 +90,32 @@ export default function EntreprisesAfricainesPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">Vos avantages en travaillant avec Danemo</h2>
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Optimisation de vos commandes</h3>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Vos avantages en travaillant avec Danemo</h2>
+            <h3 className="text-xl font-bold text-[#14171a] mb-3">Optimisation de vos commandes</h3>
             <p className="text-gray-700 mb-4">
               En cas de frais de transport relativement élevé chaque colis,{" "}
               <strong>nous regroupons tous vos achats</strong> en un seul envoi logistique.
             </p>
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Gain de temps</h3>
+            <h3 className="text-xl font-bold text-[#14171a] mb-3">Gain de temps</h3>
             <p className="text-gray-700 mb-4">
               Vous ne perdez plus de temps à suivre chaque fournisseur.{" "}
               <strong>Danemo gère la logistique à votre place</strong>.
             </p>
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Réduction des coûts</h3>
+            <h3 className="text-xl font-bold text-[#14171a] mb-3">Réduction des coûts</h3>
             <p className="text-gray-700 mb-4">
               Avec notre système de <strong>groupage</strong> et nos tarifs négociés, vous bénéficiez de{" "}
               <strong>tarifs préférentiels</strong> sur le transport.
             </p>
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Suivi personnalisé</h3>
+            <h3 className="text-xl font-bold text-[#14171a] mb-3">Suivi personnalisé</h3>
             <p className="text-gray-700 mb-4">
               Vous êtes informé à chaque étape : <strong>réception, chargement, envoi, arrivée</strong>. Nous restons
               disponibles pour répondre à vos questions.
             </p>
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Sécurité et fiabilité</h3>
+            <h3 className="text-xl font-bold text-[#14171a] mb-3">Sécurité et fiabilité</h3>
             <p className="text-gray-700">
               Vos colis sont traités avec soin, <strong>emballés et étiquetés</strong> dans de{" "}
               <strong>délais annoncés</strong>. Nos envois vers l'Afrique partent chaque <strong>semaine</strong>.
@@ -116,7 +123,7 @@ export default function EntreprisesAfricainesPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-serif text-amber-700 mb-4">
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">
               Danemo, un partenaire logistique au service du commerce Afrique-Europe
             </h2>
             <p className="text-gray-700 mb-4">
@@ -137,7 +144,7 @@ export default function EntreprisesAfricainesPage() {
         <div className="mt-12 text-center">
           <Link
             href="/blog"
-            className="inline-flex items-center px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-full hover:bg-orange-700 transition-colors"
           >
             ← Retour au blog
           </Link>
