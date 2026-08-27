@@ -7,6 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import {Countdown} from "@/components/countdown/Countdown"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -539,11 +540,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 12 — CTA final */}
+      {/* 12 — CTA final avec compte à rebours */}
+      
       <section className="relative py-24 md:py-32 bg-[#14171a] overflow-hidden">
+        
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-orange-600/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl" />
-
         <div className="relative max-w-3xl mx-auto px-6 lg:px-8 text-center">
           <Reveal>
             <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight text-balance">
@@ -553,6 +555,12 @@ export default function HomePage() {
               Parlez-nous de votre projet, quel que soit le service concerné : notre équipe vous propose une solution
               adaptée sous peu.
             </p>
+
+            {/* Compte à rebours DANEMO */}
+            <div className="mt-10">
+              <Countdown />
+            </div>
+
             <div className="mt-9 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/contactez-nous"
@@ -570,6 +578,7 @@ export default function HomePage() {
             </div>
           </Reveal>
         </div>
+
       </section>
 
       <Footer />
