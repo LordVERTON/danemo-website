@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,13 +24,16 @@ export default function AdminLoginPage() {
     setIsLoading(true)
     setError("")
 
-    // Simple authentication check (in production, this would be server-side)
-    if (email === "admin@danemo.be" && password === "danemo2024") {
-      // Set admin session
-      localStorage.setItem("danemo_admin_session", "authenticated")
-      router.push("/admin")
-    } else {
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    })
+
+    if (result?.error) {
       setError("Email ou mot de passe incorrect")
+    } else {
+      router.replace("/admin")
     }
 
     setIsLoading(false)

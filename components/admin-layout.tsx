@@ -2,8 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { signOut, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { LogOut, Package, Truck, BarChart3, Home } from "lucide-react"
 import Link from "next/link"
@@ -14,24 +13,13 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const router = useRouter()
+  const { status } = useSession()
 
-  useEffect(() => {
-    const session = localStorage.getItem("danemo_admin_session")
-    if (session === "authenticated") {
-      setIsAuthenticated(true)
-    } else {
-      router.push("/admin/login")
-    }
-  }, [router])
-
-  const handleLogout = () => {
-    localStorage.removeItem("danemo_admin_session")
-    router.push("/admin/login")
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/admin/login" })
   }
 
-  if (!isAuthenticated) {
+  if (status !== "authenticated") {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">Vérification de l'authentification...</div>

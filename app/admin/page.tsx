@@ -1,45 +1,41 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { signOut, useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Package, Truck, BarChart3, Users, LogOut, ShoppingCart } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminDashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [stats, setStats] = useState<any>(null)
-  const router = useRouter()
+  const { status } = useSession()
 
   useEffect(() => {
-    const session = localStorage.getItem("danemo_admin_session")
-    if (session === "authenticated") {
-      setIsAuthenticated(true)
-      fetchStats()
-    } else {
-      router.push("/admin/login")
+    if (status !== "authenticated") {
+      return
     }
-  }, [router])
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/stats')
-      const result = await response.json()
-      if (result.success) {
-        setStats(result.data)
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/stats')
+        const result = await response.json()
+        if (result.success) {
+          setStats(result.data)
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error)
       }
-    } catch (error) {
-      console.error('Error fetching stats:', error)
     }
+
+    void fetchStats()
+  }, [status])
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/admin/login" })
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("danemo_admin_session")
-    router.push("/admin/login")
-  }
-
-  if (!isAuthenticated) {
+  if (status !== "authenticated") {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">Vérification de l'authentification...</div>
