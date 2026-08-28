@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { customersApi } from '@/lib/database'
-import { authenticateRequest } from '@/lib/auth-middleware'
 import { normalizePhoneE164 } from '@/lib/messaging'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { calculateCustomerPaymentProgress } from '@/lib/customer-payment-progress'
 
 // GET /api/customers/[id] - Récupérer un client avec ses commandes
 export async function GET(
@@ -9,8 +11,17 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
-    const customer = await customersApi.getWithOrdersAndInvoices(id)
+    const { data: customer, error } = await (supabaseAdmin as any)
+      .from('customers')
+      .select('*, orders (*), invoices (*)')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw error
     
     if (!customer) {
       return NextResponse.json(
@@ -18,8 +29,26 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    const { data: payments, error: paymentsError } = await (supabaseAdmin as any)
+      .from('customer_payments')
+      .select('id, customer_id, amount, currency, paid_at, payment_method, reference, notes, created_at, updated_at')
+      .eq('customer_id', id)
+      .order('paid_at', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (paymentsError) throw paymentsError
+
+    const paymentRows = payments ?? []
     
-    return NextResponse.json({ success: true, data: customer })
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...customer,
+        payments: paymentRows,
+        payment_summary: calculateCustomerPaymentProgress(customer.orders ?? [], paymentRows),
+      },
+    })
   } catch (error) {
     console.error('Error fetching customer:', error)
     return NextResponse.json(
@@ -35,19 +64,8 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await authenticateRequest(request)
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentification requise' },
-        { status: 401 }
-      )
-    }
-    if (user.role !== 'admin' && user.role !== 'operator') {
-      return NextResponse.json(
-        { success: false, error: 'Permissions insuffisantes' },
-        { status: 403 }
-      )
-    }
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
 
     const { id } = await context.params
     const body = await request.json()
@@ -102,6 +120,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
     await customersApi.delete(id)
     

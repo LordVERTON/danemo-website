@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, type FormEvent } from "react"
 import { useRouter, useParams } from "next/navigation"
 import AdminLayout from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
@@ -41,7 +41,8 @@ import {
   QrCode,
   Copy,
   ExternalLink,
-  Loader2
+  Loader2,
+  CreditCard,
 } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 import { generateInvoice, defaultCompanyData, InvoiceData } from "@/lib/invoice-utils"
@@ -50,6 +51,12 @@ import { generateQRPrintPDF } from "@/lib/qr-print-utils"
 import QRCode from "qrcode"
 import { supabase } from "@/lib/supabase"
 import { getTariffItemsForLang } from "@/lib/tariff-items"
+import {
+  calculateCustomerPaymentProgress,
+  type CustomerPaymentRecord,
+  type CustomerPaymentSummary,
+  type PaymentStatus,
+} from "@/lib/customer-payment-progress"
 
 interface Order {
   id: string
@@ -99,6 +106,8 @@ interface Customer {
   status: 'active' | 'inactive' | 'archived'
   orders: Order[]
   invoices?: any[]
+  payments?: CustomerPaymentRecord[]
+  payment_summary?: CustomerPaymentSummary
   created_at: string
   qr_code?: string | null
 }
@@ -115,6 +124,7 @@ interface ClientSummary {
 }
 
 type ClientRole = "sender" | "recipient" | "both" | "none"
+type PaymentMethod = "bank_transfer" | "cash" | "card" | "mobile" | "other"
 
 const TARIFF_DESCRIPTION_OPTIONS = getTariffItemsForLang("fr").map((item) => ({
   value: item.descriptionLabel,
@@ -122,6 +132,45 @@ const TARIFF_DESCRIPTION_OPTIONS = getTariffItemsForLang("fr").map((item) => ({
   unitPriceEur: item.unitPriceEur,
 }))
 const CUSTOM_DESCRIPTION_VALUE = "__custom_description__"
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  bank_transfer: "Virement bancaire",
+  cash: "Espèces",
+  card: "Carte bancaire",
+  mobile: "Paiement mobile",
+  other: "Autre",
+}
+
+const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, { label: string; className: string; progressClassName: string }> = {
+  paid: {
+    label: "Payé",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    progressClassName: "bg-emerald-600",
+  },
+  partial: {
+    label: "Partiellement réglé",
+    className: "border-amber-200 bg-amber-50 text-amber-700",
+    progressClassName: "bg-amber-500",
+  },
+  unpaid: {
+    label: "À régler",
+    className: "border-red-200 bg-red-50 text-red-700",
+    progressClassName: "bg-red-600",
+  },
+}
+
+const formatEuro = (amount: number) =>
+  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(
+    Number.isFinite(amount) ? amount : 0,
+  )
+
+const getDefaultNewPaymentData = () => ({
+  amount: "",
+  paid_at: new Date().toISOString().slice(0, 10),
+  payment_method: "bank_transfer" as PaymentMethod,
+  reference: "",
+  notes: "",
+})
 
 const getDefaultNewOrderData = (customer: Customer | null) => ({
   client_name: customer?.name || "",
@@ -203,6 +252,9 @@ export default function ClientDetailPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false)
+  const [isCreatePaymentDialogOpen, setIsCreatePaymentDialogOpen] = useState(false)
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false)
+  const [newPayment, setNewPayment] = useState(getDefaultNewPaymentData)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [error, setError] = useState("")
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
@@ -441,6 +493,61 @@ export default function ClientDetailPage() {
       setIsLoading(false)
     }
   }
+
+  const handleCreatePayment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const amount = Number(newPayment.amount.replace(',', '.'))
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('Le montant du règlement doit être supérieur à zéro')
+      return
+    }
+
+    try {
+      setIsCreatingPayment(true)
+      setError('')
+
+      const response = await fetch(`/api/customers/${customerId}/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount,
+          paid_at: newPayment.paid_at,
+          payment_method: newPayment.payment_method,
+          reference: newPayment.reference,
+          notes: newPayment.notes,
+        }),
+      })
+      const result = await response.json()
+
+      if (!result.success) {
+        setError(result.error || 'Impossible d’enregistrer le règlement')
+        return
+      }
+
+      setNewPayment(getDefaultNewPaymentData())
+      setIsCreatePaymentDialogOpen(false)
+      await fetchCustomer()
+    } catch (error) {
+      console.error('Error creating customer payment:', error)
+      setError('Erreur de connexion lors de l’enregistrement du règlement')
+    } finally {
+      setIsCreatingPayment(false)
+    }
+  }
+
+  const getCurrentPaymentSummary = () =>
+    customer?.payment_summary ?? calculateCustomerPaymentProgress(orders, customer?.payments ?? [])
+
+  const getInvoicePaymentRecords = () =>
+    (customer?.payments ?? []).map((payment) => ({
+      amount: Math.max(Number(payment.amount) || 0, 0),
+      paidAt: payment.paid_at,
+      paymentMethod: payment.payment_method,
+      reference: payment.reference,
+    }))
 
   const fetchContainers = async () => {
     try {
@@ -991,6 +1098,7 @@ const copyClientToRecipientForEdit = () => {
       const totalValue = ordersForInvoice.reduce((sum, order) => sum + (Number(order.value) || 0), 0)
       const totalWeight = ordersForInvoice.reduce((sum, order) => sum + (Number(order.weight) || 0), 0)
       const invoiceNumber = `INV-${customer.id}-${Date.now()}`
+      const paymentSummary = getCurrentPaymentSummary()
 
       const syntheticOrder: Order = {
         ...referenceOrder,
@@ -1025,12 +1133,19 @@ const copyClientToRecipientForEdit = () => {
         qr_code: referenceOrder.qr_code,
       }
 
-      const items = ordersForInvoice.map((order) => ({
-        description: order.description || getServiceTypeLabel(order.service_type),
-        quantity: 1,
-        unitPrice: Number(order.value) || 0,
-        total: Number(order.value) || 0,
-      }))
+      const items = ordersForInvoice.map((order) => {
+        const orderPayment = paymentSummary.orderProgress[order.id]
+
+        return {
+          description: order.description || getServiceTypeLabel(order.service_type),
+          quantity: 1,
+          unitPrice: Number(order.value) || 0,
+          total: Number(order.value) || 0,
+          paidAmount: orderPayment?.paidAmount,
+          remainingAmount: orderPayment?.remainingAmount,
+          paymentStatus: orderPayment?.paymentStatus,
+        }
+      })
 
       await generateInvoice({
         order: syntheticOrder,
@@ -1053,6 +1168,15 @@ const copyClientToRecipientForEdit = () => {
         },
         paymentMethod: "Paiement groupé - voir référence facture",
         items,
+        paymentSummary: {
+          paidAmount: paymentSummary.paidAmount,
+          remainingAmount: paymentSummary.remainingAmount,
+          creditAmount: paymentSummary.creditAmount,
+          paymentStatus: paymentSummary.paymentStatus,
+          payments: getInvoicePaymentRecords(),
+          allocationNote:
+            "Les règlements sont enregistrés au niveau du client. La répartition par commande est indicative et suit l’ancienneté des commandes.",
+        },
       })
     } catch (error) {
       console.error('Error generating client invoice:', error)
@@ -1076,6 +1200,8 @@ const copyClientToRecipientForEdit = () => {
   const handleGenerateInvoice = async (order: Order) => {
     try {
       const invoiceNumber = `INV-${order.id}-${Date.now()}`
+      const customerPaymentSummary = getCurrentPaymentSummary()
+      const orderPayment = customerPaymentSummary.orderProgress[order.id]
       const invoiceData: InvoiceData = {
         order,
         company: defaultCompanyData,
@@ -1101,8 +1227,19 @@ const copyClientToRecipientForEdit = () => {
             quantity: 1,
             unitPrice: Number(order.value) || 0,
             total: Number(order.value) || 0,
+            paidAmount: orderPayment?.paidAmount,
+            remainingAmount: orderPayment?.remainingAmount,
+            paymentStatus: orderPayment?.paymentStatus,
           },
         ],
+        paymentSummary: {
+          paidAmount: orderPayment?.paidAmount ?? 0,
+          remainingAmount: orderPayment?.remainingAmount ?? Math.max(Number(order.value) || 0, 0),
+          paymentStatus: orderPayment?.paymentStatus ?? "unpaid",
+          payments: getInvoicePaymentRecords(),
+          allocationNote:
+            "Les règlements sont enregistrés au niveau du client. La répartition par commande est indicative et suit l’ancienneté des commandes.",
+        },
       }
       await generateInvoice(invoiceData)
     } catch (error) {
@@ -1265,7 +1402,15 @@ const copyClientToRecipientForEdit = () => {
     )
   }
 
-  const totalValue = orders.reduce((sum, order) => sum + (order.value || 0), 0)
+  const paymentSummary = getCurrentPaymentSummary()
+  const paymentStatusConfig =
+    paymentSummary.creditAmount > 0 && paymentSummary.remainingAmount === 0
+      ? {
+          label: "Crédit client",
+          className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+          progressClassName: "bg-emerald-600",
+        }
+      : PAYMENT_STATUS_CONFIG[paymentSummary.paymentStatus]
 
   return (
     <AdminLayout title={`Détails du client - ${customer.name}`}>
@@ -1357,6 +1502,91 @@ const copyClientToRecipientForEdit = () => {
           </Card>
         </div>
 
+        <Card>
+          <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Suivi des règlements
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Les règlements sont enregistrés au niveau du client et peuvent couvrir plusieurs commandes.
+              </CardDescription>
+            </div>
+            <Badge className={paymentStatusConfig.className}>{paymentStatusConfig.label}</Badge>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-sm text-muted-foreground">Total à facturer</p>
+                <p className="mt-1 text-xl font-semibold">{formatEuro(paymentSummary.totalAmount)}</p>
+              </div>
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-3">
+                <p className="text-sm text-emerald-700">Déjà réglé</p>
+                <p className="mt-1 text-xl font-semibold text-emerald-700">{formatEuro(paymentSummary.paidAmount)}</p>
+              </div>
+              <div className="rounded-lg border border-amber-100 bg-amber-50/50 p-3">
+                <p className="text-sm text-amber-700">Reste à payer</p>
+                <p className="mt-1 text-xl font-semibold text-amber-700">{formatEuro(paymentSummary.remainingAmount)}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Avancement du paiement</span>
+                <span className="text-muted-foreground">{paymentSummary.progressPercent}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-muted" aria-label="Avancement du paiement">
+                <div
+                  className={`h-full rounded-full transition-all ${paymentStatusConfig.progressClassName}`}
+                  style={{ width: `${paymentSummary.progressPercent}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                La répartition affichée par commande est indicative et suit l’ordre chronologique des commandes.
+              </p>
+            </div>
+
+            {paymentSummary.creditAmount > 0 && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                Avoir client disponible : <span className="font-semibold">{formatEuro(paymentSummary.creditAmount)}</span>
+              </div>
+            )}
+
+            <div className="border-t pt-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="font-medium">Historique des règlements</h3>
+                <span className="text-sm text-muted-foreground">{customer.payments?.length ?? 0} règlement(s)</span>
+              </div>
+              {(customer.payments?.length ?? 0) > 0 ? (
+                <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
+                  {customer.payments?.map((payment) => {
+                    const paymentMethodLabel = payment.payment_method
+                      ? PAYMENT_METHOD_LABELS[payment.payment_method as PaymentMethod] ?? payment.payment_method
+                      : "Règlement"
+
+                    return (
+                      <div key={payment.id} className="flex items-start justify-between gap-4 rounded-md border p-3 text-sm">
+                        <div>
+                          <p className="font-medium">
+                            {new Date(`${payment.paid_at}T12:00:00`).toLocaleDateString("fr-FR")} · {paymentMethodLabel}
+                          </p>
+                          {payment.reference && <p className="mt-1 text-muted-foreground">Référence : {payment.reference}</p>}
+                        </div>
+                        <p className="whitespace-nowrap font-semibold text-emerald-700">
+                          {formatEuro(Number(payment.amount) || 0)}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Aucun règlement enregistré pour ce client.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Récapitulatif colis par ville de destination */}
         {parcelsByCityEntries.length > 0 && (
           <Card>
@@ -1422,13 +1652,28 @@ const copyClientToRecipientForEdit = () => {
                 <Package className="h-5 w-5" />
                 Commandes ({filteredOrders.length})
               </CardTitle>
-              <Button onClick={async () => {
-                await fetchContainers()
-                setIsCreateOrderDialogOpen(true)
-              }} className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter une commande
-              </Button>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    setError("")
+                    setNewPayment(getDefaultNewPaymentData())
+                    setIsCreatePaymentDialogOpen(true)
+                  }}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Ajouter un règlement
+                </Button>
+                <Button onClick={async () => {
+                  await fetchContainers()
+                  setIsCreateOrderDialogOpen(true)
+                }} className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter une commande
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -1448,7 +1693,8 @@ const copyClientToRecipientForEdit = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => (
+                {filteredOrders.map((order) => {
+                  return (
                   <TableRow 
                     key={order.id}
                     className="cursor-pointer hover:bg-gray-50 transition-colors"
@@ -1479,9 +1725,7 @@ const copyClientToRecipientForEdit = () => {
                       )}
                     </TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell>
-                      {order.value ? `€${order.value.toLocaleString()}` : '-'}
-                    </TableCell>
+                    <TableCell>{order.value ? formatEuro(Number(order.value)) : '-'}</TableCell>
                     <TableCell>
                       {new Date(order.created_at).toLocaleDateString('fr-FR')}
                     </TableCell>
@@ -1510,7 +1754,8 @@ const copyClientToRecipientForEdit = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
             </div>
@@ -1539,6 +1784,120 @@ const copyClientToRecipientForEdit = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Dialog
+          open={isCreatePaymentDialogOpen}
+          onOpenChange={(open) => {
+            if (isCreatingPayment) return
+            setIsCreatePaymentDialogOpen(open)
+            if (!open) {
+              setNewPayment(getDefaultNewPaymentData())
+              setError("")
+            }
+          }}
+        >
+          <DialogContent className="w-[95vw] max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Ajouter un règlement</DialogTitle>
+              <DialogDescription>
+                Enregistrez un acompte ou un règlement global. Il reste associé au client, sans devoir choisir une commande.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleCreatePayment}>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="payment_amount">Montant (€)</Label>
+                  <Input
+                    id="payment_amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputMode="decimal"
+                    required
+                    value={newPayment.amount}
+                    onChange={(event) => setNewPayment({ ...newPayment, amount: event.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment_paid_at">Date du règlement</Label>
+                  <Input
+                    id="payment_paid_at"
+                    type="date"
+                    required
+                    value={newPayment.paid_at}
+                    onChange={(event) => setNewPayment({ ...newPayment, paid_at: event.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment_method">Moyen de paiement</Label>
+                <Select
+                  value={newPayment.payment_method}
+                  onValueChange={(value) => setNewPayment({ ...newPayment, payment_method: value as PaymentMethod })}
+                >
+                  <SelectTrigger id="payment_method">
+                    <SelectValue placeholder="Choisir un moyen de paiement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bank_transfer">Virement bancaire</SelectItem>
+                    <SelectItem value="cash">Espèces</SelectItem>
+                    <SelectItem value="card">Carte bancaire</SelectItem>
+                    <SelectItem value="mobile">Paiement mobile</SelectItem>
+                    <SelectItem value="other">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment_reference">Référence (facultatif)</Label>
+                <Input
+                  id="payment_reference"
+                  maxLength={120}
+                  value={newPayment.reference}
+                  onChange={(event) => setNewPayment({ ...newPayment, reference: event.target.value })}
+                  placeholder="Ex. référence de virement"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment_notes">Note (facultatif)</Label>
+                <Textarea
+                  id="payment_notes"
+                  maxLength={1000}
+                  value={newPayment.notes}
+                  onChange={(event) => setNewPayment({ ...newPayment, notes: event.target.value })}
+                  placeholder="Informations internes sur le règlement"
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isCreatingPayment}
+                  onClick={() => setIsCreatePaymentDialogOpen(false)}
+                >
+                  Annuler
+                </Button>
+                <Button type="submit" disabled={isCreatingPayment}>
+                  {isCreatingPayment ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Enregistrer le règlement
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Dialog d'édition de commande */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

@@ -305,6 +305,44 @@ export interface Database {
           updated_at?: string
         }
       }
+      customer_payments: {
+        Row: {
+          id: string
+          customer_id: string
+          amount: number
+          currency: string
+          paid_at: string
+          payment_method: 'bank_transfer' | 'cash' | 'card' | 'mobile' | 'other'
+          reference: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          customer_id: string
+          amount: number
+          currency?: string
+          paid_at?: string
+          payment_method?: 'bank_transfer' | 'cash' | 'card' | 'mobile' | 'other'
+          reference?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          customer_id?: string
+          amount?: number
+          currency?: string
+          paid_at?: string
+          payment_method?: 'bank_transfer' | 'cash' | 'card' | 'mobile' | 'other'
+          reference?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       // NEW: invoices table
       invoices: {
         Row: {

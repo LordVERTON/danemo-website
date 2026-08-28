@@ -15,6 +15,25 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  paidAmount?: number;
+  remainingAmount?: number;
+  paymentStatus?: "unpaid" | "partial" | "paid";
+}
+
+export interface InvoicePaymentRecord {
+  amount: number;
+  paidAt: string;
+  paymentMethod?: string | null;
+  reference?: string | null;
+}
+
+export interface InvoicePaymentSummary {
+  paidAmount: number;
+  remainingAmount: number;
+  creditAmount?: number;
+  paymentStatus: "unpaid" | "partial" | "paid";
+  payments?: InvoicePaymentRecord[];
+  allocationNote?: string;
 }
 
 type InvoiceAddress = {
@@ -91,6 +110,8 @@ export interface InvoiceData {
   paymentMethod?: string;
   /** Facture multi-commandes client : libellé de paiement adapté. */
   consolidatedInvoice?: boolean;
+  /** Situation de règlement client à la date de génération de la facture. */
+  paymentSummary?: InvoicePaymentSummary;
 }
 
 /** Constantes de mise en page (mm, police) — style PAGUI / Danemo. */
@@ -104,8 +125,8 @@ const LAYOUT = {
   tableHeaderBandMm: 9,
   descLineHeightMm: 3.8,
   minRowMm: 8,
-  /** Réserve pied de page + paiement sur la dernière page. */
-  tableBottomReserveLastPageMm: 82,
+  /** Réserve pied de page + règlement sur la dernière page. */
+  tableBottomReserveLastPageMm: 102,
   continuationBottomMarginMm: 14,
   continuationTableTopMm: 44,
   colFracs: [0.46, 0.14, 0.15, 0.25] as const,
@@ -142,7 +163,6 @@ const LAYOUT = {
   },
   summaryGapAfterTableMm: 10,
   summaryLineGapMm: 4.4,
-  summaryLabelColumnMm: 45,
   summaryDividerGapMm: 3,
   totalExtraGapMm: 6,
   paymentBlockGapMm: 10,
@@ -167,6 +187,9 @@ const footerGradientEndColor = [227, 93, 16] as [number, number, number]; // #E3
 const whiteColor = [255, 255, 255] as [number, number, number];
 const blackColor = [0, 0, 0] as [number, number, number];
 const linkBlueColor = [42, 116, 210] as [number, number, number];
+const paidGreenColor = [22, 128, 68] as [number, number, number];
+const partialAmberColor = [180, 102, 0] as [number, number, number];
+const unpaidRedColor = [184, 35, 35] as [number, number, number];
 /** Traits de tableau plus discrets. */
 const grayColor = [165, 165, 165] as [number, number, number];
 const tableGridColor = [190, 190, 190] as [number, number, number];
@@ -191,6 +214,76 @@ function toNameCase(value: string): string {
     .split(/\s+/)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function getPaymentStatusLabel(status: InvoicePaymentSummary["paymentStatus"]): string {
+  switch (status) {
+    case "paid":
+      return "PAYÉE";
+    case "partial":
+      return "PARTIELLEMENT RÉGLÉE";
+    default:
+      return "À RÉGLER";
+  }
+}
+
+function getPaymentStatusColor(
+  status: InvoicePaymentSummary["paymentStatus"]
+): [number, number, number] {
+  switch (status) {
+    case "paid":
+      return paidGreenColor;
+    case "partial":
+      return partialAmberColor;
+    default:
+      return unpaidRedColor;
+  }
+}
+
+function formatPaymentDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : sanitizeJsPdfText(value);
+}
+
+function formatPaymentMethod(method?: string | null): string {
+  const labels: Record<string, string> = {
+    bank_transfer: "Virement bancaire",
+    cash: "Espèces",
+    card: "Carte bancaire",
+    mobile: "Paiement mobile",
+    other: "Autre",
+  };
+
+  return method ? labels[method] ?? sanitizeJsPdfText(method) : "Règlement";
+}
+
+function formatPaymentRecord(payment: InvoicePaymentRecord): string {
+  const details = [
+    formatPaymentDate(payment.paidAt),
+    formatPaymentMethod(payment.paymentMethod),
+    payment.reference ? `Réf. ${sanitizeJsPdfText(payment.reference)}` : "",
+  ].filter(Boolean);
+
+  return `${details.join(" - ")} : ${formatCurrencyEUR(payment.amount)}`;
+}
+
+function drawPaymentStatusBadge(
+  pdf: jsPDF,
+  status: InvoicePaymentSummary["paymentStatus"],
+  x: number,
+  y: number
+) {
+  const label = getPaymentStatusLabel(status);
+  const [red, green, blue] = getPaymentStatusColor(status);
+  const fontSize = 7.6;
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(fontSize);
+  const width = pdf.getTextWidth(label) + 5;
+  pdf.setFillColor(red, green, blue);
+  pdf.roundedRect(x, y - 3.4, width, 5.2, 1, 1, "F");
+  pdf.setTextColor(whiteColor[0], whiteColor[1], whiteColor[2]);
+  pdf.text(label, x + 2.5, y);
 }
 
 async function webpUrlToPngDataUrl(url: string): Promise<string> {
@@ -808,6 +901,8 @@ export const generateInvoice = async (data: InvoiceData) => {
     }
 
     const unitPriceStr = formatCurrencyEUR(item.unitPrice).replace(/\s+€/g, "€");
+    pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+    pdf.setFontSize(LAYOUT.fontSizes.body);
     pdf.setFont("helvetica", "normal");
     pdf.text(item.quantity.toString(), colPositions[1] + cpad, singleLineTextY);
     pdf.text(unitPriceStr, colPositions[2] + cpad, singleLineTextY);
@@ -832,47 +927,50 @@ export const generateInvoice = async (data: InvoiceData) => {
 
   yPos = tableEndY + LAYOUT.summaryGapAfterTableMm;
   const footerSafeTop = pageHeight - LAYOUT.footerBandMm - 8;
-  if (yPos + 58 > footerSafeTop) {
+  const settlementLineCount = data.paymentSummary
+    ? 3 + (data.paymentSummary.creditAmount && data.paymentSummary.creditAmount > 0 ? 1 : 0)
+    : 0;
+  const settlementSummaryHeight = settlementLineCount * (LAYOUT.summaryLineGapMm + 1.2);
+  if (yPos + 58 + settlementSummaryHeight > footerSafeTop) {
     pdf.addPage();
     paintPageBackground(pdf, pageWidth, pageHeight);
     yPos = margin + 6;
   }
 
-  const summaryLabelX = totColR - LAYOUT.summaryLabelColumnMm;
-  const dividerX = totColR - 21.5;
-  const amountLeftX = dividerX + 2.2;
-  const amountX = (_txt: string) => amountLeftX;
+  const dividerX = totColR - 36;
+  const amountColumnLeftX = dividerX + 2.2;
+  const summaryRuleLeftX = dividerX - 45;
   const labelX = (label: string) => dividerX - 2.2 - pdf.getTextWidth(label);
+  const drawSummaryAmount = (text: string, y: number, fontSize: number) => {
+    textRightInColumn(pdf, text, amountColumnLeftX, totColR, y, fontSize, "bold");
+  };
   const summaryTopY = yPos;
 
   pdf.setFontSize(LAYOUT.fontSizes.body);
   pdf.setFont("helvetica", "bolditalic");
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
   const subtotalLabel = "Sous-total";
-  pdf.text(subtotalLabel, Math.max(summaryLabelX, labelX(subtotalLabel)), yPos);
+  pdf.text(subtotalLabel, labelX(subtotalLabel), yPos);
   const subtotalText = formatCurrencyEUR(subtotal);
-  pdf.setFont("helvetica", "bold");
-  pdf.text(subtotalText, amountX(subtotalText), yPos);
+  drawSummaryAmount(subtotalText, yPos, LAYOUT.fontSizes.body);
 
   pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
   pdf.setLineWidth(0.18);
-  pdf.line(summaryLabelX - 2, yPos + 1.2, totColR, yPos + 1.2);
+  pdf.line(summaryRuleLeftX, yPos + 1.2, totColR, yPos + 1.2);
 
   yPos += LAYOUT.summaryLineGapMm;
   const taxRateLabel = "Taux de TVA";
   pdf.setFont("helvetica", "bolditalic");
-  pdf.text(taxRateLabel, Math.max(summaryLabelX, labelX(taxRateLabel)), yPos);
+  pdf.text(taxRateLabel, labelX(taxRateLabel), yPos);
   const taxRateStr = formatTaxRateDisplay(taxRate);
-  pdf.setFont("helvetica", "bold");
-  pdf.text(taxRateStr, amountX(taxRateStr), yPos);
+  drawSummaryAmount(taxRateStr, yPos, LAYOUT.fontSizes.body);
 
   yPos += LAYOUT.summaryLineGapMm;
   const taxAmountLabel = "TVA";
   pdf.setFont("helvetica", "bolditalic");
-  pdf.text(taxAmountLabel, Math.max(summaryLabelX, labelX(taxAmountLabel)), yPos);
+  pdf.text(taxAmountLabel, labelX(taxAmountLabel), yPos);
   const taxAmountText = formatTaxAmountDisplay(taxAmount);
-  pdf.setFont("helvetica", "bold");
-  pdf.text(taxAmountText, amountX(taxAmountText), yPos);
+  drawSummaryAmount(taxAmountText, yPos, LAYOUT.fontSizes.body);
 
   yPos += LAYOUT.totalExtraGapMm;
   const totalText = formatCurrencyEUR(total);
@@ -880,8 +978,45 @@ export const generateInvoice = async (data: InvoiceData) => {
   pdf.setFont("helvetica", "bolditalic");
   pdf.setFontSize(LAYOUT.fontSizes.totalEmphasis);
   pdf.setTextColor(orangeColor[0], orangeColor[1], orangeColor[2]);
-  pdf.text(totalLabel, Math.max(summaryLabelX, labelX(totalLabel)), yPos);
-  pdf.text(totalText, amountX(totalText), yPos);
+  pdf.text(totalLabel, labelX(totalLabel), yPos);
+  drawSummaryAmount(totalText, yPos, LAYOUT.fontSizes.totalEmphasis);
+
+  if (data.paymentSummary) {
+    const paymentSummary = data.paymentSummary;
+
+    yPos += LAYOUT.summaryLineGapMm + 1.2;
+    drawPaymentStatusBadge(pdf, paymentSummary.paymentStatus, summaryRuleLeftX, yPos);
+
+    yPos += LAYOUT.summaryLineGapMm + 1.2;
+    const paidLabel = "DÉJÀ RÉGLÉ";
+    const paidText = formatCurrencyEUR(Math.max(paymentSummary.paidAmount, 0));
+    pdf.setFontSize(LAYOUT.fontSizes.body);
+    pdf.setFont("helvetica", "bolditalic");
+    pdf.setTextColor(paidGreenColor[0], paidGreenColor[1], paidGreenColor[2]);
+    pdf.text(paidLabel, labelX(paidLabel), yPos);
+    drawSummaryAmount(paidText, yPos, LAYOUT.fontSizes.body);
+
+    yPos += LAYOUT.summaryLineGapMm;
+    const remainingLabel = "RESTE À PAYER";
+    const remainingText = formatCurrencyEUR(Math.max(paymentSummary.remainingAmount, 0));
+    const [remainingRed, remainingGreen, remainingBlue] = getPaymentStatusColor(
+      paymentSummary.remainingAmount > 0 ? paymentSummary.paymentStatus : "paid"
+    );
+    pdf.setFont("helvetica", "bolditalic");
+    pdf.setTextColor(remainingRed, remainingGreen, remainingBlue);
+    pdf.text(remainingLabel, labelX(remainingLabel), yPos);
+    drawSummaryAmount(remainingText, yPos, LAYOUT.fontSizes.body);
+
+    if (paymentSummary.creditAmount && paymentSummary.creditAmount > 0) {
+      yPos += LAYOUT.summaryLineGapMm;
+      const creditLabel = "AVOIR CLIENT";
+      const creditText = formatCurrencyEUR(paymentSummary.creditAmount);
+      pdf.setFont("helvetica", "bolditalic");
+      pdf.setTextColor(paidGreenColor[0], paidGreenColor[1], paidGreenColor[2]);
+      pdf.text(creditLabel, labelX(creditLabel), yPos);
+      drawSummaryAmount(creditText, yPos, LAYOUT.fontSizes.body);
+    }
+  }
 
   pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2]);
   pdf.setLineWidth(0.18);
@@ -906,8 +1041,30 @@ export const generateInvoice = async (data: InvoiceData) => {
     /\b(payment|bank transfer|invoice|details)\b/i.test(paymentText);
   const payTitle = isEnglishContext ? "Payment details:" : "Détails de paiement :";
   const payGap = LAYOUT.paymentLineGapMm;
+  const paymentRecords = [...(data.paymentSummary?.payments ?? [])]
+    .sort((left, right) => left.paidAt.localeCompare(right.paidAt));
+  const visiblePaymentRecords = paymentRecords.slice(-5);
+  const hiddenPaymentCount = paymentRecords.length - visiblePaymentRecords.length;
+  const paymentRecordLines = [
+    ...visiblePaymentRecords.map(formatPaymentRecord),
+    ...(hiddenPaymentCount > 0 ? [`+ ${hiddenPaymentCount} règlement(s) antérieur(s)`] : []),
+  ];
+  const paymentHistoryTitle = paymentRecordLines.length > 0 ? "Règlements reçus :" : null;
+  const allocationNoteLines = data.paymentSummary?.allocationNote
+    ? wrapLinesJsPDF(
+        pdf,
+        `Note : ${data.paymentSummary.allocationNote}`,
+        maxPaymentWidth,
+        8.5
+      )
+    : [];
   const paymentBlockHeight =
-    LAYOUT.paymentTitleGapMm + (payLines.length + bicLines.length) * payGap;
+    LAYOUT.paymentTitleGapMm +
+    (payLines.length +
+      bicLines.length +
+      (paymentHistoryTitle ? 1 + paymentRecordLines.length : 0) +
+      allocationNoteLines.length) *
+      payGap;
   let paymentStartY =
     pageHeight - LAYOUT.footerBandMm - 8 - paymentBlockHeight;
   const minPaymentStartY = yPos + LAYOUT.paymentBlockGapMm;
@@ -939,6 +1096,26 @@ export const generateInvoice = async (data: InvoiceData) => {
   for (const bl of bicLines) {
     pdf.text(bl, margin, yPos);
     yPos += payGap;
+  }
+  if (paymentHistoryTitle) {
+    pdf.setFont("helvetica", "bold");
+    pdf.text(paymentHistoryTitle, margin, yPos);
+    yPos += payGap;
+    pdf.setFont("helvetica", "normal");
+    for (const paymentRecordLine of paymentRecordLines) {
+      pdf.text(paymentRecordLine, margin, yPos);
+      yPos += payGap;
+    }
+  }
+  if (allocationNoteLines.length > 0) {
+    pdf.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+    pdf.setFontSize(8.5);
+    pdf.setFont("helvetica", "italic");
+    for (const allocationNoteLine of allocationNoteLines) {
+      pdf.text(allocationNoteLine, margin, yPos);
+      yPos += payGap;
+    }
+    pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
   }
 
   const pageCount = pdf.getNumberOfPages();
