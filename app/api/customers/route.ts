@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { customersApi } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
 import { normalizePhoneE164 } from '@/lib/messaging'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 async function syncOrdersWithoutCustomer() {
   const { data: danglingOrders, error } = await (supabaseAdmin as any)
@@ -86,6 +87,9 @@ async function syncOrdersWithoutCustomer() {
 // GET /api/customers - Récupérer tous les clients avec leurs commandes
 export async function GET(request: NextRequest) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     // Backfill défensif : garantit que les commandes (y compris en conteneur)
     // créent/pointent bien vers un client visible dans la page Clients.
     await syncOrdersWithoutCustomer()
@@ -142,6 +146,9 @@ export async function GET(request: NextRequest) {
 // POST /api/customers - Créer un nouveau client
 export async function POST(request: NextRequest) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const body = await request.json()
     
     const requiredFields = [
