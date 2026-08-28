@@ -32,3 +32,6 @@ next-env.d.ts
 
 # Supabase temporary/local files
 supabase/.temp/
+
+# Sensitive local certificates
+certificates/
