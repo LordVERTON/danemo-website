@@ -1,26 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { hasStaffSession } from '@/lib/staff-api-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // GET /api/inventory/[id] - Récupérer un article d'inventaire par ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
-    const { id } = await params
-    const { data, error } = await supabase
+    const { id } = await context.params
+    const { data, error } = await (supabaseAdmin as any)
       .from('inventory')
       .select('*')
       .eq('id', id)
       .single()
     
     if (error) throw error
+    if (!data) {
+      return NextResponse.json(
+        { success: false, error: 'Inventory item not found' },
+        { status: 404 }
+      )
+    }
     
-    return NextResponse.json({ success: true, data })
+    // Fetch container code if container_id exists
+    let containerCode = null
+    if (data.container_id) {
+      const { data: container, error: containerError } = await (supabaseAdmin as any)
+        .from('containers')
+        .select('code')
+        .eq('id', data.container_id)
+        .single()
+      
+      if (!containerError && container) {
+        containerCode = container.code
+      }
+    }
+    
+    // Transform data to include container_code
+    const transformedData = {
+      ...data,
+      container_code: containerCode,
+    }
+    
+    return NextResponse.json({ success: true, data: transformedData })
   } catch (error) {
     console.error('Error fetching inventory item:', error)
     return NextResponse.json(
@@ -33,18 +55,45 @@ export async function GET(
 // PUT /api/inventory/[id] - Mettre à jour un article d'inventaire
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    const { id } = await context.params
+    // Validation de l'ID
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid inventory ID' },
+        { status: 400 }
+      )
     }
-    const { id } = await params
+
     const body = await request.json()
     
-    const { data, error } = await supabase
+    // Validation des données
+    const allowedFields = ['type', 'reference', 'description', 'client', 'status', 'location', 'poids', 'dimensions', 'valeur', 'container_id']
+    const updateData: Record<string, any> = {}
+    
+    for (const [key, value] of Object.entries(body)) {
+      if (allowedFields.includes(key) && value !== undefined) {
+        // Convert empty string container_id to null
+        if (key === 'container_id' && value === '') {
+          updateData[key] = null
+        } else {
+          updateData[key] = value
+        }
+      }
+    }
+    
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid fields to update' },
+        { status: 400 }
+      )
+    }
+    
+    const { data, error } = await (supabaseAdmin as any)
       .from('inventory')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
@@ -64,14 +113,11 @@ export async function PUT(
 // DELETE /api/inventory/[id] - Supprimer un article d'inventaire
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
-    const { id } = await params
-    const { error } = await supabase
+    const { id } = await context.params
+    const { error } = await supabaseAdmin
       .from('inventory')
       .delete()
       .eq('id', id)

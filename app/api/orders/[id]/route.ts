@@ -1,18 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ordersApi } from '@/lib/database'
-import { hasStaffSession } from '@/lib/staff-api-auth'
+import { ordersApi, containersApi, trackingApi, customersApi } from '@/lib/database'
+import { supabaseAdmin } from '@/lib/supabase'
+import type { Database } from '@/lib/supabase'
 
-// GET /api/orders/[id] - Récupérer une commande par ID
+// Helper function to check if a string is a UUID
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
+
+// GET /api/orders/[id] - Récupérer une commande par ID ou QR code
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    const { id } = await context.params
+    
+    // Determine if the parameter is a UUID (ID) or a QR code
+    const isId = isUUID(id)
+    
+    let order
+    if (isId) {
+      // Try to get by ID first
+      order = await ordersApi.getById(id)
+    } else {
+      // Try to get by QR code
+      order = await ordersApi.getByQr(id)
     }
-    const { id } = await params
-    const order = await ordersApi.getById(id)
     
     if (!order) {
       return NextResponse.json(
@@ -21,6 +36,27 @@ export async function GET(
       )
     }
 
+    // If it was a QR code lookup, return with related data (like the old [qr] route)
+    if (!isId) {
+      const contactEmail = order.recipient_email || order.client_email
+      const [container, events, customer] = await Promise.all([
+        order.container_id ? containersApi.getById(order.container_id).catch(() => null) : Promise.resolve(null),
+        trackingApi.getByOrderId(order.id).catch(() => []),
+        contactEmail ? customersApi.getByEmail(contactEmail).catch(() => null) : Promise.resolve(null),
+      ])
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          order,
+          container,
+          events: events || [],
+          customer,
+        },
+      })
+    }
+
+    // For ID lookups, return just the order (existing behavior)
     return NextResponse.json({ success: true, data: order })
   } catch (error) {
     console.error('Error fetching order:', error)
@@ -34,15 +70,174 @@ export async function GET(
 // PUT /api/orders/[id] - Mettre à jour une commande
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
-    const { id } = await params
+    const { id } = await context.params
     const body = await request.json()
-    const order = await ordersApi.update(id, body)
+    const { user_id, user_name, ...orderData } = body
+    
+    // Determine if the parameter is a UUID (ID) or a QR code
+    const isId = isUUID(id)
+    
+    // Get the order first to find the actual ID if QR code was provided
+    let orderId = id
+    if (!isId) {
+      const order = await ordersApi.getByQr(id)
+      if (!order) {
+        return NextResponse.json(
+          { success: false, error: 'Order not found' },
+          { status: 404 }
+        )
+      }
+      orderId = order.id
+    }
+    
+    // Récupérer l'ancienne commande pour comparer les changements
+    const oldOrder = await ordersApi.getById(orderId)
+    if (!oldOrder) {
+      return NextResponse.json(
+        { success: false, error: 'Order not found' },
+        { status: 404 }
+      )
+    }
+    
+    const sanitizeRecipient = () => {
+      const updated: typeof orderData = { ...orderData }
+      if ('recipient_name' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_name === 'string'
+            ? orderData.recipient_name.trim()
+            : orderData.recipient_name || null
+        updated.recipient_name =
+          trimmed ||
+          (typeof orderData.client_name === 'string' && orderData.client_name.trim()) ||
+          oldOrder.client_name ||
+          null
+      }
+      if ('recipient_email' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_email === 'string'
+            ? orderData.recipient_email.trim().toLowerCase()
+            : orderData.recipient_email || null
+        updated.recipient_email =
+          trimmed ||
+          (typeof orderData.client_email === 'string' && orderData.client_email.trim().toLowerCase()) ||
+          oldOrder.client_email ||
+          null
+      }
+      if ('recipient_phone' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_phone === 'string'
+            ? orderData.recipient_phone.trim()
+            : orderData.recipient_phone || null
+        updated.recipient_phone = trimmed || orderData.client_phone || oldOrder.client_phone || null
+      }
+      if ('recipient_address' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_address === 'string'
+            ? orderData.recipient_address.trim()
+            : orderData.recipient_address || null
+        updated.recipient_address = trimmed || null
+      }
+      if ('recipient_city' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_city === 'string'
+            ? orderData.recipient_city.trim()
+            : orderData.recipient_city || null
+        updated.recipient_city = trimmed || null
+      }
+      if ('recipient_postal_code' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_postal_code === 'string'
+            ? orderData.recipient_postal_code.trim()
+            : orderData.recipient_postal_code || null
+        updated.recipient_postal_code = trimmed || null
+      }
+      if ('recipient_country' in orderData) {
+        const trimmed =
+          typeof orderData.recipient_country === 'string'
+            ? orderData.recipient_country.trim()
+            : orderData.recipient_country || null
+        updated.recipient_country = trimmed || null
+      }
+      return updated
+    }
+
+    const sanitizedOrderData = sanitizeRecipient()
+
+    const requiredValues = {
+      client_name: orderData.client_name ?? oldOrder.client_name,
+      client_phone: orderData.client_phone ?? oldOrder.client_phone,
+      client_address: orderData.client_address ?? oldOrder.client_address,
+      client_city: orderData.client_city ?? oldOrder.client_city,
+      client_postal_code: orderData.client_postal_code ?? oldOrder.client_postal_code,
+      client_country: orderData.client_country ?? oldOrder.client_country,
+      recipient_name: sanitizedOrderData.recipient_name ?? oldOrder.recipient_name,
+      recipient_phone: sanitizedOrderData.recipient_phone ?? oldOrder.recipient_phone,
+      recipient_address: sanitizedOrderData.recipient_address ?? oldOrder.recipient_address,
+      recipient_city: sanitizedOrderData.recipient_city ?? oldOrder.recipient_city,
+      recipient_postal_code: sanitizedOrderData.recipient_postal_code ?? oldOrder.recipient_postal_code,
+      recipient_country: sanitizedOrderData.recipient_country ?? oldOrder.recipient_country,
+    }
+    const missingRequired = Object.entries(requiredValues)
+      .filter(([, value]) => !String(value ?? '').trim())
+      .map(([field]) => field)
+    if (missingRequired.length > 0) {
+      return NextResponse.json(
+        { success: false, error: `Missing required fields: ${missingRequired.join(', ')}` },
+        { status: 400 },
+      )
+    }
+
+    if ('description' in orderData) {
+      sanitizedOrderData.description =
+        typeof orderData.description === 'string'
+          ? orderData.description.trim().substring(0, 500) || null
+          : orderData.description || null
+    }
+
+    // Sanitize parcels_count if provided
+    if ('parcels_count' in orderData) {
+      const v = orderData.parcels_count
+      if (v == null || v === '') {
+        sanitizedOrderData.parcels_count = 1
+      } else {
+        const n = typeof v === 'string' ? parseInt(v, 10) : Math.floor(Number(v))
+        sanitizedOrderData.parcels_count = isNaN(n) || n < 1 ? 1 : Math.min(n, 9999)
+      }
+    }
+    
+    // Mettre à jour la commande (email client si changement de statut : géré dans ordersApi.update)
+    const order = await ordersApi.update(orderId, sanitizedOrderData)
+
+    // TODO: Activer l'historique une fois la table order_history créée
+    /*
+    // Créer un historique manuel si l'utilisateur est fourni
+    if (user_id || user_name) {
+      try {
+        await supabaseAdmin
+          .from('order_history')
+          .insert({
+            order_id: id,
+            user_id: user_id || null,
+            action: 'update',
+            description: 'Modification de la commande',
+            changes: {
+              modified_by: user_name || 'Utilisateur inconnu',
+              timestamp: new Date().toISOString()
+            }
+          })
+      } catch (historyError) {
+        console.error('Error creating order history:', historyError)
+        // Si la table n'existe pas encore, c'est normal
+        if (historyError.code === 'PGRST116' || historyError.message?.includes('relation "order_history" does not exist')) {
+          console.log('Order history table does not exist yet, skipping history creation')
+        }
+        // Ne pas faire échouer la mise à jour si l'historique échoue
+      }
+    }
+    */
     
     return NextResponse.json({ success: true, data: order })
   } catch (error) {
@@ -57,13 +252,10 @@ export async function PUT(
 // DELETE /api/orders/[id] - Supprimer une commande
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
-    const { id } = await params
+    const { id } = await context.params
     await ordersApi.delete(id)
     
     return NextResponse.json({ success: true, message: 'Order deleted successfully' })
@@ -71,6 +263,105 @@ export async function DELETE(
     console.error('Error deleting order:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to delete order' },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH /api/orders/[id] - Actions spéciales sur une commande (comme générer QR code)
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params
+    const body = await request.json()
+    const action = body.action
+
+    if (action === 'generate-qr') {
+      // Determine if the parameter is a UUID (ID) or a QR code
+      const isId = isUUID(id)
+      
+      // Get the order first to find the actual ID if QR code was provided
+      let orderId = id
+      let order
+      if (isId) {
+        order = await ordersApi.getById(id)
+        orderId = id
+      } else {
+        order = await ordersApi.getByQr(id)
+        if (!order) {
+          return NextResponse.json(
+            { success: false, error: 'Order not found' },
+            { status: 404 }
+          )
+        }
+        orderId = order.id
+      }
+      
+      if (!order) {
+        return NextResponse.json(
+          { success: false, error: 'Order not found' },
+          { status: 404 }
+        )
+      }
+
+      // Si la commande a déjà un QR code, le retourner
+      if (order.qr_code) {
+        return NextResponse.json({
+          success: true,
+          data: { qr_code: order.qr_code },
+          message: 'Order already has a QR code'
+        })
+      }
+
+      // Générer un nouveau QR code unique
+      // Format: ORD-{timestamp}-{random}
+      let qrCode: string = ''
+      let exists = true
+      let attempts = 0
+      const maxAttempts = 10
+
+      while (exists && attempts < maxAttempts) {
+        const timestamp = Date.now()
+        const random = Math.random().toString(36).substring(2, 8).toUpperCase()
+        qrCode = `ORD-${timestamp}-${random}`
+        
+        // Vérifier si ce QR code existe déjà
+        const { data: existing } = await (supabaseAdmin as any)
+          .from('orders')
+          .select('id')
+          .eq('qr_code', qrCode)
+          .single()
+        
+        exists = !!existing
+        attempts++
+      }
+
+      if (attempts >= maxAttempts || !qrCode) {
+        return NextResponse.json(
+          { success: false, error: 'Failed to generate unique QR code' },
+          { status: 500 }
+        )
+      }
+
+      // Mettre à jour la commande avec le nouveau QR code
+      const updatedOrder = await ordersApi.update(orderId, { qr_code: qrCode })
+
+      return NextResponse.json({
+        success: true,
+        data: { qr_code: qrCode, order: updatedOrder }
+      })
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Unknown action' },
+      { status: 400 }
+    )
+  } catch (error) {
+    console.error('Error in PATCH order:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to process request' },
       { status: 500 }
     )
   }

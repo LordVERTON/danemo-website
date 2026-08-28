@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { hasStaffSession } from '@/lib/staff-api-auth'
 
 // GET /api/test-connection - Tester la connexion à Supabase
 export async function GET(request: NextRequest) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
     // Test simple de connexion
     const { data, error } = await supabase
       .from('orders')
@@ -19,6 +15,7 @@ export async function GET(request: NextRequest) {
         { 
           success: false, 
           error: 'Failed to connect to Supabase',
+          details: error.message 
         },
         { status: 500 }
       )
@@ -35,6 +32,7 @@ export async function GET(request: NextRequest) {
       { 
         success: false, 
         error: 'Connection test failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     )

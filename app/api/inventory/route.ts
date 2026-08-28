@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { hasStaffSession } from '@/lib/staff-api-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // GET /api/inventory - Récupérer tous les articles d'inventaire
 export async function GET(request: NextRequest) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const type = searchParams.get('type')
     const status = searchParams.get('status')
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('inventory')
       .select('*')
       .order('created_at', { ascending: false })
@@ -34,7 +30,30 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, data: data || [] })
+    // Fetch container codes for items that have container_id
+    const containerIds = [...new Set((data || []).map((item: any) => item.container_id).filter(Boolean))]
+    const containerMap = new Map<string, string>()
+    
+    if (containerIds.length > 0) {
+      const { data: containers, error: containersError } = await supabaseAdmin
+        .from('containers')
+        .select('id, code')
+        .in('id', containerIds)
+      
+      if (!containersError && containers) {
+        containers.forEach((container: any) => {
+          containerMap.set(container.id, container.code)
+        })
+      }
+    }
+
+    // Transform data to include container_code
+    const transformedData = (data || []).map((item: any) => ({
+      ...item,
+      container_code: item.container_id ? containerMap.get(item.container_id) || null : null
+    }))
+
+    return NextResponse.json({ success: true, data: transformedData })
   } catch (error) {
     console.error('Error fetching inventory:', error)
     return NextResponse.json(
@@ -47,14 +66,17 @@ export async function GET(request: NextRequest) {
 // POST /api/inventory - Créer un nouvel article d'inventaire
 export async function POST(request: NextRequest) {
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
     const body = await request.json()
     
-    const { data, error } = await supabase
+    // Convert empty string container_id to null
+    const insertData = {
+      ...body,
+      container_id: body.container_id && body.container_id !== '' ? body.container_id : null
+    }
+    
+    const { data, error } = await supabaseAdmin
       .from('inventory')
-      .insert(body)
+      .insert(insertData)
       .select()
       .single()
     

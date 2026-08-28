@@ -1,26 +1,37 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+  throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }
 
 // Client Supabase pour le côté client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Client Supabase pour le côté serveur (avec service role key)
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+const isServer = typeof window === 'undefined'
+let supabaseAdminInstance: ReturnType<typeof createClient> | null = null
+
+if (isServer) {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    throw new Error('Missing Supabase env: SUPABASE_SERVICE_ROLE_KEY')
   }
-)
+  supabaseAdminInstance = createClient(
+    supabaseUrl,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+}
+
+export const supabaseAdmin = supabaseAdminInstance as unknown as ReturnType<typeof createClient>
 
 // Types pour la base de données
 export interface Database {
@@ -33,15 +44,33 @@ export interface Database {
           client_name: string
           client_email: string
           client_phone: string | null
+          client_address: string | null
+          client_city: string | null
+          client_postal_code: string | null
+          client_country: string | null
+          recipient_name: string | null
+          recipient_email: string | null
+          recipient_phone: string | null
+          recipient_address: string | null
+          recipient_city: string | null
+          recipient_postal_code: string | null
+          recipient_country: string | null
           service_type: string
+          description: string | null
           origin: string
           destination: string
           weight: number | null
           value: number | null
           status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           estimated_delivery: string | null
+          qr_code: string | null
           created_at: string
           updated_at: string
+          container_id: string | null
+          container_code: string | null
+          container_status: string | null
+          customer_id: string | null
+          parcels_count: number | null
         }
         Insert: {
           id?: string
@@ -49,15 +78,33 @@ export interface Database {
           client_name: string
           client_email: string
           client_phone?: string | null
+          client_address?: string | null
+          client_city?: string | null
+          client_postal_code?: string | null
+          client_country?: string | null
+          recipient_name?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          recipient_address?: string | null
+          recipient_city?: string | null
+          recipient_postal_code?: string | null
+          recipient_country?: string | null
           service_type: string
+          description?: string | null
           origin: string
           destination: string
           weight?: number | null
           value?: number | null
           status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           estimated_delivery?: string | null
+          qr_code?: string | null
           created_at?: string
           updated_at?: string
+          container_id?: string | null
+          container_code?: string | null
+          container_status?: string | null
+          customer_id?: string | null
+          parcels_count?: number | null
         }
         Update: {
           id?: string
@@ -65,15 +112,33 @@ export interface Database {
           client_name?: string
           client_email?: string
           client_phone?: string | null
+          client_address?: string | null
+          client_city?: string | null
+          client_postal_code?: string | null
+          client_country?: string | null
+          recipient_name?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          recipient_address?: string | null
+          recipient_city?: string | null
+          recipient_postal_code?: string | null
+          recipient_country?: string | null
           service_type?: string
+          description?: string | null
           origin?: string
           destination?: string
           weight?: number | null
           value?: number | null
           status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
           estimated_delivery?: string | null
+          qr_code?: string | null
           created_at?: string
           updated_at?: string
+          container_id?: string | null
+          container_code?: string | null
+          container_status?: string | null
+          customer_id?: string | null
+          parcels_count?: number | null
         }
       }
       tracking_events: {
@@ -105,6 +170,287 @@ export interface Database {
           event_date?: string
         }
       }
+      // NEW: clients table
+      clients: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          phone: string | null
+          address: string | null
+          company: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          company?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          company?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // NEW: containers table
+      containers: {
+        Row: {
+          id: string
+          code: string // e.g., MSKU1234567
+          vessel: string | null
+          departure_port: string | null
+          arrival_port: string | null
+          etd: string | null // estimated time of departure
+          eta: string | null // estimated time of arrival
+          status: 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
+          client_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          vessel?: string | null
+          departure_port?: string | null
+          arrival_port?: string | null
+          etd?: string | null
+          eta?: string | null
+          status?: 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
+          client_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          vessel?: string | null
+          departure_port?: string | null
+          arrival_port?: string | null
+          etd?: string | null
+          eta?: string | null
+          status?: 'planned' | 'departed' | 'in_transit' | 'arrived' | 'delivered' | 'delayed'
+          client_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // NEW: customers table
+      customers: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          phone: string | null
+          phone_e164: string | null
+          opted_in_sms: boolean
+          opted_in_whatsapp: boolean
+          address: string | null
+          city: string | null
+          postal_code: string | null
+          country: string | null
+          company: string | null
+          tax_id: string | null
+          notes: string | null
+          status: 'active' | 'inactive' | 'archived'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          phone_e164?: string | null
+          opted_in_sms?: boolean
+          opted_in_whatsapp?: boolean
+          address?: string | null
+          city?: string | null
+          postal_code?: string | null
+          country?: string | null
+          company?: string | null
+          tax_id?: string | null
+          notes?: string | null
+          status?: 'active' | 'inactive' | 'archived'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          phone?: string | null
+          phone_e164?: string | null
+          opted_in_sms?: boolean
+          opted_in_whatsapp?: boolean
+          address?: string | null
+          city?: string | null
+          postal_code?: string | null
+          country?: string | null
+          company?: string | null
+          tax_id?: string | null
+          notes?: string | null
+          status?: 'active' | 'inactive' | 'archived'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      customer_payments: {
+        Row: {
+          id: string
+          customer_id: string
+          amount: number
+          currency: string
+          paid_at: string
+          payment_method: 'bank_transfer' | 'cash' | 'card' | 'mobile' | 'other'
+          reference: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          customer_id: string
+          amount: number
+          currency?: string
+          paid_at?: string
+          payment_method?: 'bank_transfer' | 'cash' | 'card' | 'mobile' | 'other'
+          reference?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          customer_id?: string
+          amount?: number
+          currency?: string
+          paid_at?: string
+          payment_method?: 'bank_transfer' | 'cash' | 'card' | 'mobile' | 'other'
+          reference?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // NEW: invoices table
+      invoices: {
+        Row: {
+          id: string
+          invoice_number: string
+          customer_id: string
+          order_id: string | null
+          issue_date: string
+          due_date: string | null
+          status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+          subtotal: number
+          tax_rate: number
+          tax_amount: number
+          total_amount: number
+          currency: string
+          payment_method: string | null
+          payment_date: string | null
+          notes: string | null
+          pdf_path: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          invoice_number?: string
+          customer_id: string
+          order_id?: string | null
+          issue_date?: string
+          due_date?: string | null
+          status?: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+          subtotal?: number
+          tax_rate?: number
+          tax_amount?: number
+          total_amount?: number
+          currency?: string
+          payment_method?: string | null
+          payment_date?: string | null
+          notes?: string | null
+          pdf_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          invoice_number?: string
+          customer_id?: string
+          order_id?: string | null
+          issue_date?: string
+          due_date?: string | null
+          status?: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+          subtotal?: number
+          tax_rate?: number
+          tax_amount?: number
+          total_amount?: number
+          currency?: string
+          payment_method?: string | null
+          payment_date?: string | null
+          notes?: string | null
+          pdf_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // NEW: packages table (colis) with QR tracking
+      packages: {
+        Row: {
+          id: string
+          qr_code: string // unique QR content (e.g., URL token)
+          reference: string
+          description: string | null
+          client_id: string | null
+          container_id: string | null
+          weight: number | null
+          value: number | null
+          status: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
+          last_scan_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          qr_code: string
+          reference: string
+          description?: string | null
+          client_id?: string | null
+          container_id?: string | null
+          weight?: number | null
+          value?: number | null
+          status?: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
+          last_scan_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          qr_code?: string
+          reference?: string
+          description?: string | null
+          client_id?: string | null
+          container_id?: string | null
+          weight?: number | null
+          value?: number | null
+          status?: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
+          last_scan_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       inventory: {
         Row: {
           id: string
@@ -117,6 +463,7 @@ export interface Database {
           poids: string | null
           dimensions: string | null
           valeur: string
+          container_id: string | null
           date_ajout: string
           created_at: string
           updated_at: string
@@ -132,6 +479,7 @@ export interface Database {
           poids?: string | null
           dimensions?: string | null
           valeur: string
+          container_id?: string | null
           date_ajout?: string
           created_at?: string
           updated_at?: string
@@ -147,11 +495,82 @@ export interface Database {
           poids?: string | null
           dimensions?: string | null
           valeur?: string
+          container_id?: string | null
           date_ajout?: string
           created_at?: string
           updated_at?: string
         }
       }
+    }
+  }
+  employees: {
+    Row: {
+      id: string
+      user_id: string
+      name: string
+      email: string
+      role: 'admin' | 'operator'
+      salary: number
+      position: string
+      hire_date: string
+      is_active: boolean
+      last_login: string | null
+      created_at: string
+      updated_at: string
+    }
+    Insert: {
+      id?: string
+      user_id: string
+      name: string
+      email: string
+      role: 'admin' | 'operator'
+      salary: number
+      position: string
+      hire_date: string
+      is_active?: boolean
+      last_login?: string | null
+      created_at?: string
+      updated_at?: string
+    }
+    Update: {
+      id?: string
+      user_id?: string
+      name?: string
+      email?: string
+      role?: 'admin' | 'operator'
+      salary?: number
+      position?: string
+      hire_date?: string
+      is_active?: boolean
+      last_login?: string | null
+      created_at?: string
+      updated_at?: string
+    }
+  }
+  employee_activities: {
+    Row: {
+      id: string
+      employee_id: string
+      activity_type: 'login' | 'logout' | 'order_created' | 'order_updated' | 'inventory_updated' | 'tracking_updated'
+      description: string
+      metadata: any
+      created_at: string
+    }
+    Insert: {
+      id?: string
+      employee_id: string
+      activity_type: 'login' | 'logout' | 'order_created' | 'order_updated' | 'inventory_updated' | 'tracking_updated'
+      description: string
+      metadata?: any
+      created_at?: string
+    }
+    Update: {
+      id?: string
+      employee_id?: string
+      activity_type?: 'login' | 'logout' | 'order_created' | 'order_updated' | 'inventory_updated' | 'tracking_updated'
+      description?: string
+      metadata?: any
+      created_at?: string
     }
   }
 }
