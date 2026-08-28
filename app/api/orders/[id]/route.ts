@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ordersApi } from '@/lib/database'
+import { hasStaffSession } from '@/lib/staff-api-auth'
 
 // GET /api/orders/[id] - Récupérer une commande par ID
 export async function GET(
@@ -7,6 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { id } = await params
     const order = await ordersApi.getById(id)
     
@@ -33,6 +37,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { id } = await params
     const body = await request.json()
     const order = await ordersApi.update(id, body)
@@ -53,6 +60,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { id } = await params
     await ordersApi.delete(id)
     

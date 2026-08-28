@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { hasStaffSession } from '@/lib/staff-api-auth'
 
 // GET /api/inventory - Récupérer tous les articles d'inventaire
 export async function GET(request: NextRequest) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const type = searchParams.get('type')
@@ -43,6 +47,9 @@ export async function GET(request: NextRequest) {
 // POST /api/inventory - Créer un nouvel article d'inventaire
 export async function POST(request: NextRequest) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const body = await request.json()
     
     const { data, error } = await supabase

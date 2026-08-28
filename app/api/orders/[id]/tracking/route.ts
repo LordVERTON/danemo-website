@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { trackingApi, ordersApi } from '@/lib/database'
+import { hasStaffSession } from '@/lib/staff-api-auth'
 
 // GET /api/orders/[id]/tracking - Récupérer les événements de suivi d'une commande
 export async function GET(
@@ -26,6 +27,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { id } = await params
     const body = await request.json()
     

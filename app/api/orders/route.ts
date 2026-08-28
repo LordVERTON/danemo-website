@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ordersApi, utils } from '@/lib/database'
+import { hasStaffSession } from '@/lib/staff-api-auth'
 
 // GET /api/orders - Récupérer toutes les commandes
 export async function GET(request: NextRequest) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const status = searchParams.get('status')
@@ -30,6 +34,9 @@ export async function GET(request: NextRequest) {
 // POST /api/orders - Créer une nouvelle commande
 export async function POST(request: NextRequest) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const body = await request.json()
     
     // Générer un numéro de commande unique

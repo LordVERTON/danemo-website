@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { hasStaffSession } from '@/lib/staff-api-auth'
 
 // GET /api/inventory/[id] - Récupérer un article d'inventaire par ID
 export async function GET(
@@ -7,6 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { id } = await params
     const { data, error } = await supabase
       .from('inventory')
@@ -32,6 +36,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { id } = await params
     const body = await request.json()
     
@@ -60,6 +67,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!(await hasStaffSession())) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
     const { id } = await params
     const { error } = await supabase
       .from('inventory')
