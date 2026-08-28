@@ -4,10 +4,11 @@ import { ordersApi } from '@/lib/database'
 // GET /api/orders/[id] - Récupérer une commande par ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const order = await ordersApi.getById(params.id)
+    const { id } = await params
+    const order = await ordersApi.getById(id)
     
     if (!order) {
       return NextResponse.json(
@@ -29,11 +30,12 @@ export async function GET(
 // PUT /api/orders/[id] - Mettre à jour une commande
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
-    const order = await ordersApi.update(params.id, body)
+    const order = await ordersApi.update(id, body)
     
     return NextResponse.json({ success: true, data: order })
   } catch (error) {
@@ -48,10 +50,11 @@ export async function PUT(
 // DELETE /api/orders/[id] - Supprimer une commande
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ordersApi.delete(params.id)
+    const { id } = await params
+    await ordersApi.delete(id)
     
     return NextResponse.json({ success: true, message: 'Order deleted successfully' })
   } catch (error) {

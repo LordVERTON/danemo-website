@@ -4,13 +4,14 @@ import { supabase } from '@/lib/supabase'
 // GET /api/inventory/[id] - Récupérer un article d'inventaire par ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { data, error } = await supabase
       .from('inventory')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
     
     if (error) throw error
@@ -28,15 +29,16 @@ export async function GET(
 // PUT /api/inventory/[id] - Mettre à jour un article d'inventaire
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     
     const { data, error } = await supabase
       .from('inventory')
       .update(body)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
     
@@ -55,13 +57,14 @@ export async function PUT(
 // DELETE /api/inventory/[id] - Supprimer un article d'inventaire
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { error } = await supabase
       .from('inventory')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
     
     if (error) throw error
     

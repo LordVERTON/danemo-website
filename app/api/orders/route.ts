@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ordersApi } from '@/lib/database'
+import { ordersApi, utils } from '@/lib/database'
 
 // GET /api/orders - Récupérer toutes les commandes
 export async function GET(request: NextRequest) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Générer un numéro de commande unique
-    const orderNumber = await ordersApi.generateOrderNumber()
+    const orderNumber = await utils.generateOrderNumber()
     
     const orderData = {
       ...body,

@@ -15,15 +15,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    let orders
-    if (tracking) {
-      // Recherche par numéro de commande
-      const order = await ordersApi.getByOrderNumber(tracking)
-      orders = order ? [order] : []
-    } else if (email) {
-      // Recherche par email client
-      orders = await ordersApi.search(email)
-    }
+    const matchingOrder = tracking ? await ordersApi.getByOrderNumber(tracking) : null
+    const orders = matchingOrder
+      ? [matchingOrder]
+      : email
+        ? await ordersApi.search(email)
+        : []
 
     // Retourner seulement les informations publiques (sans données sensibles)
     const publicOrders = orders.map(order => ({
