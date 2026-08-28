@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { containersApi } from '@/lib/database'
 import { notifyContainerStatusChange } from '@/lib/container-notifications'
+import { toPublicContainer } from '@/lib/public-container'
+import { isStaffApiRequest, requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/containers/[id]
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -13,7 +15,11 @@ export async function GET(
     if (!container) {
       return NextResponse.json({ success: false, error: 'Container not found' }, { status: 404 })
     }
-    return NextResponse.json({ success: true, data: container })
+    const isStaff = await isStaffApiRequest(request)
+    return NextResponse.json({
+      success: true,
+      data: isStaff ? container : toPublicContainer(container),
+    })
   } catch (error) {
     console.error('Error fetching container:', error)
     return NextResponse.json({ success: false, error: 'Failed to fetch container' }, { status: 500 })
@@ -26,6 +32,9 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
     const current = await containersApi.getById(id)
     if (!current) {
@@ -56,10 +65,13 @@ export async function PUT(
 
 // DELETE /api/containers/[id]
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
     await containersApi.delete(id)
     return NextResponse.json({ success: true, message: 'Container deleted successfully' })

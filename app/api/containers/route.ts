@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { containersApi } from '@/lib/database'
+import { toPublicContainer } from '@/lib/public-container'
+import { isStaffApiRequest, requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/containers - list
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const containers = await containersApi.getAll()
+    const isStaff = await isStaffApiRequest(request)
     console.log('API /api/containers: Returning', containers?.length || 0, 'containers')
-    return NextResponse.json({ success: true, data: containers || [] })
+    return NextResponse.json({
+      success: true,
+      data: isStaff ? containers : containers.map(toPublicContainer),
+    })
   } catch (error) {
     console.error('Error fetching containers:', error)
     return NextResponse.json({ success: false, error: 'Failed to fetch containers' }, { status: 500 })
@@ -16,6 +22,9 @@ export async function GET() {
 // POST /api/containers - create
 export async function POST(request: NextRequest) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const body = await request.json()
     const code = String(body.code || '').trim()
     if (!code) {

@@ -3,14 +3,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import type { Database } from "@/lib/supabase"
+import { requireStaffApiAccess } from "@/lib/staff-api-auth"
 
 type OrderRow = Database["public"]["Tables"]["orders"]["Row"]
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
 
     if (!id) {
