@@ -31,7 +31,7 @@ async function getAuthState(request: NextRequest) {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const isApiRoute = pathname.startsWith("/api/")
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/")
