@@ -124,13 +124,52 @@ export async function DELETE(
     if (accessError) return accessError
 
     const { id } = await context.params
+    const body = await request.json().catch(() => null)
+    const confirmationName = typeof body?.confirmationName === 'string' ? body.confirmationName.trim() : ''
+
+    const { data: customer, error: customerError } = await (supabaseAdmin as any)
+      .from('customers')
+      .select('id, name')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (customerError) throw customerError
+
+    if (!customer) {
+      return NextResponse.json(
+        { success: false, error: 'Client introuvable' },
+        { status: 404 },
+      )
+    }
+
+    if (confirmationName !== customer.name) {
+      return NextResponse.json(
+        { success: false, error: 'Le nom de confirmation ne correspond pas au client.' },
+        { status: 400 },
+      )
+    }
+
+    const { count: orderCount, error: ordersError } = await (supabaseAdmin as any)
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('customer_id', id)
+
+    if (ordersError) throw ordersError
+
+    if ((orderCount ?? 0) > 0) {
+      return NextResponse.json(
+        { success: false, error: 'Impossible de supprimer un client ayant des commandes.' },
+        { status: 409 },
+      )
+    }
+
     await customersApi.delete(id)
     
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Error deleting customer:', error)
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete customer' },
+      { success: false, error: 'Impossible de supprimer le client' },
       { status: 500 }
     )
   }

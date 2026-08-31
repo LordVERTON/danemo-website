@@ -254,6 +254,10 @@ export default function ClientDetailPage() {
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false)
   const [isCreatePaymentDialogOpen, setIsCreatePaymentDialogOpen] = useState(false)
   const [isCreatingPayment, setIsCreatingPayment] = useState(false)
+  const [isDeleteCustomerDialogOpen, setIsDeleteCustomerDialogOpen] = useState(false)
+  const [isDeletingCustomer, setIsDeletingCustomer] = useState(false)
+  const [deleteConfirmationName, setDeleteConfirmationName] = useState("")
+  const [deleteCustomerError, setDeleteCustomerError] = useState("")
   const [newPayment, setNewPayment] = useState(getDefaultNewPaymentData)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [error, setError] = useState("")
@@ -960,6 +964,48 @@ const copyClientToRecipientForEdit = () => {
     } catch (error) {
       console.error('Error deleting order:', error)
       setError('Erreur de connexion')
+    }
+  }
+
+  const handleDeleteCustomer = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!customer) return
+
+    if (orders.length > 0) {
+      setDeleteCustomerError("Ce client possède des commandes et ne peut pas être supprimé.")
+      return
+    }
+
+    if (deleteConfirmationName.trim() !== customer.name) {
+      setDeleteCustomerError("Saisissez exactement le nom du client pour confirmer la suppression.")
+      return
+    }
+
+    try {
+      setIsDeletingCustomer(true)
+      setDeleteCustomerError("")
+
+      const response = await fetch(`/api/customers/${customer.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ confirmationName: deleteConfirmationName }),
+      })
+      const result = await response.json()
+
+      if (!result.success) {
+        setDeleteCustomerError(result.error || "Impossible de supprimer le client.")
+        return
+      }
+
+      router.push("/admin/clients")
+    } catch (error) {
+      console.error("Error deleting customer:", error)
+      setDeleteCustomerError("Erreur de connexion lors de la suppression du client.")
+    } finally {
+      setIsDeletingCustomer(false)
     }
   }
 
@@ -1784,6 +1830,92 @@ const copyClientToRecipientForEdit = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <Trash2 className="h-5 w-5" />
+              Zone dangereuse
+            </CardTitle>
+            <CardDescription>
+              {orders.length > 0
+                ? `Ce client possède ${orders.length} commande${orders.length > 1 ? "s" : ""} et ne peut pas être supprimé.`
+                : "La suppression est définitive. Elle doit être confirmée avec le nom complet du client."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setDeleteCustomerError("")
+                setDeleteConfirmationName("")
+                setIsDeleteCustomerDialogOpen(true)
+              }}
+              disabled={orders.length > 0}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Supprimer le client
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Dialog
+          open={isDeleteCustomerDialogOpen}
+          onOpenChange={(open) => {
+            if (isDeletingCustomer) return
+            setIsDeleteCustomerDialogOpen(open)
+            if (!open) {
+              setDeleteConfirmationName("")
+              setDeleteCustomerError("")
+            }
+          }}
+        >
+          <DialogContent className="w-[95vw] max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Supprimer définitivement ce client</DialogTitle>
+              <DialogDescription>
+                Cette action est irréversible. Saisissez exactement le nom du client pour confirmer sa suppression.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleDeleteCustomer}>
+              {deleteCustomerError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{deleteCustomerError}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="delete-customer-confirmation">
+                  Tapez « {customer.name} » pour confirmer
+                </Label>
+                <Input
+                  id="delete-customer-confirmation"
+                  autoComplete="off"
+                  value={deleteConfirmationName}
+                  onChange={(event) => setDeleteConfirmationName(event.target.value)}
+                  disabled={isDeletingCustomer}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDeleteCustomerDialogOpen(false)}
+                  disabled={isDeletingCustomer}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  disabled={isDeletingCustomer || deleteConfirmationName.trim() !== customer.name}
+                >
+                  {isDeletingCustomer ? "Suppression en cours..." : "Supprimer définitivement"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Dialog
           open={isCreatePaymentDialogOpen}
