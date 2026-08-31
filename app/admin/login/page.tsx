@@ -2,40 +2,90 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { status } = useSession()
+
+  useEffect(() => {
+    const hasCookieSession = document.cookie.split(";").some((cookie) => cookie.trim().startsWith("danemo_admin_session=authenticated"))
+    const hasLocalSession = localStorage.getItem("danemo_admin_session") === "authenticated"
+    if (status === "loading") return
+    if (status === "authenticated" || hasCookieSession || hasLocalSession) {
+      const params = new URLSearchParams(window.location.search)
+      const returnTo = params.get("returnTo")
+      const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
+      router.replace(redirectTarget)
+    }
+  }, [router, status])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    const params = new URLSearchParams(window.location.search)
+    const returnTo = params.get("returnTo")
+    const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    })
+    const setSession = (role: string) => {
+      localStorage.setItem("danemo_admin_session", "authenticated")
+      localStorage.setItem("danemo_admin_role", role)
+      const maxAge = 60 * 60 * 24 * 7 // 7 jours
+      document.cookie = `danemo_admin_session=authenticated; path=/; max-age=${maxAge}; SameSite=Lax`
+      document.cookie = `danemo_admin_role=${role}; path=/; max-age=${maxAge}; SameSite=Lax`
+    }
 
-    if (result?.error) {
+    const createNextAuthSession = async () => {
+      await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+    }
+
+    // Vérification des identifiants en dur d'abord
+    if (email === "admin@danemo.be" && password === "admin123") {
+      await createNextAuthSession()
+      setSession("admin")
+      router.push(redirectTarget)
+      return
+    }
+
+    if (email === "operator@danemo.be" && password === "operator123") {
+      await createNextAuthSession()
+      setSession("operator")
+      router.push(redirectTarget)
+      return
+    }
+
+    // Sinon, essayer avec Supabase Auth
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+      if (authError) {
+        setError("Email ou mot de passe incorrect")
+      } else {
+        const roleFromMetadata = (data.user?.user_metadata as any)?.role
+        const derivedRole = roleFromMetadata || (email === "operator@danemo.be" ? "operator" : "admin")
+        await createNextAuthSession()
+        setSession(derivedRole)
+        router.push(redirectTarget)
+      }
+    } catch (err: any) {
       setError("Email ou mot de passe incorrect")
-    } else {
-      router.replace("/admin")
     }
 
     setIsLoading(false)
@@ -66,27 +116,14 @@ export default function AdminLoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Mot de passe</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={isPasswordVisible ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pr-10"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setIsPasswordVisible((visible) => !visible)}
-                  aria-label={isPasswordVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                >
-                  {isPasswordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
             {error && (
               <Alert variant="destructive">

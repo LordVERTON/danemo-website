@@ -1,41 +1,59 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Package, Truck, BarChart3, Users, LogOut, ShoppingCart } from "lucide-react"
+import { Package, Truck, BarChart3, Users, LogOut, BookOpen } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminDashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [role, setRole] = useState<string | null>(null)
   const [stats, setStats] = useState<any>(null)
-  const { status } = useSession()
+  const router = useRouter()
+  const { data: session, status } = useSession()
 
   useEffect(() => {
-    if (status !== "authenticated") {
-      return
-    }
+    if (status === "loading") return
 
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/stats')
-        const result = await response.json()
-        if (result.success) {
-          setStats(result.data)
-        }
-      } catch (error) {
-        console.error('Error fetching stats:', error)
+    const legacySession = localStorage.getItem("danemo_admin_session")
+    if (status === "authenticated") {
+      setIsAuthenticated(true)
+      setRole(session?.user?.role || localStorage.getItem("danemo_admin_role"))
+      fetchStats()
+    } else if (legacySession === "authenticated") {
+      setIsAuthenticated(true)
+      setRole(localStorage.getItem("danemo_admin_role"))
+      fetchStats()
+    } else {
+      router.push("/admin/login")
+    }
+  }, [router, session?.user?.role, status])
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/stats')
+      const result = await response.json()
+      if (result.success) {
+        setStats(result.data)
       }
+    } catch (error) {
+      console.error('Error fetching stats:', error)
     }
-
-    void fetchStats()
-  }, [status])
-
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: "/admin/login" })
   }
 
-  if (status !== "authenticated") {
+  const handleLogout = async () => {
+    localStorage.removeItem("danemo_admin_session")
+    localStorage.removeItem("danemo_admin_role")
+    document.cookie = "danemo_admin_session=; path=/; max-age=0"
+    document.cookie = "danemo_admin_role=; path=/; max-age=0"
+    await signOut({ redirect: false })
+    router.push("/admin/login")
+  }
+
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">Vérification de l'authentification...</div>
@@ -91,6 +109,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
+          {role !== 'operator' && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Revenus du mois</CardTitle>
@@ -101,6 +120,7 @@ export default function AdminDashboard() {
               <p className="text-xs text-muted-foreground">Commandes terminées</p>
             </CardContent>
           </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -116,26 +136,26 @@ export default function AdminDashboard() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link href="/admin/orders">
+          <Link href="/admin/clients">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5 text-orange-600" />
-                  Gestion des commandes
+                  <Users className="h-5 w-5 text-orange-600" />
+                  Gestion des clients
                 </CardTitle>
-                <CardDescription>Créez et gérez les commandes clients</CardDescription>
+                <CardDescription>Gérez vos clients et leurs commandes</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
-          <Link href="/admin/inventory">
+          <Link href="/admin/containers">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5 text-orange-600" />
-                  Gestion des stocks
+                  Gestion des conteneurs
                 </CardTitle>
-                <CardDescription>Gérez l'inventaire des colis, véhicules et marchandises</CardDescription>
+                <CardDescription>Suivez les conteneurs et leurs statuts</CardDescription>
               </CardHeader>
             </Card>
           </Link>
@@ -152,19 +172,70 @@ export default function AdminDashboard() {
             </Card>
           </Link>
 
-          <Link href="/admin/analytics">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-orange-600" />
-                  Analyses et rapports
-                </CardTitle>
-                <CardDescription>Consultez les statistiques et générez des rapports</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
+          {role !== 'operator' && (
+            <Link href="/admin/analytics">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-orange-600" />
+                    Analyses et rapports
+                  </CardTitle>
+                  <CardDescription>Consultez les statistiques et générez des rapports</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
+          {(role === 'admin' || role === 'operator') && (
+            <Link href="/admin/blogs">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-orange-600" />
+                    Blogs
+                  </CardTitle>
+                  <CardDescription>Ajoutez et modifiez les contenus du blog de l'accueil</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
+        <div className="flex items-center justify-around py-2 px-2">
+          <Link
+            href="/admin/clients"
+            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
+          >
+            <Users className="h-5 w-5" />
+            <span className="text-xs">Clients</span>
+          </Link>
+          <Link
+            href="/admin/containers"
+            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
+          >
+            <Package className="h-5 w-5" />
+            <span className="text-xs">Conteneurs</span>
+          </Link>
+          <Link
+            href="/admin/tracking"
+            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
+          >
+            <Truck className="h-5 w-5" />
+            <span className="text-xs">Suivi</span>
+          </Link>
+          {role !== 'operator' && (
+            <Link
+              href="/admin/analytics"
+              className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
+            >
+              <BarChart3 className="h-5 w-5" />
+              <span className="text-xs">Analyses</span>
+            </Link>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
