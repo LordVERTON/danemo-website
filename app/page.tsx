@@ -8,6 +8,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import {Countdown} from "@/components/countdown/Countdown"
+import GoogleReviews from "@/components/GoogleReviews"
+import { Suspense } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -136,6 +138,21 @@ const FAQS = [
     a: "Par téléphone ou e-mail depuis la Belgique (+32 488 64 51 83, info@danemo.be), ou directement auprès de nos bureaux de Yaoundé et Douala au Cameroun. Retrouvez toutes les coordonnées sur notre page Contact.",
   },
 ]
+
+function GoogleReviewsSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="flex justify-center">
+        <div className="h-7 w-56 rounded-full bg-gray-200" />
+      </div>
+      <div className="mt-10 grid md:grid-cols-3 gap-5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-48 rounded-2xl bg-gray-100 border border-gray-200" />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function HomePage() {
   return (
@@ -493,7 +510,13 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          <div className="mt-14 grid md:grid-cols-3 gap-6">
+          <Suspense fallback={<GoogleReviewsSkeleton />}>
+            <Reveal delay={80}>
+              <GoogleReviews />
+            </Reveal>
+          </Suspense>
+
+          <div className="mt-20 grid md:grid-cols-3 gap-6">
             {[
               "https://www.youtube-nocookie.com/embed/L1e6I_c57jI",
               "https://www.youtube-nocookie.com/embed/46S7xTtEFaM",
