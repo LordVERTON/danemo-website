@@ -42,6 +42,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useCurrentUser } from "@/lib/use-current-user"
 
 interface BlogPost {
   id: string
@@ -219,6 +220,7 @@ function getSectionLabel(type: BlogSectionType) {
 }
 
 export default function AdminBlogsPage() {
+  const { user: currentUser } = useCurrentUser()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [form, setForm] = useState<Omit<BlogPost, "id">>(EMPTY_FORM)
@@ -848,7 +850,7 @@ export default function AdminBlogsPage() {
                     <p>Modifie par : {selectedPost.updatedByName || selectedPost.updatedByEmail || "N/A"}</p>
                   </div>
                 )}
-                {selectedId && (
+                {selectedId && currentUser?.role === "admin" && (
                   <Button type="button" variant="destructive" onClick={onDelete} disabled={isSaving} className="w-full">
                     <Trash2 className="size-4" />
                     Supprimer l'article
