@@ -28,9 +28,11 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
     { href: "/admin/messages", label: "Messages", icon: MessageSquare, roles: ["admin"] },
     { href: "/admin/blogs", label: "Blogs", icon: BookOpen },
     { href: "/admin/employees", label: "Collaborateurs", icon: Users, roles: ["admin"] },
-    { href: "/admin/qr", label: "QR", icon: QrCode },
+    { href: "/admin/qr", label: "Scanner", icon: QrCode },
   ]
   const visibleNavigation = navigation.filter((item) => !item.roles || item.roles.includes(role))
+  const desktopNavigation = visibleNavigation.filter((item) => item.href !== "/admin/qr")
+  const mobileNavigation = visibleNavigation.filter((item) => item.href !== "/admin")
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/admin/login" })
@@ -69,7 +71,7 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
                 Administration Danemo
               </Link>
               <nav className="hidden items-center gap-4 lg:flex">
-                {visibleNavigation.map(({ href, label, icon: Icon }) => {
+                {desktopNavigation.map(({ href, label, icon: Icon }) => {
                   const isActive = href === "/admin" ? pathname === href : pathname.startsWith(href)
                   return (
                     <Link
@@ -94,27 +96,7 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
         </div>
       </header>
 
-      {/* Main Content */}
-      <nav className="border-b bg-white lg:hidden" aria-label="Navigation administration">
-        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 sm:px-6">
-          {visibleNavigation.map(({ href, label }) => {
-            const isActive = href === "/admin" ? pathname === href : pathname.startsWith(href)
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`whitespace-nowrap rounded-md px-3 py-2 text-sm ${
-                  isActive ? "bg-orange-50 font-semibold text-orange-600" : "text-gray-600 hover:text-orange-600"
-                }`}
-              >
-                {label}
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 lg:px-8 lg:pb-8">
         {title && (
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
@@ -122,6 +104,27 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
         )}
         {children}
       </main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden" aria-label="Navigation administration mobile">
+        <div className={`mx-auto grid max-w-7xl px-1 py-1.5 ${mobileNavigation.length === 8 ? "grid-cols-8" : "grid-cols-5"}`}>
+          {mobileNavigation.map(({ href, label, icon: Icon }) => {
+            const isActive = href === "/admin" ? pathname === href : pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[10px] font-medium leading-tight transition-colors sm:text-xs ${
+                  isActive ? "bg-orange-50 text-orange-600" : "text-slate-600 hover:bg-slate-50 hover:text-orange-600"
+                }`}
+              >
+                <Icon className="size-4 shrink-0 sm:size-[18px]" strokeWidth={1.8} />
+                <span className="w-full truncate text-center">{label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
     </div>
   )
 }
