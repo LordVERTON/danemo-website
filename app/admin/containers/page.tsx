@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PackageSearch, Plus, MapPin, Clock, BadgeCheck, Loader2, Pencil, Send } from "lucide-react"
+import { PackageSearch, Plus, MapPin, Clock, BadgeCheck, Download, Loader2, Pencil, Send } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 interface Container {
@@ -90,6 +90,7 @@ export default function ContainersPage() {
   const [statusDrafts, setStatusDrafts] = useState<Record<string, Container["status"]>>({})
   const [statusUpdateLoading, setStatusUpdateLoading] = useState<string | null>(null)
   const [statusUpdateFeedback, setStatusUpdateFeedback] = useState<string | null>(null)
+  const [exportLoading, setExportLoading] = useState<string | null>(null)
   const [containerNotificationHistory, setContainerNotificationHistory] = useState<
     Record<string, { status: string; timestamp: string }>
   >({})
@@ -200,6 +201,25 @@ export default function ContainersPage() {
       setNotifyError(null)
       setNotifySuccess(null)
       setAutoNotifyStatusMessage(null)
+    }
+  }
+
+  const exportContainerClients = async (container: Container, format: "xlsx" | "docx") => {
+    setExportLoading(`${container.id}:${format}`)
+    try {
+      const response = await fetch(`/api/documents/clients-by-container?container_id=${encodeURIComponent(container.id)}&format=${format}`)
+      if (!response.ok) throw new Error("Export impossible")
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `clients-${container.code}.${format}`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      setStatusUpdateFeedback(error instanceof Error ? error.message : "Export impossible")
+    } finally {
+      setExportLoading(null)
     }
   }
 
@@ -455,6 +475,12 @@ export default function ContainersPage() {
                               <MapPin className="h-4 w-4" />
                               Suivi
                             </Button>
+                            <Button variant="outline" size="sm" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "xlsx")}>
+                              {exportLoading === `${c.id}:xlsx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} XLSX
+                            </Button>
+                            <Button variant="outline" size="sm" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "docx")}>
+                              {exportLoading === `${c.id}:docx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} DOCX
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -672,3 +698,5 @@ export default function ContainersPage() {
     </AdminLayout>
   )
 }
+
+

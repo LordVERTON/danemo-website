@@ -18,12 +18,12 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Users,
+import { 
+  Plus, 
+  Search, 
+  Edit, 
+  Trash2, 
+  Users, 
   Eye,
   DollarSign,
   Calendar,
@@ -99,8 +99,8 @@ export default function EmployeesPage() {
   })
 
   useEffect(() => {
-    fetchEmployees()
-  }, [])
+    if (currentUser?.role === "admin") fetchEmployees()
+  }, [currentUser?.role])
 
   useEffect(() => {
     const handleQRScanResult = (event: CustomEvent) => {
@@ -119,7 +119,7 @@ export default function EmployeesPage() {
       setIsLoading(true)
       const response = await fetch('/api/employees')
       const result = await response.json()
-
+      
       if (result.success) {
         setEmployees(result.data)
       } else {
@@ -136,7 +136,7 @@ export default function EmployeesPage() {
     try {
       const response = await fetch(`/api/employees/${employeeId}/activities`)
       const result = await response.json()
-
+      
       if (result.success) {
         setActivities(result.data)
       }
@@ -147,7 +147,7 @@ export default function EmployeesPage() {
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault()
-
+    
     try {
       const response = await fetch('/api/employees', {
         method: 'POST',
@@ -162,7 +162,7 @@ export default function EmployeesPage() {
       })
 
       const result = await response.json()
-
+      
       if (result.success) {
         setFormData({
           name: "",
@@ -187,7 +187,7 @@ export default function EmployeesPage() {
   const handleQRScan = (qrData: string) => {
     try {
       const data = JSON.parse(qrData)
-
+      
       // Pré-remplir le formulaire avec les données du QR code
       setFormData({
         name: data.name || "",
@@ -199,7 +199,7 @@ export default function EmployeesPage() {
         password: data.password || "",
         is_active: data.is_active !== undefined ? data.is_active : true
       })
-
+      
       // Ouvrir le dialog d'ajout
       setIsAddDialogOpen(true)
     } catch (error) {
@@ -239,7 +239,7 @@ export default function EmployeesPage() {
       })
 
       const result = await response.json()
-
+      
       if (result.success) {
         setEditingEmployee(null)
         setFormData({
@@ -273,7 +273,7 @@ export default function EmployeesPage() {
       })
 
       const result = await response.json()
-
+      
       if (result.success) {
         fetchEmployees()
       } else {
@@ -318,7 +318,7 @@ export default function EmployeesPage() {
       employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.position.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = filterRole === "all" || employee.role === filterRole
-    const matchesActive = filterActive === "all" ||
+    const matchesActive = filterActive === "all" || 
       (filterActive === "active" && employee.is_active) ||
       (filterActive === "inactive" && !employee.is_active)
     return matchesSearch && matchesRole && matchesActive
@@ -326,7 +326,7 @@ export default function EmployeesPage() {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Gestion des employés">
+      <AdminLayout title="Gestion des employés" allowedRoles={["admin"]}>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
@@ -338,7 +338,7 @@ export default function EmployeesPage() {
   }
 
   return (
-    <AdminLayout title="Gestion des collaborateurs">
+    <AdminLayout title="Gestion des collaborateurs" allowedRoles={["admin"]}>
       <div className="space-y-6">
         {/* Header actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -742,7 +742,7 @@ export default function EmployeesPage() {
                     </Badge>
                   </div>
                 </div>
-
+                
                 {/* Informations Auth */}
                 {selectedEmployee.auth_user && (
                   <div className="border-t pt-4">
@@ -758,7 +758,7 @@ export default function EmployeesPage() {
                       </div>
                       <div>
                         <Label className="text-sm sm:text-base">Compte créé</Label>
-                        <p className="text-sm sm:text-base">{selectedEmployee.created_at_auth
+                        <p className="text-sm sm:text-base">{selectedEmployee.created_at_auth 
                           ? new Date(selectedEmployee.created_at_auth).toLocaleDateString('fr-FR')
                           : 'N/A'
                         }</p>
@@ -770,7 +770,7 @@ export default function EmployeesPage() {
                     </div>
                   </div>
                 )}
-
+                
                 {/* Activités récentes */}
                 <div>
                   <Label className="text-base sm:text-lg font-semibold">Activités récentes</Label>
@@ -797,14 +797,14 @@ export default function EmployeesPage() {
 
                 {/* Boutons d'action */}
                 <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t px-1 sm:px-0">
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
                     onClick={() => setIsViewDialogOpen(false)}
                     className="w-full sm:w-auto text-sm sm:text-base py-2 sm:py-1"
                   >
                     Fermer
                   </Button>
-                  <Button
+                  <Button 
                     onClick={() => {
                       setIsViewDialogOpen(false)
                       handleEditEmployee(selectedEmployee)

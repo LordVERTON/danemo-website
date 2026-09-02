@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, MessageSquare, Send, Ship, Users } from "lucide-react"
+import { useCurrentUser } from "@/lib/use-current-user"
 
 type MessageMode = "all" | "container" | "city"
 type MessageChannel = "sms" | "whatsapp"
@@ -34,6 +35,7 @@ const defaultMessage =
   "Bonjour {{nom}}, un conteneur Danemo est bientot au depart. Si vous avez des colis a envoyer, merci de venir les deposer rapidement a notre depot. Danemo"
 
 export default function AdminMessagesPage() {
+  const { user: currentUser } = useCurrentUser()
   const [mode, setMode] = useState<MessageMode>("all")
   const [channel, setChannel] = useState<MessageChannel>("sms")
   const [containers, setContainers] = useState<ContainerOption[]>([])
@@ -53,6 +55,7 @@ export default function AdminMessagesPage() {
   )
 
   useEffect(() => {
+    if (currentUser?.role !== "admin") return
     fetch("/api/containers", { credentials: "include" })
       .then((response) => response.json())
       .then((result) => {
@@ -62,7 +65,7 @@ export default function AdminMessagesPage() {
         }
       })
       .catch(() => setContainers([]))
-  }, [])
+  }, [currentUser?.role])
 
   useEffect(() => {
     setPreview(null)
@@ -156,7 +159,7 @@ export default function AdminMessagesPage() {
   }
 
   return (
-    <AdminLayout title="Messages clients">
+    <AdminLayout title="Messages clients" allowedRoles={["admin"]}>
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           <Card>

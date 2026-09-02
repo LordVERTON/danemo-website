@@ -117,9 +117,9 @@ export default function ClientsPage() {
   })
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [error, setError] = useState("")
-  const [containers, setContainers] = useState<Array<{
-    id: string;
-    code: string;
+  const [containers, setContainers] = useState<Array<{ 
+    id: string; 
+    code: string; 
     status?: string | null;
     vessel?: string | null;
     departure_port?: string | null;
@@ -137,7 +137,7 @@ export default function ClientsPage() {
     eta: "",
     status: "planned" as const
   })
-
+  
   // Formulaire de création de client
   const [newCustomer, setNewCustomer] = useState({
     name: "",
@@ -154,7 +154,7 @@ export default function ClientsPage() {
     opted_in_whatsapp: false,
     status: "active" as const
   })
-
+  
   // Formulaire de création de commande(s)
   const [newOrders, setNewOrders] = useState([{
     service_type: "",
@@ -196,7 +196,7 @@ export default function ClientsPage() {
       cancelled = true
     }
   }, [isQrDialogOpen, publicFormUrl])
-
+  
   const fetchContainers = async () => {
     try {
       const response = await fetch('/api/containers')
@@ -230,10 +230,10 @@ export default function ClientsPage() {
       const params = new URLSearchParams()
       if (searchTerm) params.append('search', searchTerm)
       if (filterStatus !== 'all') params.append('status', filterStatus)
-
+      
       const response = await fetch(`/api/customers?${params.toString()}`)
       const result = await response.json()
-
+      
       if (result.success) {
         setCustomers(result.data)
       } else {
@@ -334,7 +334,7 @@ export default function ClientsPage() {
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-
+    
     try {
       // Créer le client
       const customerResponse = await fetch('/api/customers', {
@@ -344,21 +344,21 @@ export default function ClientsPage() {
         },
         body: JSON.stringify(newCustomer),
       })
-
+      
       const customerResult = await customerResponse.json()
-
+      
       if (!customerResult.success) {
         setError(customerResult.error || 'Erreur lors de la création du client')
         return
       }
-
+      
       const createdCustomer = customerResult.data
-
+      
       // Créer les commandes si elles sont renseignées
-      const validOrders = newOrders.filter(order =>
+      const validOrders = newOrders.filter(order => 
         order.service_type && order.description?.trim() && order.origin && order.destination
       )
-
+      
       if (validOrders.length > 0) {
         for (const order of validOrders) {
           await fetch('/api/orders', {
@@ -384,7 +384,7 @@ export default function ClientsPage() {
           })
         }
       }
-
+      
       // Réinitialiser les formulaires
       setNewCustomer({
         name: "",
@@ -486,13 +486,13 @@ export default function ClientsPage() {
       if (result.success) {
         await fetchContainers()
         const createdContainer = result.data
-
+        
         // Sélectionner automatiquement le nouveau conteneur dans le dernier formulaire de commande
         if (newOrders.length > 0) {
           const lastIndex = newOrders.length - 1
           updateOrderForm(lastIndex, 'container_id', createdContainer.id)
         }
-
+        
         setNewContainer({
           code: "",
           vessel: "",
@@ -634,9 +634,9 @@ export default function ClientsPage() {
                 <TableBody>
                   {customers.map((customer) => {
                     const ordersCount = customer.orders?.length || 0
-
+                    
                     return (
-                      <TableRow
+                      <TableRow 
                         key={customer.id}
                         className="cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => handleCustomerClick(customer.id)}
@@ -1057,9 +1057,9 @@ export default function ClientsPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
+                <Button 
+                  type="button" 
+                  variant="outline" 
                   onClick={() => setIsCreateDialogOpen(false)}
                 >
                   Annuler
@@ -1337,13 +1337,13 @@ export default function ClientsPage() {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
+                <Button 
+                  type="button" 
+                  variant="outline" 
                   onClick={() => {
                     setIsCreateContainerDialogOpen(false)
                     setError("")
-                  }}
+                  }} 
                   className="w-full sm:w-auto"
                 >
                   Annuler
