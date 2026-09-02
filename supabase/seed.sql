@@ -29,6 +29,7 @@ BEGIN
   -- Admin
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
+    confirmation_token, recovery_token, email_change_token_new, email_change,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
@@ -38,6 +39,7 @@ BEGIN
     'authenticated',
     'admin@danemo.be',
     v_pw_admin,
+    '', '', '', '',
     NOW(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"role":"admin"}'::jsonb,
@@ -64,6 +66,7 @@ BEGIN
   -- Opérateur 1
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
+    confirmation_token, recovery_token, email_change_token_new, email_change,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
@@ -73,6 +76,7 @@ BEGIN
     'authenticated',
     'operator@danemo.be',
     v_pw_oper,
+    '', '', '', '',
     NOW(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"role":"operator"}'::jsonb,
@@ -99,6 +103,7 @@ BEGIN
   -- Opérateur 2
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
+    confirmation_token, recovery_token, email_change_token_new, email_change,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
@@ -108,6 +113,7 @@ BEGIN
     'authenticated',
     'operator2@danemo.be',
     v_pw_oper,
+    '', '', '', '',
     NOW(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"role":"operator"}'::jsonb,
