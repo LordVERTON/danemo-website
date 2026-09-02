@@ -2,6 +2,13 @@ import { createClient } from "@supabase/supabase-js"
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 
+type StaffRole = "admin" | "operator"
+
+function getStaffRole(user: { user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown> }): StaffRole {
+  const role = user.app_metadata?.role || user.user_metadata?.role
+  return role === "admin" ? "admin" : "operator"
+}
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
   session: {
@@ -41,8 +48,22 @@ export const authOptions: NextAuthOptions = {
           id: data.user.id,
           email: data.user.email || email,
           name: data.user.user_metadata.name || data.user.email || "Utilisateur",
+          role: getStaffRole(data.user),
         }
       },
     }),
   ],
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) token.role = user.role || "operator"
+      return token
+    },
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub
+        session.user.role = token.role || "operator"
+      }
+      return session
+    },
+  },
 }

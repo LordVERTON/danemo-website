@@ -29,6 +29,7 @@ import {
   Calendar,
   Download
 } from "lucide-react"
+import { useCurrentUser } from "@/lib/use-current-user"
 
 interface Stats {
   total: number
@@ -50,6 +51,7 @@ interface Order {
 }
 
 export default function AnalyticsPage() {
+  const { user: currentUser } = useCurrentUser()
   const [stats, setStats] = useState<Stats | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -57,8 +59,8 @@ export default function AnalyticsPage() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    fetchData()
-  }, [timeRange])
+    if (currentUser?.role === "admin") fetchData()
+  }, [currentUser?.role, timeRange])
 
   const fetchData = async () => {
     try {
@@ -153,7 +155,7 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <AdminLayout>
+      <AdminLayout allowedRoles={["admin"]}>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
@@ -165,7 +167,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout allowedRoles={["admin"]}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
