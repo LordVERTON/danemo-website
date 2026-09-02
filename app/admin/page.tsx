@@ -1,241 +1,83 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { signOut, useSession } from "next-auth/react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Package, Truck, BarChart3, Users, LogOut, BookOpen } from "lucide-react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
+import {
+  BarChart3,
+  BookOpen,
+  MessageSquare,
+  Package,
+  Truck,
+  Users,
+} from "lucide-react"
+import AdminLayout from "@/components/admin-layout"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
+const adminSections = [
+  { href: "/admin/clients", label: "Clients", description: "Gérez les clients et leurs commandes.", icon: Users },
+  { href: "/admin/containers", label: "Conteneurs", description: "Organisez les départs et les arrivées.", icon: Package },
+  { href: "/admin/tracking", label: "Suivi", description: "Consultez le suivi des expéditions.", icon: Truck },
+  { href: "/admin/analytics", label: "Analyses", description: "Suivez les indicateurs de l'activité.", icon: BarChart3, roles: ["admin"] },
+  { href: "/admin/messages", label: "Messages", description: "Préparez les communications clients.", icon: MessageSquare, roles: ["admin"] },
+  { href: "/admin/blogs", label: "Blogs", description: "Créez et publiez les articles du site.", icon: BookOpen },
+  { href: "/admin/employees", label: "Collaborateurs", description: "Gérez les membres de l'équipe.", icon: Users, roles: ["admin"] },
+]
 
 export default function AdminDashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [role, setRole] = useState<string | null>(null)
-  const [stats, setStats] = useState<any>(null)
-  const router = useRouter()
+  const [stats, setStats] = useState<Record<string, number> | null>(null)
   const { data: session, status } = useSession()
+  const role = session?.user?.role === "admin" ? "admin" : "operator"
 
   useEffect(() => {
-    if (status === "loading") return
+    if (status !== "authenticated") return
 
-    const legacySession = localStorage.getItem("danemo_admin_session")
-    if (status === "authenticated") {
-      setIsAuthenticated(true)
-      setRole(session?.user?.role || localStorage.getItem("danemo_admin_role"))
-      fetchStats()
-    } else if (legacySession === "authenticated") {
-      setIsAuthenticated(true)
-      setRole(localStorage.getItem("danemo_admin_role"))
-      fetchStats()
-    } else {
-      router.push("/admin/login")
-    }
-  }, [router, session?.user?.role, status])
-
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/stats')
-      const result = await response.json()
-      if (result.success) {
-        setStats(result.data)
-      }
-    } catch (error) {
-      console.error('Error fetching stats:', error)
-    }
-  }
-
-  const handleLogout = async () => {
-    localStorage.removeItem("danemo_admin_session")
-    localStorage.removeItem("danemo_admin_role")
-    document.cookie = "danemo_admin_session=; path=/; max-age=0"
-    document.cookie = "danemo_admin_role=; path=/; max-age=0"
-    await signOut({ redirect: false })
-    router.push("/admin/login")
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">Vérification de l'authentification...</div>
-      </div>
-    )
-  }
+    fetch("/api/stats")
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.success) setStats(result.data)
+      })
+      .catch(() => setStats(null))
+  }, [status])
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-orange-600">Administration Danemo</h1>
-            </div>
-            <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2 bg-transparent">
-              <LogOut className="h-4 w-4" />
-              Déconnexion
-            </Button>
-          </div>
-        </div>
-      </header>
+    <AdminLayout title="Tableau de bord">
+      <p className="mb-8 text-gray-600">Accédez rapidement aux outils de gestion Danemo.</p>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord</h2>
-          <p className="text-gray-600">Gérez vos stocks, suivez les colis et analysez les performances</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Colis en transit</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.in_progress || 0}</div>
-              <p className="text-xs text-muted-foreground">Commandes en cours</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Véhicules en stock</CardTitle>
-              <Truck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.pending || 0}</div>
-              <p className="text-xs text-muted-foreground">Commandes en attente</p>
-            </CardContent>
-          </Card>
-
-          {role !== 'operator' && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revenus du mois</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.completed || 0}</div>
-              <p className="text-xs text-muted-foreground">Commandes terminées</p>
-            </CardContent>
-          </Card>
-          )}
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clients actifs</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.total || 0}</div>
-              <p className="text-xs text-muted-foreground">Total des commandes</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link href="/admin/clients">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-orange-600" />
-                  Gestion des clients
-                </CardTitle>
-                <CardDescription>Gérez vos clients et leurs commandes</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          <Link href="/admin/containers">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-orange-600" />
-                  Gestion des conteneurs
-                </CardTitle>
-                <CardDescription>Suivez les conteneurs et leurs statuts</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          <Link href="/admin/tracking">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-orange-600" />
-                  Suivi des colis
-                </CardTitle>
-                <CardDescription>Suivez les expéditions et mettez à jour les statuts</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          {role !== 'operator' && (
-            <Link href="/admin/analytics">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-orange-600" />
-                    Analyses et rapports
-                  </CardTitle>
-                  <CardDescription>Consultez les statistiques et générez des rapports</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-          )}
-          {(role === 'admin' || role === 'operator') && (
-            <Link href="/admin/blogs">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-orange-600" />
-                    Blogs
-                  </CardTitle>
-                  <CardDescription>Ajoutez et modifiez les contenus du blog de l'accueil</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-          )}
-        </div>
-      </main>
-
-      {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
-        <div className="flex items-center justify-around py-2 px-2">
-          <Link
-            href="/admin/clients"
-            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
-          >
-            <Users className="h-5 w-5" />
-            <span className="text-xs">Clients</span>
-          </Link>
-          <Link
-            href="/admin/containers"
-            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
-          >
-            <Package className="h-5 w-5" />
-            <span className="text-xs">Conteneurs</span>
-          </Link>
-          <Link
-            href="/admin/tracking"
-            className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
-          >
-            <Truck className="h-5 w-5" />
-            <span className="text-xs">Suivi</span>
-          </Link>
-          {role !== 'operator' && (
-            <Link
-              href="/admin/analytics"
-              className="flex flex-col items-center gap-1 text-gray-600 hover:text-orange-600"
-            >
-              <BarChart3 className="h-5 w-5" />
-              <span className="text-xs">Analyses</span>
-            </Link>
-          )}
-        </div>
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Colis en transit</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{stats?.in_progress || 0}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">En attente</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{stats?.pending || 0}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Commandes terminées</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{stats?.completed || 0}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Total</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{stats?.total || 0}</p></CardContent>
+        </Card>
       </div>
-    </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {adminSections.filter((section) => !section.roles || section.roles.includes(role)).map(({ href, label, description, icon: Icon }) => (
+          <Link key={href} href={href} className="group">
+            <Card className="h-full transition-shadow group-hover:shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon className="h-5 w-5 text-orange-600" />
+                  {label}
+                </CardTitle>
+                <CardDescription>{description}</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </AdminLayout>
   )
 }
