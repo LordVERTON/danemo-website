@@ -1,6 +1,7 @@
 import QRTrackingView from '@/components/qr-tracking-view'
-import { cookies } from 'next/headers'
+import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
+import { authOptions } from '@/lib/auth'
 
 export default async function AdminQRPage({
   searchParams,
@@ -9,9 +10,9 @@ export default async function AdminQRPage({
 }) {
   const sp = (await searchParams) || {}
   const code = sp.code || sp.payload || ''
-  const isAuthenticated = (await cookies()).get('danemo_admin_session')?.value === 'authenticated'
+  const session = await getServerSession(authOptions)
 
-  if (!isAuthenticated) {
+  if (!session) {
     const returnTo = encodeURIComponent(`/admin/qr${code ? `?code=${encodeURIComponent(code)}` : ''}`)
     redirect(`/admin/login?returnTo=${returnTo}`)
   }

@@ -18,14 +18,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (status === "loading") return
 
-    const legacySession = localStorage.getItem("danemo_admin_session")
     if (status === "authenticated") {
       setIsAuthenticated(true)
-      setRole(session?.user?.role || localStorage.getItem("danemo_admin_role"))
-      fetchStats()
-    } else if (legacySession === "authenticated") {
-      setIsAuthenticated(true)
-      setRole(localStorage.getItem("danemo_admin_role"))
+      setRole(session?.user?.role || null)
       fetchStats()
     } else {
       router.push("/admin/login")
@@ -45,10 +40,6 @@ export default function AdminDashboard() {
   }
 
   const handleLogout = async () => {
-    localStorage.removeItem("danemo_admin_session")
-    localStorage.removeItem("danemo_admin_role")
-    document.cookie = "danemo_admin_session=; path=/; max-age=0"
-    document.cookie = "danemo_admin_role=; path=/; max-age=0"
     await signOut({ redirect: false })
     router.push("/admin/login")
   }

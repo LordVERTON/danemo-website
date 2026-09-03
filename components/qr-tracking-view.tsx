@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import QRScanner from "@/components/qr-scanner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -241,6 +242,7 @@ interface QRTrackingViewProps {
 
 export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) {
   const router = useRouter()
+  const { status } = useSession()
   const [authChecked, setAuthChecked] = useState(false)
   const [inputValue, setInputValue] = useState(initialPayload || "")
   const [decoded, setDecoded] = useState<DecodedPayload>(() => decodePayload(initialPayload || ""))
@@ -263,8 +265,8 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
   const container = isOrder ? (trackingData as OrderPayload)?.container : (trackingData as PackagePayload)?.container ?? null
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("danemo_admin_session") === "authenticated"
-    if (!isAuthenticated) {
+    if (status === "loading") return
+    if (status !== "authenticated") {
       const params = new URLSearchParams(window.location.search)
       const codeParam = params.get("code")
       const returnTo = `/admin/qr${codeParam ? `?code=${encodeURIComponent(codeParam)}` : ""}`
@@ -272,7 +274,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
       return
     }
     setAuthChecked(true)
-  }, [router])
+  }, [router, status])
 
   useEffect(() => {
     if (initialPayload) {

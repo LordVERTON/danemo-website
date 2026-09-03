@@ -8,16 +8,6 @@ const AUTH_REQUIRED_API_PREFIXES = ["/api/stats", "/api/employees", "/api/admin"
 const ADMIN_ONLY_API_PREFIXES = ["/api/stats", "/api/employees", "/api/admin"]
 const OPERATOR_ALLOWED_ADMIN_API_PREFIXES = ["/api/admin/articles", "/api/admin/article-revisions", "/api/admin/media"]
 
-function hasLegacyPortalSession(request: NextRequest): boolean {
-  const sessionCookie = request.cookies.get("danemo_admin_session")?.value
-  return sessionCookie === "authenticated"
-}
-
-function isLegacyAdmin(request: NextRequest): boolean {
-  const roleCookie = request.cookies.get("danemo_admin_role")?.value
-  return roleCookie === "admin"
-}
-
 async function getAuthState(request: NextRequest) {
   const token = await getToken({
     req: request,
@@ -26,8 +16,8 @@ async function getAuthState(request: NextRequest) {
   const nextAuthRole = token?.role === "admin" ? "admin" : token?.role === "operator" ? "operator" : null
 
   return {
-    isAuthenticated: hasLegacyPortalSession(request) || Boolean(token),
-    isAdmin: isLegacyAdmin(request) || nextAuthRole === "admin",
+    isAuthenticated: Boolean(token),
+    isAdmin: nextAuthRole === "admin",
   }
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { supabase } from './supabase'
 
 export interface AuthenticatedUser {
@@ -10,15 +11,9 @@ export interface AuthenticatedUser {
 
 export async function authenticateRequest(request: NextRequest): Promise<AuthenticatedUser | null> {
   try {
-    // Vérifier l'authentification via les headers ou cookies
+    // Vérifier l'authentification via un jeton Supabase ou une session NextAuth.
     const authHeader = request.headers.get('authorization')
-    const sessionCookie = request.cookies.get('danemo_admin_session')?.value
-    
-    if (!authHeader && !sessionCookie) {
-      return null
-    }
 
-    // Pour les requêtes API, vérifier le token JWT
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7)
       const { data: { user }, error } = await supabase.auth.getUser(token)
@@ -35,17 +30,18 @@ export async function authenticateRequest(request: NextRequest): Promise<Authent
       }
     }
 
-    // Pour les sessions locales (fallback)
-    if (sessionCookie === 'authenticated') {
-      // Vérifier le rôle dans les cookies
-      const role = request.cookies.get('danemo_admin_role')?.value
-      if (!role) return null
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
+    })
+    const role = token?.role === 'admin' ? 'admin' : token?.role === 'operator' ? 'operator' : null
 
+    if (token && role) {
       return {
-        id: 'local-user',
-        email: 'local@danemo.be',
-        role: role as 'admin' | 'operator' | 'client',
-        name: role === 'admin' ? 'Admin Local' : 'Operator Local'
+        id: token.sub || '',
+        email: token.email || '',
+        role,
+        name: token.name || token.email || 'Utilisateur',
       }
     }
 

@@ -25,14 +25,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   useEffect(() => {
     if (status === "loading") return
 
-    const legacySession = localStorage.getItem("danemo_admin_session")
     const nextAuthRole = session?.user?.role
     if (status === "authenticated") {
       setIsAuthenticated(true)
-      setRole(nextAuthRole || localStorage.getItem("danemo_admin_role"))
-    } else if (legacySession === "authenticated") {
-      setIsAuthenticated(true)
-      setRole(localStorage.getItem("danemo_admin_role"))
+      setRole(nextAuthRole || null)
     } else {
       router.push("/admin/login")
     }
@@ -42,10 +38,6 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   }, [router, session?.user?.role, status])
 
   const handleLogout = useCallback(async () => {
-    localStorage.removeItem("danemo_admin_session")
-    localStorage.removeItem("danemo_admin_role")
-    document.cookie = "danemo_admin_session=; path=/; max-age=0"
-    document.cookie = "danemo_admin_role=; path=/; max-age=0"
     await signOut({ redirect: false })
     router.push("/admin/login")
   }, [router])
