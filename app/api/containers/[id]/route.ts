@@ -3,6 +3,7 @@ import { containersApi } from '@/lib/database'
 import { notifyContainerStatusChange } from '@/lib/container-notifications'
 import { toPublicContainer } from '@/lib/public-container'
 import { isStaffApiRequest, requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 // GET /api/containers/[id]
 export async function GET(
@@ -47,6 +48,13 @@ export async function PUT(
     })
     const updated = await containersApi.update(id, updates)
 
+    await recordBusinessAudit(request, {
+      action: 'update',
+      entityType: 'container',
+      entityId: id,
+      changedFields: Object.keys(updates),
+    })
+
     if (updates.status && updates.status !== current.status) {
       notifyContainerStatusChange(id, updates.status, {
         previousStatus: current.status,
@@ -74,6 +82,11 @@ export async function DELETE(
 
     const { id } = await context.params
     await containersApi.delete(id)
+    await recordBusinessAudit(request, {
+      action: 'delete',
+      entityType: 'container',
+      entityId: id,
+    })
     return NextResponse.json({ success: true, message: 'Container deleted successfully' })
   } catch (error) {
     console.error('Error deleting container:', error)
