@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-
-const ADMIN_SEED_KEY = process.env.ADMIN_SEED_KEY || '';
+import { requireDevelopmentSeedAccess } from '@/lib/admin-seed-auth';
 
 export async function POST(request: NextRequest) {
-  try {
-    // Verify admin seed key
-    const authHeader = request.headers.get('x-admin-seed-key');
-    if (!authHeader || authHeader !== ADMIN_SEED_KEY) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+  const accessError = await requireDevelopmentSeedAccess(request);
+  if (accessError) return accessError;
 
+  try {
     const supabase = supabaseAdmin as any;
 
     // Step 1: Delete all existing data

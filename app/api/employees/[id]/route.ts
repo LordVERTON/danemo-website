@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
 interface Employee {
   user_id: string
@@ -10,6 +11,9 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const { data, error } = await supabaseAdmin
@@ -35,6 +39,9 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const body = await request.json()
@@ -105,6 +112,9 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     // Récupérer l'employé pour avoir le user_id

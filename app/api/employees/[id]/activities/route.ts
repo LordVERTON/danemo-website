@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/employees/[id]/activities - Récupérer les activités d'un employé
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const { searchParams } = new URL(request.url)
@@ -42,6 +46,9 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const body = await request.json()

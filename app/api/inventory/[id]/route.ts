@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/inventory/[id] - Récupérer un article d'inventaire par ID
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const { data, error } = await (supabaseAdmin as any)
@@ -57,6 +61,9 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     // Validation de l'ID
@@ -115,6 +122,9 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const { error } = await supabaseAdmin

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { packagesApi, trackingApi } from '@/lib/database'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // POST /api/qr/scan
 // Body: { qr: string, status?: Package['status'], location?: string, description?: string, operator?: string }
 export async function POST(request: NextRequest) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     const qr = String(body.qr || '').trim()

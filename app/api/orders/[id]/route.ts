@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ordersApi, containersApi, trackingApi, customersApi } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -14,6 +15,9 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     
@@ -72,6 +76,9 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const body = await request.json()
@@ -254,6 +261,9 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     await ordersApi.delete(id)
@@ -273,6 +283,9 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const body = await request.json()

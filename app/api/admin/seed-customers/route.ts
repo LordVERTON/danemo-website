@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireDevelopmentSeedAccess } from '@/lib/admin-seed-auth'
 
 export async function POST(request: NextRequest) {
+  const authError = await requireDevelopmentSeedAccess(request)
+  if (authError) return authError
+
   try {
     // Simple protection: require a header that matches an env key
-    const seedKey = process.env.ADMIN_SEED_KEY
-    const providedKey = request.headers.get('x-admin-seed-key')
-    if (!seedKey || providedKey !== seedKey) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-
     if (!supabaseAdmin) {
       return NextResponse.json({ success: false, error: 'Supabase admin not initialized' }, { status: 500 })
     }

@@ -23,15 +23,10 @@ import {
 } from "lucide-react"
 
 interface Order {
-  id: string
   order_number: string
-  client_name: string
-  client_email: string
   service_type: string
   origin: string
   destination: string
-  weight?: number
-  value?: number
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   estimated_delivery?: string
   created_at: string
@@ -65,7 +60,7 @@ export default function TrackingPage() {
       setError("")
       setHasSearched(true)
 
-      const response = await fetch(`/api/orders/search?tracking=${trackingNumber}`)
+      const response = await fetch(`/api/orders/search?tracking=${encodeURIComponent(trackingNumber.trim())}`)
       const result = await response.json()
 
       if (result.success && result.data.length > 0) {
@@ -73,7 +68,7 @@ export default function TrackingPage() {
         setOrder(foundOrder)
 
         // Récupérer les événements de suivi
-        const eventsResponse = await fetch(`/api/orders/${foundOrder.id}/tracking`)
+        const eventsResponse = await fetch(`/api/orders/${encodeURIComponent(foundOrder.order_number)}/tracking`)
         const eventsResult = await eventsResponse.json()
 
         if (eventsResult.success) {
@@ -228,18 +223,8 @@ export default function TrackingPage() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Informations client</h3>
-                      <p className="text-sm text-gray-600">{order.client_name}</p>
-                      <p className="text-sm text-gray-600">{order.client_email}</p>
-                    </div>
-                    <div>
                       <h3 className="font-semibold text-gray-900 mb-2">Détails de l&apos;expédition</h3>
-                      <p className="text-sm text-gray-600">
-                        <strong>Poids:</strong> {order.weight ? `${order.weight} kg` : 'Non spécifié'}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <strong>Valeur:</strong> {order.value ? `€${order.value.toLocaleString()}` : 'Non spécifiée'}
-                      </p>
+                      <p className="text-sm text-gray-600"><strong>Référence:</strong> {order.order_number}</p>
                       <p className="text-sm text-gray-600">
                         <strong>Livraison estimée:</strong> {order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString('fr-FR') : 'Non spécifiée'}
                       </p>

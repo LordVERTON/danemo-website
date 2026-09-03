@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ordersApi, utils } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/orders - Récupérer toutes les commandes
 export async function GET(request: NextRequest) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
@@ -58,6 +62,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/orders - Créer une nouvelle commande
 export async function POST(request: NextRequest) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     

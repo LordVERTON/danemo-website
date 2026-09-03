@@ -1,25 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkDatabaseHealth, testDatabaseOperations } from '@/lib/db-health-check'
+import { checkDatabaseHealth } from '@/lib/db-health-check'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
 export async function GET(request: NextRequest) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
-    const [health, operations] = await Promise.all([
-      checkDatabaseHealth(),
-      testDatabaseOperations()
-    ])
+    const health = await checkDatabaseHealth()
 
     const isHealthy = health.isConnected && 
                      Object.values(health.tables).every(Boolean) && 
-                     health.auth &&
-                     operations.read && 
-                     operations.write && 
-                     operations.delete
+                     health.auth
 
     return NextResponse.json({
       success: true,
       healthy: isHealthy,
       database: health,
-      operations,
       timestamp: new Date().toISOString()
     })
   } catch (error) {

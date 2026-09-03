@@ -4,20 +4,6 @@ import { getToken } from "next-auth/jwt"
 
 const PUBLIC_PATHS = new Set(["/admin/login"])
 const ADMIN_ONLY_PREFIXES = ["/admin/analytics", "/admin/employees"]
-const AUTH_REQUIRED_API_PREFIXES = ["/api/stats", "/api/employees", "/api/admin", "/api/blog-posts", "/api/blog-media"]
-const ADMIN_ONLY_API_PREFIXES = ["/api/stats", "/api/employees", "/api/admin"]
-const OPERATOR_ALLOWED_ADMIN_API_PREFIXES = ["/api/admin/articles", "/api/admin/article-revisions", "/api/admin/media"]
-
-function hasLegacyPortalSession(request: NextRequest): boolean {
-  const sessionCookie = request.cookies.get("danemo_admin_session")?.value
-  return sessionCookie === "authenticated"
-}
-
-function isLegacyAdmin(request: NextRequest): boolean {
-  const roleCookie = request.cookies.get("danemo_admin_role")?.value
-  return roleCookie === "admin"
-}
-
 async function getAuthState(request: NextRequest) {
   const token = await getToken({
     req: request,
@@ -25,16 +11,16 @@ async function getAuthState(request: NextRequest) {
   })
   const nextAuthRole = token?.role === "admin" ? "admin" : token?.role === "operator" ? "operator" : null
 
-  return {
-    isAuthenticated: hasLegacyPortalSession(request) || Boolean(token),
-    isAdmin: isLegacyAdmin(request) || nextAuthRole === "admin",
-  }
+  return { isAuthenticated: Boolean(nextAuthRole), isAdmin: nextAuthRole === "admin" }
 }
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const isApiRoute = pathname.startsWith("/api/")
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/")
+  const publicTrackingRoute = /^\/api\/orders\/[^/]+\/tracking$/i.test(pathname)
+    && request.method === "GET"
+    && !/^\/api\/orders\/[0-9a-f]{8}-[0-9a-f-]{27}\/tracking$/i.test(pathname)
 
   if (pathname.startsWith("/api/auth/")) {
     return NextResponse.next()
@@ -43,15 +29,12 @@ export async function proxy(request: NextRequest) {
   const authState = await getAuthState(request)
 
   if (isApiRoute) {
-    if (pathname === "/api/blog-posts" && request.method === "GET") {
-      return NextResponse.next()
-    }
-
-    const isProtectedApi = AUTH_REQUIRED_API_PREFIXES.some(
-      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-    )
-
-    if (!isProtectedApi) {
+    if (
+      (pathname === "/api/blog-posts" && request.method === "GET") ||
+      pathname.startsWith("/api/public/") ||
+      (pathname === "/api/orders/search" && request.method === "GET") ||
+      publicTrackingRoute
+    ) {
       return NextResponse.next()
     }
 
@@ -62,10 +45,10 @@ export async function proxy(request: NextRequest) {
       )
     }
 
-    const isAdminOnlyApi = ADMIN_ONLY_API_PREFIXES.some(
+    const isAdminOnlyApi = ["/api/stats", "/api/employees", "/api/admin", "/api/health", "/api/test-connection"].some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
     )
-    const isOperatorAllowedAdminApi = OPERATOR_ALLOWED_ADMIN_API_PREFIXES.some(
+    const isOperatorAllowedAdminApi = ["/api/admin/articles", "/api/admin/article-revisions", "/api/admin/media"].some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
     )
 

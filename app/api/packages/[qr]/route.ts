@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { packagesApi, customersApi, containersApi, trackingApi } from '@/lib/database'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ qr: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ qr: string }> }) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { qr } = await context.params
     let pkg: Awaited<ReturnType<typeof packagesApi.getByQr>> | null = null

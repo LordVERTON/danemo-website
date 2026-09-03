@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { notifyContainerStatusChange } from '@/lib/container-notifications'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
 // POST /api/notifications/container-event
 // Body: { container_id: string, event: 'depart'|'arrive'|'deliver'|'delay', message?: string }
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     const containerId = String(body.container_id || '')

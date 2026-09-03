@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
 type EmployeeRole = 'admin' | 'operator'
 
@@ -111,6 +112,9 @@ async function syncAuthUsersToEmployees() {
 
 // GET /api/employees - Récupérer tous les employés
 export async function GET(request: NextRequest) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     await syncAuthUsersToEmployees()
 
@@ -198,6 +202,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/employees - Créer un nouvel employé
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     

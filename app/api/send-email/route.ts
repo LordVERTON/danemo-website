@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/notify";
+import { requireAdminApiAccess } from "@/lib/staff-api-auth";
 import {
   buildOrderStatusEmail,
   buildContainerStatusEmail,
@@ -9,7 +10,10 @@ import {
   normalizeContainerStatus,
 } from "@/lib/notification-templates";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const authError = await requireAdminApiAccess(req);
+  if (authError) return authError;
+
   try {
     const body = await req.json();
     const {

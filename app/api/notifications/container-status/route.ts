@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { containersApi } from "@/lib/database";
 import { notifyContainerStatusChange } from "@/lib/container-notifications";
+import { requireAdminApiAccess } from "@/lib/staff-api-auth";
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminApiAccess(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const containerId = String(body.container_id || "").trim();

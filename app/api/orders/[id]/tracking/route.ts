@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { trackingApi, ordersApi } from '@/lib/database'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -18,10 +19,15 @@ export async function GET(
     // Determine if the parameter is a UUID (ID) or a QR code
     const isId = isUUID(id)
     
+    if (isId) {
+      const authError = await requireStaffApiAccess(request)
+      if (authError) return authError
+    }
+
     let orderId = id
     if (!isId) {
       // Get order by QR code to find the actual ID
-      const order = await ordersApi.getByQr(id)
+      const order = await ordersApi.getByQr(id) || await ordersApi.getByOrderNumber(id) || await ordersApi.getFirstByContainerCode(id)
       if (!order) {
         return NextResponse.json(
           { success: false, error: 'Order not found' },
@@ -48,6 +54,9 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { id } = await context.params
     const body = await request.json()

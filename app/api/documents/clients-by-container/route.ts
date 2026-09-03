@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { generateClientsDocx, generateClientsExcel } from '@/lib/documents-utils'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/documents/clients-by-container?container_id=...&format=docx|xlsx
 export async function GET(request: NextRequest) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(request.url)
     const containerId = searchParams.get('container_id')

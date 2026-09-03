@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/inventory - Récupérer tous les articles d'inventaire
 export async function GET(request: NextRequest) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
@@ -65,6 +69,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/inventory - Créer un nouvel article d'inventaire
 export async function POST(request: NextRequest) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
     
