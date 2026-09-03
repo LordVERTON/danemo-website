@@ -48,7 +48,8 @@ Pour chaque workflow, la future procédure doit préciser :
 
 ### Priorité haute — sécurité et continuité de service
 
-- [ ] Auditer systématiquement les autorisations de toutes les routes API : aucune route d'écriture, d'administration ou contenant des données personnelles ne doit dépendre uniquement de l'interface.
+- [x] Auditer systématiquement les autorisations de toutes les routes API : aucune route d'écriture, d'administration ou contenant des données personnelles ne doit dépendre uniquement de l'interface. *(Terminé le 03/09/2026 : refus par défaut dans le proxy avec session NextAuth signée ; contrôles explicites dans les routes sensibles ; suppression du fallback par cookies non signés ; routes de seed réservées au hors-production, à un administrateur et à la clé locale ; suivi public réduit aux seules données nécessaires.)*
+- Validation de cette étape : contrôle du diff réussi. La compilation complète reste à relancer après restauration de `node_modules` : les dépendances concernées sont déjà déclarées et verrouillées, mais absentes localement.
 - [ ] Revoir les politiques RLS Supabase et appliquer le principe du moindre privilège, table par table.
 - [ ] Vérifier qu'aucun secret, clé de service, mot de passe de démonstration ou fichier `.env` n'est exposé dans Git, les journaux ou le navigateur.
 - [ ] Ajouter une limitation de débit et une protection anti-abus sur les formulaires publics, le suivi, le scan QR et l'envoi de messages.
