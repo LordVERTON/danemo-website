@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get container
-    const { data: container, error: cErr } = await supabaseAdmin
+    const { data: container, error: cErr } = await (supabaseAdmin as any)
       .from('containers')
       .select('*')
       .eq('id', containerId)
@@ -26,20 +26,25 @@ export async function GET(request: NextRequest) {
     if (!container) return NextResponse.json({ success: false, error: 'Container not found' }, { status: 404 })
 
     // Find packages in this container
-    const { data: packages, error: pErr } = await supabaseAdmin
+    const { data: packages, error: pErr } = await (supabaseAdmin as any)
       .from('packages')
       .select('client_id')
       .eq('container_id', containerId)
     if (pErr) throw pErr
 
-    const clientIds = Array.from(new Set((packages || []).map((p) => p.client_id).filter(Boolean))) as string[]
+    const clientIds = Array.from(
+      new Set((packages || []).map((p: { client_id?: string | null }) => p.client_id).filter(Boolean)),
+    ) as string[]
 
     // Load customers (legacy field name `client_id` kept on packages)
     let rows: any[] = []
     if (clientIds.length > 0) {
-      const { data: clients, error: clErr } = await supabaseAdmin.from('customers').select('*').in('id', clientIds)
+      const { data: clients, error: clErr } = await (supabaseAdmin as any)
+        .from('customers')
+        .select('*')
+        .in('id', clientIds)
       if (clErr) throw clErr
-      rows = (clients || []).map((c) => ({
+      rows = (clients || []).map((c: Record<string, string | null>) => ({
         name: c.name,
         email: c.email,
         phone: c.phone,
