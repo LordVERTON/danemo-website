@@ -71,7 +71,7 @@ Les schémas Mermaid sont séparés par domaine dans le dossier `docs/workflows/
 - [ ] Ajouter une limitation de débit et une protection anti-abus sur les formulaires publics, le suivi, le scan QR et l'envoi de messages. *(Première protection ajoutée le 03/09/2026 dans `proxy.ts` : limites par IP, réponses HTTP 429 et en-tête `Retry-After` pour la connexion, l’inscription publique, le suivi, les scans QR, les mises à jour de suivi et les envois e-mail/SMS. Cette limite en mémoire protège chaque instance ; compléter le déploiement par une règle WAF/CDN ou un stockage partagé pour couvrir plusieurs instances.)*
 - [ ] Formaliser la gestion des comptes : mots de passe robustes, réinitialisation, révocation immédiate des accès, revue périodique des rôles et, si possible, MFA pour les administrateurs.
 - [ ] Mettre en place des sauvegardes testées, un plan de restauration, des alertes de santé et une journalisation centralisée des erreurs.
-- [ ] Ajouter une piste d'audit métier : qui a créé, modifié ou supprimé un client, une commande, un paiement, un conteneur ou un contenu.
+- [ ] Ajouter une piste d'audit métier : qui a créé, modifié ou supprimé un client, une commande, un paiement, un conteneur ou un contenu. *(Implémentée le 04/09/2026 : migration `20260903000400_add_business_audit_log.sql`, RLS au moindre privilège et journalisation des mutations réussies dans les routes métier. La migration reste à appliquer en production avant d’activer ce point.)*
 - [ ] Définir une politique de conservation et de suppression des données personnelles conforme aux obligations applicables (RGPD), y compris les exportations de données.
 
 ### Priorité haute — données et opérations métier
