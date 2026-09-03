@@ -49,7 +49,6 @@ import { generateInvoice, defaultCompanyData, InvoiceData } from "@/lib/invoice-
 import { generateProformaDocx, generateProformaPdf } from "@/lib/proforma-utils"
 import { generateQRPrintPDF } from "@/lib/qr-print-utils"
 import QRCode from "qrcode"
-import { supabase } from "@/lib/supabase"
 import { getTariffItemsForLang } from "@/lib/tariff-items"
 import {
   calculateCustomerPaymentProgress,

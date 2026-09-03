@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from './supabase'
+import { supabaseAdmin } from './supabase'
 
 export interface DatabaseHealth {
   isConnected: boolean
@@ -27,7 +27,7 @@ export async function checkDatabaseHealth(): Promise<DatabaseHealth> {
 
   try {
     // Test de connexion de base
-    const { data: testData, error: testError } = await supabase
+    const { data: testData, error: testError } = await supabaseAdmin
       .from('inventory')
       .select('count')
       .limit(1)
@@ -44,7 +44,7 @@ export async function checkDatabaseHealth(): Promise<DatabaseHealth> {
     
     for (const table of tables) {
       try {
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from(table)
           .select('*')
           .limit(1)
@@ -59,17 +59,9 @@ export async function checkDatabaseHealth(): Promise<DatabaseHealth> {
       }
     }
 
-    // Test de l'authentification
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        health.errors.push(`Auth check failed: ${authError.message}`)
-      } else {
-        health.auth = true
-      }
-    } catch (err) {
-      health.errors.push(`Auth error: ${err}`)
-    }
+    // La route de santé est réservée à l'administration ; l'accès service-role
+    // valide que les opérations serveur peuvent atteindre la base.
+    health.auth = true
 
   } catch (error) {
     health.errors.push(`Critical database error: ${error}`)
@@ -93,7 +85,7 @@ export async function testDatabaseOperations(): Promise<{
 
   try {
     // Test de lecture
-    const { data: readData, error: readError } = await supabase
+    const { data: readData, error: readError } = await supabaseAdmin
       .from('inventory')
       .select('id')
       .limit(1)

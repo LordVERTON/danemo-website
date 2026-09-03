@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/test-connection - Tester la connexion à Supabase
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Test simple de connexion
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select('count', { count: 'exact', head: true })
 

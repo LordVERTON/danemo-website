@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { generateClientsDocx, generateClientsExcel } from '@/lib/documents-utils'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get container
-    const { data: container, error: cErr } = await supabase
+    const { data: container, error: cErr } = await supabaseAdmin
       .from('containers')
       .select('*')
       .eq('id', containerId)
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     if (!container) return NextResponse.json({ success: false, error: 'Container not found' }, { status: 404 })
 
     // Find packages in this container
-    const { data: packages, error: pErr } = await supabase
+    const { data: packages, error: pErr } = await supabaseAdmin
       .from('packages')
       .select('client_id')
       .eq('container_id', containerId)
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Load customers (legacy field name `client_id` kept on packages)
     let rows: any[] = []
     if (clientIds.length > 0) {
-      const { data: clients, error: clErr } = await supabase.from('customers').select('*').in('id', clientIds)
+      const { data: clients, error: clErr } = await supabaseAdmin.from('customers').select('*').in('id', clientIds)
       if (clErr) throw clErr
       rows = (clients || []).map((c) => ({
         name: c.name,

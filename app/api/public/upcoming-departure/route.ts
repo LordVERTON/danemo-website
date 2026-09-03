@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase"
 
 export async function GET() {
   if (process.env.NODE_ENV === "production") {
@@ -7,7 +7,7 @@ export async function GET() {
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("containers")
       .select("id, code, vessel, departure_port, arrival_port, etd, eta, status")
       .eq("status", "planned")
