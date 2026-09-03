@@ -2,6 +2,7 @@ import { randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { readBlogPosts, writeBlogPosts, type BlogPost, type BlogSection } from "@/lib/blog-posts"
 import { authenticateRequest } from "@/lib/auth-middleware"
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 function canManageBlogs(userRole: string | undefined): boolean {
   return userRole === "admin" || userRole === "operator"
@@ -98,6 +99,11 @@ export async function POST(request: NextRequest) {
 
     posts.unshift(newPost)
     await writeBlogPosts(posts)
+    await recordBusinessAudit(request, {
+      action: 'create',
+      entityType: 'content',
+      entityId: newPost.id,
+    })
     return NextResponse.json({ success: true, data: newPost }, { status: 201 })
   } catch (error) {
     return NextResponse.json({ success: false, error: "Failed to create blog post" }, { status: 500 })
@@ -145,6 +151,12 @@ export async function PUT(request: NextRequest) {
     }
     posts[index] = updatedPost
     await writeBlogPosts(posts)
+    await recordBusinessAudit(request, {
+      action: 'update',
+      entityType: 'content',
+      entityId: id,
+      changedFields: Object.keys(payload),
+    })
     return NextResponse.json({ success: true, data: updatedPost })
   } catch (error) {
     return NextResponse.json({ success: false, error: "Failed to update blog post" }, { status: 500 })
@@ -174,6 +186,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     await writeBlogPosts(filteredPosts)
+    await recordBusinessAudit(request, {
+      action: 'delete',
+      entityType: 'content',
+      entityId: id,
+    })
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json({ success: false, error: "Failed to delete blog post" }, { status: 500 })
