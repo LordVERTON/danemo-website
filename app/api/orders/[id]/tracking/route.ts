@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { trackingApi, ordersApi } from '@/lib/database'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -99,6 +100,13 @@ export async function POST(
     if (body.status && body.status !== order.status) {
       await ordersApi.update(orderId, { status: body.status })
     }
+
+    await recordBusinessAudit(request, {
+      action: 'update',
+      entityType: 'order',
+      entityId: orderId,
+      changedFields: body.status ? ['tracking_event', 'status'] : ['tracking_event'],
+    })
 
     return NextResponse.json({ success: true, data: event }, { status: 201 })
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ordersApi, utils } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 // GET /api/orders - Récupérer toutes les commandes
 export async function GET(request: NextRequest) {
@@ -247,6 +248,12 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       )
     }
+
+    await recordBusinessAudit(request, {
+      action: 'create',
+      entityType: 'order',
+      entityId: order.id,
+    })
     
     return NextResponse.json({ success: true, data: order }, { status: 201 })
   } catch (error) {

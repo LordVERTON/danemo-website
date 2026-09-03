@@ -3,6 +3,7 @@ import { ordersApi, containersApi, trackingApi, customersApi } from '@/lib/datab
 import { supabaseAdmin } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -218,6 +219,13 @@ export async function PUT(
     // Mettre à jour la commande (email client si changement de statut : géré dans ordersApi.update)
     const order = await ordersApi.update(orderId, sanitizedOrderData)
 
+    await recordBusinessAudit(request, {
+      action: 'update',
+      entityType: 'order',
+      entityId: orderId,
+      changedFields: Object.keys(sanitizedOrderData),
+    })
+
     // TODO: Activer l'historique une fois la table order_history créée
     /*
     // Créer un historique manuel si l'utilisateur est fourni
@@ -267,6 +275,11 @@ export async function DELETE(
   try {
     const { id } = await context.params
     await ordersApi.delete(id)
+    await recordBusinessAudit(request, {
+      action: 'delete',
+      entityType: 'order',
+      entityId: id,
+    })
     
     return NextResponse.json({ success: true, message: 'Order deleted successfully' })
   } catch (error) {
@@ -360,6 +373,13 @@ export async function PATCH(
 
       // Mettre à jour la commande avec le nouveau QR code
       const updatedOrder = await ordersApi.update(orderId, { qr_code: qrCode })
+
+      await recordBusinessAudit(request, {
+        action: 'update',
+        entityType: 'order',
+        entityId: orderId,
+        changedFields: ['qr_code'],
+      })
 
       return NextResponse.json({
         success: true,
