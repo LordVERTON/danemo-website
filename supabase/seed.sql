@@ -39,8 +39,8 @@ BEGIN
     'admin@danemo.be',
     v_pw_admin,
     NOW(),
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"role":"admin"}'::jsonb,
+    '{"provider":"email","providers":["email"],"role":"admin"}'::jsonb,
+    '{}'::jsonb,
     NOW(),
     NOW()
   )
@@ -74,8 +74,8 @@ BEGIN
     'operator@danemo.be',
     v_pw_oper,
     NOW(),
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"role":"operator"}'::jsonb,
+    '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
+    '{}'::jsonb,
     NOW(),
     NOW()
   )
@@ -109,8 +109,8 @@ BEGIN
     'operator2@danemo.be',
     v_pw_oper,
     NOW(),
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"role":"operator"}'::jsonb,
+    '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
+    '{}'::jsonb,
     NOW(),
     NOW()
   )

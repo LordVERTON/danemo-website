@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
     }
 
     const usersToCreate = [
-      { email: 'admin@danemo.be', password: 'admin123', user_metadata: { role: 'admin' } },
-      { email: 'operator@danemo.be', password: 'operator123', user_metadata: { role: 'operator' } },
+      { email: 'admin@danemo.be', password: 'admin123', app_metadata: { role: 'admin' } },
+      { email: 'operator@danemo.be', password: 'operator123', app_metadata: { role: 'operator' } },
     ]
 
     const results: Array<{ email: string; ok: boolean; message?: string; id?: string }> = []
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
         email: u.email,
         password: u.password,
         email_confirm: true,
-        user_metadata: u.user_metadata,
+        app_metadata: u.app_metadata,
       })
       if (error) {
         // If user already exists, treat as success for idempotency

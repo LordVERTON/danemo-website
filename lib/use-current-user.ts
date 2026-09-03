@@ -41,7 +41,7 @@ export function useCurrentUser() {
               id: authUser.id,
               name: authUser.user_metadata?.name || authUser.email || 'Utilisateur',
               email: authUser.email || '',
-              role: authUser.user_metadata?.role || 'operator'
+              role: authUser.app_metadata?.role || 'operator'
             })
           }
         }

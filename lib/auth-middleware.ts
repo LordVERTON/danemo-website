@@ -25,7 +25,7 @@ export async function authenticateRequest(request: NextRequest): Promise<Authent
       return {
         id: user.id,
         email: user.email || '',
-        role: (user.user_metadata as any)?.role || 'operator',
+        role: (user.app_metadata as any)?.role || 'operator',
         name: (user.user_metadata as any)?.name || user.email?.split('@')[0] || 'User'
       }
     }

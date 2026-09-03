@@ -42,13 +42,14 @@ export const authOptions: NextAuthOptions = {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error || !data.user) return null
 
-        const metadata = data.user.user_metadata as { role?: AdminRole; name?: string } | null
-        const role: AdminRole = metadata?.role === "admin" ? "admin" : "operator"
+        const appMetadata = data.user.app_metadata as { role?: AdminRole } | null
+        const userMetadata = data.user.user_metadata as { name?: string } | null
+        const role: AdminRole = appMetadata?.role === "admin" ? "admin" : "operator"
 
         return {
           id: data.user.id,
           email: data.user.email || email,
-          name: metadata?.name || data.user.email?.split("@")[0] || "Utilisateur",
+          name: userMetadata?.name || data.user.email?.split("@")[0] || "Utilisateur",
           role,
         }
       },

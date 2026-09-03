@@ -61,7 +61,7 @@ export async function PUT(
     if (body.email || body.role || body.password) {
       const updateData: any = {}
       if (body.email) updateData.email = body.email
-      if (body.role) updateData.user_metadata = { role: body.role }
+      if (body.role) updateData.app_metadata = { role: body.role }
       if (body.password && body.password.trim() !== '') {
         updateData.password = body.password
       }

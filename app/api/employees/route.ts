@@ -92,7 +92,7 @@ async function syncAuthUsersToEmployees() {
         user_id: authUser.id,
         name: nameFromAuthUser(authUser),
         email,
-        role: normalizeRole(authUser.user_metadata?.role),
+        role: normalizeRole(authUser.app_metadata?.role),
         salary: 0,
         position: 'Collaborateur',
         hire_date: today,
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
       email: body.email,
       password: body.password || 'temp123',
       email_confirm: true,
-      user_metadata: { role: body.role }
+      app_metadata: { role: body.role }
     })
 
     if (authError) {
