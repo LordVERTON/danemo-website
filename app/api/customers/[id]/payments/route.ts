@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 const PAYMENT_METHODS = ['bank_transfer', 'cash', 'card', 'mobile', 'other'] as const
 
@@ -108,6 +109,12 @@ export async function POST(
       .single()
 
     if (error) throw error
+
+    await recordBusinessAudit(request, {
+      action: 'create',
+      entityType: 'payment',
+      entityId: data.id,
+    })
 
     return NextResponse.json({ success: true, data }, { status: 201 })
   } catch (error) {

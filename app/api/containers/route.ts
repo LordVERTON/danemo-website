@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { containersApi } from '@/lib/database'
 import { toPublicContainer } from '@/lib/public-container'
 import { isStaffApiRequest, requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 // GET /api/containers - list
 export async function GET(request: NextRequest) {
@@ -41,6 +42,11 @@ export async function POST(request: NextRequest) {
       client_id: body.client_id || null,
     }
     const created = await containersApi.create(payload)
+    await recordBusinessAudit(request, {
+      action: 'create',
+      entityType: 'container',
+      entityId: created.id,
+    })
     return NextResponse.json({ success: true, data: created }, { status: 201 })
   } catch (error) {
     console.error('Error creating container:', error)

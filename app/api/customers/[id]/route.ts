@@ -4,6 +4,7 @@ import { normalizePhoneE164 } from '@/lib/messaging'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 import { calculateCustomerPaymentProgress } from '@/lib/customer-payment-progress'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 // GET /api/customers/[id] - Récupérer un client avec ses commandes
 export async function GET(
@@ -103,6 +104,13 @@ export async function PUT(
       opted_in_whatsapp: Boolean(body.opted_in_whatsapp),
       status: body.status,
     })
+
+    await recordBusinessAudit(request, {
+      action: 'update',
+      entityType: 'customer',
+      entityId: id,
+      changedFields: Object.keys(body),
+    })
     
     return NextResponse.json({ success: true, data: customer })
   } catch (error: any) {
@@ -125,6 +133,12 @@ export async function DELETE(
 
     const { id } = await context.params
     await customersApi.delete(id)
+
+    await recordBusinessAudit(request, {
+      action: 'delete',
+      entityType: 'customer',
+      entityId: id,
+    })
     
     return NextResponse.json({ success: true })
   } catch (error: any) {

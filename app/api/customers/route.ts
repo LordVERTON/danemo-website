@@ -3,6 +3,7 @@ import { customersApi } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
 import { normalizePhoneE164 } from '@/lib/messaging'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
 async function syncOrdersWithoutCustomer() {
   const { data: danglingOrders, error } = await (supabaseAdmin as any)
@@ -192,6 +193,12 @@ export async function POST(request: NextRequest) {
       opted_in_sms: Boolean(body.opted_in_sms),
       opted_in_whatsapp: Boolean(body.opted_in_whatsapp),
       status: body.status || 'active',
+    })
+
+    await recordBusinessAudit(request, {
+      action: 'create',
+      entityType: 'customer',
+      entityId: customer.id,
     })
     
     return NextResponse.json({ success: true, data: customer }, { status: 201 })
