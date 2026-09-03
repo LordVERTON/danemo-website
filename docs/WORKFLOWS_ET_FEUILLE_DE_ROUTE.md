@@ -36,6 +36,21 @@ Pour chaque workflow, la future procédure doit préciser :
 | P2 | Parcours public du site | Client public | Services, tarifs, contact, blog, recherche/consultation d'un suivi et attentes de réponse. |
 | P2 | Administration des données de démonstration | Administrateur technique | Usage des routes de réinitialisation ou d'initialisation de données, uniquement hors production et avec validation préalable. |
 
+## Schémas des workflows à documenter
+
+Les schémas Mermaid sont séparés par domaine dans le dossier `docs/workflows/`. Les éléments signalés « à valider » doivent être confirmés par le responsable métier avant la rédaction des procédures et des supports de formation.
+
+| Workflow | Fichier |
+| --- | --- |
+| Connexion et rôles | [01 — Connexion et rôles](workflows/01-connexion-et-roles.md) |
+| Client, commande et règlement | [02 — Client, commande et règlement](workflows/02-client-commande-reglement.md) |
+| Conteneur et changement de statut | [03 — Conteneur et changement de statut](workflows/03-conteneur-et-statut.md) |
+| Suivi, QR code et accès public | [04 — Suivi, QR code et accès public](workflows/04-suivi-qr-et-acces-public.md) |
+| Inscription et parcours public | [05 — Inscription et parcours public](workflows/05-inscription-et-parcours-public.md) |
+| Inventaire et suppression contrôlée | [06 — Inventaire et suppression contrôlée](workflows/06-inventaire-et-suppression.md) |
+| Collaborateurs, messagerie et blog | [07 — Collaborateurs, messagerie et blog](workflows/07-collaborateurs-messagerie-et-blog.md) |
+| Analyses, exports et données de démonstration | [08 — Analyses, exports et données de démonstration](workflows/08-analyses-exports-et-demonstration.md) |
+
 ## Ordre recommandé de production des procédures
 
 1. Connexion, rôles, création de client et création de commande.
