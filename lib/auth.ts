@@ -16,16 +16,6 @@ function getSupabaseAuthClient() {
   })
 }
 
-function hardcodedUser(email: string, password: string) {
-  if (email === "admin@danemo.be" && password === "admin123") {
-    return { id: "admin-local", email, name: "Admin Local", role: "admin" as AdminRole }
-  }
-  if (email === "operator@danemo.be" && password === "operator123") {
-    return { id: "operator-local", email, name: "Operator Local", role: "operator" as AdminRole }
-  }
-  return null
-}
-
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
@@ -45,9 +35,6 @@ export const authOptions: NextAuthOptions = {
         const email = String(credentials?.email || "").trim().toLowerCase()
         const password = String(credentials?.password || "")
         if (!email || !password) return null
-
-        const localUser = hardcodedUser(email, password)
-        if (localUser) return localUser
 
         const supabase = getSupabaseAuthClient()
         if (!supabase) return null
