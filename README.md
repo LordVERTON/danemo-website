@@ -274,11 +274,12 @@ danemo-website/
    - Configurez les variables d'environnement
    - Déployez
 
-## 🔐 Accès Admin
+## 🔐 Accès administrateur
 
-- **URL** : `/admin/login`
-- **Email** : `admin@danemo.be`
-- **Mot de passe** : `danemo2024`
+Les identifiants d’administration ne sont pas fournis dans le dépôt. Créez ou
+provisionnez un compte administrateur dans l’environnement concerné, avec un
+mot de passe unique et robuste. Ne consignez jamais ces identifiants dans la
+documentation, le code source ou les journaux.
 
 ## 📊 Fonctionnalités
 
