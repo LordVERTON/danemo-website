@@ -331,7 +331,8 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
         setEditStatus(json.data.order.status)
       }
       
-      setActiveTab(json.data?.container ? "container" : "tracking")
+      // Afficher d'abord les informations opérationnelles du colis ou de la commande.
+      setActiveTab("tracking")
     } catch (err) {
       console.error("Failed to fetch QR tracking data:", err)
       setError("Impossible de récupérer les informations.")
