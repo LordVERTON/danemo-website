@@ -29,7 +29,7 @@ BEGIN
   -- Admin
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_admin_id,
@@ -39,6 +39,7 @@ BEGIN
     'admin@danemo.be',
     v_pw_admin,
     NOW(),
+    '',
     '{"provider":"email","providers":["email"],"role":"admin"}'::jsonb,
     '{}'::jsonb,
     NOW(),
@@ -64,7 +65,7 @@ BEGIN
   -- Opérateur 1
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_op1_id,
@@ -74,6 +75,7 @@ BEGIN
     'operator@danemo.be',
     v_pw_oper,
     NOW(),
+    '',
     '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
     '{}'::jsonb,
     NOW(),
@@ -99,7 +101,7 @@ BEGIN
   -- Opérateur 2
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_op2_id,
@@ -109,6 +111,7 @@ BEGIN
     'operator2@danemo.be',
     v_pw_oper,
     NOW(),
+    '',
     '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
     '{}'::jsonb,
     NOW(),
