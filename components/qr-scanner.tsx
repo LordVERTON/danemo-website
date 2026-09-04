@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { QrCode, Camera, X, RotateCcw } from "lucide-react"
@@ -23,6 +25,7 @@ export default function QRScanner({
   keepOpenAfterScan = false,
   requireReauthOnFirstScanInSession = false,
 }: QRScannerProps) {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState("")
@@ -32,13 +35,10 @@ export default function QRScanner({
   const scannerIdRef = useRef(`qr-reader-${Math.random().toString(36).substring(7)}`)
   const SESSION_REAUTH_KEY = "danemo_qr_reauth_done"
 
-  const forceReauthentication = () => {
-    localStorage.removeItem("danemo_admin_session")
-    localStorage.removeItem("danemo_admin_role")
-    document.cookie = "danemo_admin_session=; path=/; max-age=0"
-    document.cookie = "danemo_admin_role=; path=/; max-age=0"
+  const forceReauthentication = async () => {
+    await signOut({ redirect: false })
     const returnTo = encodeURIComponent(window.location.pathname + window.location.search)
-    window.location.href = `/admin/login?returnTo=${returnTo}`
+    router.replace(`/admin/login?returnTo=${returnTo}`)
   }
 
   const startScanning = async () => {

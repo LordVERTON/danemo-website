@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -60,6 +62,8 @@ export default function AnalyticsPage() {
   const [error, setError] = useState("")
   const [role, setRole] = useState<string | null>(null)
   const [isFiltering, setIsFiltering] = useState(false)
+  const router = useRouter()
+  const { data: session, status } = useSession()
   
   // Refs pour les graphiques
   const barChartRef = useRef<HTMLDivElement>(null)
@@ -67,15 +71,17 @@ export default function AnalyticsPage() {
   const lineChartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const currentRole = typeof window !== 'undefined' ? localStorage.getItem('danemo_admin_role') : null
+    if (status === "loading") return
+
+    const currentRole = session?.user?.role || null
     setRole(currentRole)
     if (currentRole === 'operator') {
       // Redirect operators away from analytics
-      window.location.href = '/admin'
+      router.replace('/admin')
       return
     }
     fetchData()
-  }, [timeRange])
+  }, [router, session?.user?.role, status, timeRange])
 
   const fetchData = async () => {
     try {
