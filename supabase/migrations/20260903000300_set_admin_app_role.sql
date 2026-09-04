@@ -13,7 +13,11 @@ WHERE email = 'admin@danemo.be';
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
+    SELECT 1
+    FROM auth.users
+    WHERE email = 'admin@danemo.be'
+  ) AND NOT EXISTS (
     SELECT 1
     FROM auth.users
     WHERE email = 'admin@danemo.be'
