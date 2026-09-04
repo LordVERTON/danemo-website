@@ -62,7 +62,7 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Image src="/images/logo.webp" alt="Danemo Logo" width={120} height={90} className="object-contain" />
+            <Image src="/images/logo.webp" alt="Danemo Logo" width={120} height={85} className="object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold text-orange-600">Administration Danemo</CardTitle>
           <CardDescription>Connectez-vous pour accéder au panneau d'administration</CardDescription>

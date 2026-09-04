@@ -49,7 +49,7 @@ export default function Header() {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3">
-              <Image src="/images/logo.webp" alt="Danemo Logo" width={60} height={60} className="object-contain" />
+              <Image src="/images/logo.webp" alt="Danemo Logo" width={60} height={43} className="object-contain" />
               <div>
                 <h1 className="text-2xl font-bold text-orange-500 font-serif">Danemo Srl</h1>
               </div>

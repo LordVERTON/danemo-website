@@ -135,7 +135,7 @@ export default function HomePage() {
             </div>
 
             <div className="flex justify-center">
-              <Image src="/images/logo.webp" alt="Danemo Logo" width={400} height={300} className="object-contain" />
+              <Image src="/images/logo.webp" alt="Danemo Logo" width={400} height={284} className="object-contain" />
             </div>
           </div>
         </div>
