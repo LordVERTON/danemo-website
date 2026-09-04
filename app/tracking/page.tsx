@@ -26,17 +26,11 @@ import { useI18n } from "@/lib/i18n"
 interface Order {
   id: string
   order_number: string
-  client_name: string
-  client_email: string
   service_type: string
-  description?: string | null
   origin: string
   destination: string
-  weight?: number
-  value?: number
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
   estimated_delivery?: string
-  created_at: string
   updated_at: string
   container_id?: string | null
   container_code?: string | null
@@ -377,23 +371,9 @@ export default function TrackingPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">{tracking.order.clientInfo}</h3>
-                    <p className="text-sm text-gray-600">{order.client_name}</p>
-                    <p className="text-sm text-gray-600">{order.client_email}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">{tracking.order.shipmentDetails}</h3>
-                    <p className="text-sm text-gray-600">
-                      <strong>Description:</strong> {order.description || 'Non spécifiée'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <strong>Poids:</strong> {order.weight ? `${order.weight} kg` : 'Non spécifié'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <strong>Valeur:</strong> {order.value ? `€${order.value.toLocaleString()}` : 'Non spécifiée'}
-                    </p>
                     <p className="text-sm text-gray-600">
                       <strong>Livraison estimée:</strong> {order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString('fr-FR') : 'Non spécifiée'}
                     </p>
