@@ -204,6 +204,51 @@ Le serveur de développement se lancera automatiquement sur le port 3000.
 
 Ouvrez votre navigateur et allez sur [http://localhost:3000](http://localhost:3000)
 
+### 7. Tester la version mobile
+
+#### Depuis le réseau local
+
+Connectez le téléphone et l'ordinateur au même réseau Wi-Fi, puis lancez le
+serveur en l'exposant sur le réseau local :
+
+```bash
+npm run dev -- --hostname 0.0.0.0
+```
+
+Repérez l'adresse IPv4 de l'ordinateur avec `ipconfig`, puis ouvrez sur le
+téléphone `http://ADRESSE_IP:3000` (par exemple `http://192.168.1.42:3000`).
+Si la page ne s'affiche pas, autorisez Node.js sur les réseaux privés dans le
+pare-feu Windows.
+
+#### Avec ngrok (HTTPS, depuis n'importe quel réseau)
+
+Cette option est utile pour tester les fonctionnalités qui nécessitent HTTPS,
+comme la caméra, la géolocalisation ou certains parcours d'authentification.
+
+1. Installez le client officiel une seule fois :
+
+   ```powershell
+   winget install --id Ngrok.Ngrok -e
+   ```
+
+2. Créez un compte ngrok et copiez votre jeton depuis
+   [le tableau de bord ngrok](https://dashboard.ngrok.com/get-started/your-authtoken),
+   puis configurez-le une seule fois :
+
+   ```powershell
+   ngrok config add-authtoken VOTRE_JETON
+   ```
+
+3. Démarrez le serveur Next.js (`npm run dev`), puis, dans un second terminal :
+
+   ```powershell
+   ngrok http 3000
+   ```
+
+Ouvrez sur le mobile l'URL HTTPS `https://…ngrok-free.app` affichée par ngrok.
+Ne partagez pas cette URL publiquement et ne stockez jamais le jeton ngrok dans
+le dépôt.
+
 ## 📁 Structure du projet
 
 ```
