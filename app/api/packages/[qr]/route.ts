@@ -1,36 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { packagesApi, customersApi, containersApi, trackingApi } from '@/lib/database'
+import { trackingApi } from '@/lib/database'
+import { supabaseAdmin } from '@/lib/supabase'
+import type { Database } from '@/lib/supabase'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ qr: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ qr: string }> }) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { qr } = await context.params
-    let pkg: Awaited<ReturnType<typeof packagesApi.getByQr>> | null = null
-    try {
-      pkg = await packagesApi.getByQr(qr)
-    } catch (error: any) {
-      const code = error?.code || error?.message
-      if (code && String(code).includes('PGRST116')) {
-        return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 })
-      }
-      throw error
-    }
+    const { data: packageData, error: packageError } = await supabaseAdmin
+      .from('packages')
+      .select('*')
+      .eq('qr_code', qr)
+      .maybeSingle()
+    const pkg = packageData as Database['public']['Tables']['packages']['Row'] | null
+
+    if (packageError) throw packageError
 
     if (!pkg) {
       return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 })
     }
 
-    const [client, container, events] = await Promise.all([
-      pkg.client_id ? customersApi.getById(pkg.client_id) : Promise.resolve(null),
-      pkg.container_id ? containersApi.getById(pkg.container_id) : Promise.resolve(null),
+    const [clientResult, containerResult, events] = await Promise.all([
+      pkg.client_id
+        ? supabaseAdmin.from('customers').select('*').eq('id', pkg.client_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      pkg.container_id
+        ? supabaseAdmin.from('containers').select('*').eq('id', pkg.container_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
       pkg.container_id ? trackingApi.getByOrderId(pkg.container_id) : Promise.resolve([]),
     ])
+
+    if (clientResult.error) throw clientResult.error
+    if (containerResult.error) throw containerResult.error
 
     return NextResponse.json({
       success: true,
       data: {
         package: pkg,
-        client,
-        container,
+        client: clientResult.data,
+        container: containerResult.data,
         events,
       },
     })

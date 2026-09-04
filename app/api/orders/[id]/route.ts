@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ordersApi, containersApi, trackingApi, customersApi } from '@/lib/database'
+import { ordersApi, trackingApi } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -15,19 +16,22 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
     
     // Determine if the parameter is a UUID (ID) or a QR code
     const isId = isUUID(id)
     
-    let order
-    if (isId) {
-      // Try to get by ID first
-      order = await ordersApi.getById(id)
-    } else {
-      // Try to get by QR code
-      order = await ordersApi.getByQr(id)
-    }
+    const { data: orderData, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq(isId ? 'id' : 'qr_code', id)
+      .maybeSingle()
+    const order = orderData as Database['public']['Tables']['orders']['Row'] | null
+
+    if (orderError) throw orderError
     
     if (!order) {
       return NextResponse.json(
@@ -39,19 +43,26 @@ export async function GET(
     // If it was a QR code lookup, return with related data (like the old [qr] route)
     if (!isId) {
       const contactEmail = order.recipient_email || order.client_email
-      const [container, events, customer] = await Promise.all([
-        order.container_id ? containersApi.getById(order.container_id).catch(() => null) : Promise.resolve(null),
+      const [containerResult, events, customerResult] = await Promise.all([
+        order.container_id
+          ? supabaseAdmin.from('containers').select('*').eq('id', order.container_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
         trackingApi.getByOrderId(order.id).catch(() => []),
-        contactEmail ? customersApi.getByEmail(contactEmail).catch(() => null) : Promise.resolve(null),
+        contactEmail
+          ? supabaseAdmin.from('customers').select('*').eq('email', contactEmail).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
       ])
+
+      if (containerResult.error) throw containerResult.error
+      if (customerResult.error) throw customerResult.error
 
       return NextResponse.json({
         success: true,
         data: {
           order,
-          container,
+          container: containerResult.data,
           events: events || [],
-          customer,
+          customer: customerResult.data,
         },
       })
     }
