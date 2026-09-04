@@ -1,54 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ordersApi } from '@/lib/database'
+import { supabaseAdmin } from '@/lib/supabase'
+
+const PUBLIC_TRACKING_FIELDS = [
+  'id',
+  'order_number',
+  'service_type',
+  'origin',
+  'destination',
+  'status',
+  'estimated_delivery',
+  'updated_at',
+  'container_id',
+  'container_code',
+].join(', ')
 
 // GET /api/orders/search - Rechercher des commandes (publique)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const tracking = searchParams.get('tracking')
-    const email = searchParams.get('email')
+    const tracking = searchParams.get('tracking')?.trim()
 
-    if (!tracking && !email) {
+    if (!tracking) {
       return NextResponse.json(
-        { success: false, error: 'Numéro de suivi ou email requis' },
+        { success: false, error: 'Numéro de suivi requis' },
         { status: 400 }
       )
     }
 
-    let orders: any[] = []
-    if (tracking) {
-      const trimmed = String(tracking).trim()
-      let order = await ordersApi.getByOrderNumber(trimmed)
-      if (!order) {
-        order = await ordersApi.getFirstByContainerCode(trimmed)
-      }
-      orders = order ? [order] : []
-    } else if (email) {
-      // Recherche par email client
-      orders = await ordersApi.search(email)
+    // Cette route publique reste côté serveur : service_role contourne les
+    // restrictions RLS sans exposer les données client au navigateur.
+    const { data: orderByNumber, error: orderByNumberError } = await supabaseAdmin
+      .from('orders')
+      .select(PUBLIC_TRACKING_FIELDS)
+      .eq('order_number', tracking)
+      .maybeSingle()
+
+    if (orderByNumberError) {
+      throw orderByNumberError
     }
 
-    // Retourner seulement les informations publiques (sans données sensibles)
-    const publicOrders = orders.map((order) => ({
-      id: order.id,
-      order_number: order.order_number,
-      client_name: order.client_name,
-      client_email: order.client_email,
-      service_type: order.service_type,
-      origin: order.origin,
-      destination: order.destination,
-      weight: order.weight,
-      value: order.value,
-      status: order.status,
-      estimated_delivery: order.estimated_delivery,
-      created_at: order.created_at,
-      updated_at: order.updated_at,
-      container_id: order.container_id ?? null,
-      container_code: order.container_code ?? null,
-      container_status: order.container_status ?? null,
-    }))
+    let order = orderByNumber
+    if (!order) {
+      const { data: orderByContainerCode, error: orderByContainerCodeError } = await supabaseAdmin
+        .from('orders')
+        .select(PUBLIC_TRACKING_FIELDS)
+        .eq('container_code', tracking)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-    return NextResponse.json({ success: true, data: publicOrders })
+      if (orderByContainerCodeError) {
+        throw orderByContainerCodeError
+      }
+
+      order = orderByContainerCode
+    }
+
+    return NextResponse.json({ success: true, data: order ? [order] : [] })
   } catch (error) {
     console.error('Error searching orders:', error)
     return NextResponse.json(
