@@ -45,6 +45,11 @@ interface PackagePayload {
     name: string
     email?: string | null
     phone?: string | null
+    company?: string | null
+    address?: string | null
+    city?: string | null
+    postal_code?: string | null
+    country?: string | null
   } | null
   container: {
     id: string
@@ -69,6 +74,10 @@ interface OrderPayload {
     client_name: string
     client_email: string
     client_phone: string | null
+    client_address: string | null
+    client_city: string | null
+    client_postal_code: string | null
+    client_country: string | null
     recipient_name: string | null
     recipient_email: string | null
     recipient_phone: string | null
@@ -86,6 +95,7 @@ interface OrderPayload {
     estimated_delivery: string | null
     container_id: string | null
     container_code: string | null
+    parcels_count: number | null
     created_at: string
     updated_at: string
   }
@@ -234,6 +244,10 @@ function formatDateTime(date?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   })
+}
+
+function formatWeight(weight?: number | null) {
+  return weight == null ? "Non renseigné" : `${weight.toLocaleString("fr-FR")} kg`
 }
 
 interface QRTrackingViewProps {
@@ -684,7 +698,7 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                               </div>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                               <div className="space-y-2">
                                 <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations commande</h3>
                                 <div className="text-sm text-gray-600">
@@ -696,6 +710,14 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                                   </p>
                                   <p>
                                     <span className="font-semibold">Description:</span> {(trackingData as OrderPayload).order.description || "Non spécifiée"}
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold">Nombre de colis:</span>{" "}
+                                    {(trackingData as OrderPayload).order.parcels_count ?? 1}
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold">Poids total:</span>{" "}
+                                    {formatWeight((trackingData as OrderPayload).order.weight)}
                                   </p>
                                   <p>
                                     <span className="font-semibold">Origine:</span> {(trackingData as OrderPayload).order.origin}
@@ -713,15 +735,36 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                                     <span className="font-semibold">Mis à jour:</span>{" "}
                                     {formatDateTime((trackingData as OrderPayload).order.updated_at)}
                                   </p>
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-semibold">Livraison estimée:</span>{" "}
+                                    {formatDate((trackingData as OrderPayload).order.estimated_delivery)}
+                                  </p>
                                 </div>
                               </div>
                               <div className="space-y-2">
-                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Client</h3>
+                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Donneur d&apos;ordre</h3>
                                 <div className="text-sm text-gray-600 space-y-1">
                                   <p>{(trackingData as OrderPayload).order.client_name}</p>
                                   <p>{(trackingData as OrderPayload).order.client_email}</p>
                                   {(trackingData as OrderPayload).order.client_phone && (
                                     <p>{(trackingData as OrderPayload).order.client_phone}</p>
+                                  )}
+                                  {(trackingData as OrderPayload).order.client_address && (
+                                    <p>{(trackingData as OrderPayload).order.client_address}</p>
+                                  )}
+                                  {((trackingData as OrderPayload).order.client_postal_code ||
+                                    (trackingData as OrderPayload).order.client_city) && (
+                                    <p>
+                                      {[
+                                        (trackingData as OrderPayload).order.client_postal_code,
+                                        (trackingData as OrderPayload).order.client_city,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                    </p>
+                                  )}
+                                  {(trackingData as OrderPayload).order.client_country && (
+                                    <p>{(trackingData as OrderPayload).order.client_country}</p>
                                   )}
                                 </div>
                               </div>
@@ -853,6 +896,10 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                                   <span className="font-semibold">Dernier scan:</span>{" "}
                                   {formatDateTime((trackingData as PackagePayload).package.last_scan_at)}
                                 </p>
+                                <p>
+                                  <span className="font-semibold">Créé le:</span>{" "}
+                                  {formatDateTime((trackingData as PackagePayload).package.created_at)}
+                                </p>
                               </div>
                             </div>
                             <div className="space-y-2">
@@ -870,8 +917,28 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                               {(trackingData as PackagePayload).client ? (
                                 <div className="text-sm text-gray-600 space-y-1">
                                   <p>{(trackingData as PackagePayload).client!.name}</p>
+                                  {(trackingData as PackagePayload).client!.company && (
+                                    <p>{(trackingData as PackagePayload).client!.company}</p>
+                                  )}
                                   {(trackingData as PackagePayload).client!.email && <p>{(trackingData as PackagePayload).client!.email}</p>}
                                   {(trackingData as PackagePayload).client!.phone && <p>{(trackingData as PackagePayload).client!.phone}</p>}
+                                  {(trackingData as PackagePayload).client!.address && (
+                                    <p>{(trackingData as PackagePayload).client!.address}</p>
+                                  )}
+                                  {((trackingData as PackagePayload).client!.postal_code ||
+                                    (trackingData as PackagePayload).client!.city) && (
+                                    <p>
+                                      {[
+                                        (trackingData as PackagePayload).client!.postal_code,
+                                        (trackingData as PackagePayload).client!.city,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                    </p>
+                                  )}
+                                  {(trackingData as PackagePayload).client!.country && (
+                                    <p>{(trackingData as PackagePayload).client!.country}</p>
+                                  )}
                                 </div>
                               ) : (
                                 <p className="text-sm text-gray-500">Aucun client associé</p>
@@ -945,14 +1012,15 @@ export default function QRTrackingView({ initialPayload }: QRTrackingViewProps) 
                               <span className="font-semibold">Description:</span> {(trackingData as PackagePayload).package.description}
                             </div>
                           )}
-                          {((trackingData as PackagePayload).package.weight || (trackingData as PackagePayload).package.value) && (
+                          {((trackingData as PackagePayload).package.weight != null || (trackingData as PackagePayload).package.value != null) && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
-                              {(trackingData as PackagePayload).package.weight && (
+                              {(trackingData as PackagePayload).package.weight != null && (
                                 <div>
-                                  <span className="font-semibold">Poids:</span> {(trackingData as PackagePayload).package.weight} kg
+                                  <span className="font-semibold">Poids:</span>{" "}
+                                  {formatWeight((trackingData as PackagePayload).package.weight)}
                                 </div>
                               )}
-                              {(trackingData as PackagePayload).package.value && (
+                              {(trackingData as PackagePayload).package.value != null && (
                                 <div>
                                   <span className="font-semibold">Valeur:</span>{" "}
                                   €{((trackingData as PackagePayload).package.value || 0).toLocaleString("fr-FR")}
