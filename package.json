@@ -9,7 +9,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev --experimental-https",
-    "lint": "next lint",
+    "lint": "eslint .",
     "resend:hello": "node scripts/resend-hello.mjs",
     "blog:migrate-articles": "node scripts/migrate-blog-posts-to-articles.mjs",
     "mailpit": "docker compose -f docker-compose.mailpit.yml up",

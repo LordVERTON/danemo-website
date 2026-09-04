@@ -3,9 +3,6 @@ const nextConfig = {
   async redirects() {
     return [{ source: "/contact", destination: "/contactez-nous", permanent: true }]
   },
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
   typescript: {
     ignoreBuildErrors: false,
   },
