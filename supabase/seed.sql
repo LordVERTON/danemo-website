@@ -29,7 +29,6 @@ BEGIN
   -- Admin
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    confirmation_token, recovery_token, email_change_token_new, email_change,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
@@ -39,14 +38,21 @@ BEGIN
     'authenticated',
     'admin@danemo.be',
     v_pw_admin,
-    '', '', '', '',
     NOW(),
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"role":"admin"}'::jsonb,
+    '{"provider":"email","providers":["email"],"role":"admin"}'::jsonb,
+    '{}'::jsonb,
     NOW(),
     NOW()
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    aud = EXCLUDED.aud,
+    role = EXCLUDED.role,
+    email = EXCLUDED.email,
+    encrypted_password = EXCLUDED.encrypted_password,
+    email_confirmed_at = EXCLUDED.email_confirmed_at,
+    raw_app_meta_data = EXCLUDED.raw_app_meta_data,
+    raw_user_meta_data = EXCLUDED.raw_user_meta_data,
+    updated_at = NOW();
 
   INSERT INTO auth.identities (
     id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
@@ -66,7 +72,6 @@ BEGIN
   -- Opérateur 1
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    confirmation_token, recovery_token, email_change_token_new, email_change,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
@@ -76,14 +81,21 @@ BEGIN
     'authenticated',
     'operator@danemo.be',
     v_pw_oper,
-    '', '', '', '',
     NOW(),
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"role":"operator"}'::jsonb,
+    '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
+    '{}'::jsonb,
     NOW(),
     NOW()
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    aud = EXCLUDED.aud,
+    role = EXCLUDED.role,
+    email = EXCLUDED.email,
+    encrypted_password = EXCLUDED.encrypted_password,
+    email_confirmed_at = EXCLUDED.email_confirmed_at,
+    raw_app_meta_data = EXCLUDED.raw_app_meta_data,
+    raw_user_meta_data = EXCLUDED.raw_user_meta_data,
+    updated_at = NOW();
 
   INSERT INTO auth.identities (
     id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
@@ -103,7 +115,6 @@ BEGIN
   -- Opérateur 2
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    confirmation_token, recovery_token, email_change_token_new, email_change,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
@@ -113,14 +124,21 @@ BEGIN
     'authenticated',
     'operator2@danemo.be',
     v_pw_oper,
-    '', '', '', '',
     NOW(),
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"role":"operator"}'::jsonb,
+    '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
+    '{}'::jsonb,
     NOW(),
     NOW()
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    aud = EXCLUDED.aud,
+    role = EXCLUDED.role,
+    email = EXCLUDED.email,
+    encrypted_password = EXCLUDED.encrypted_password,
+    email_confirmed_at = EXCLUDED.email_confirmed_at,
+    raw_app_meta_data = EXCLUDED.raw_app_meta_data,
+    raw_user_meta_data = EXCLUDED.raw_user_meta_data,
+    updated_at = NOW();
 
   INSERT INTO auth.identities (
     id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
