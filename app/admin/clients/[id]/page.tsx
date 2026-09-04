@@ -49,7 +49,6 @@ import { generateInvoice, defaultCompanyData, InvoiceData } from "@/lib/invoice-
 import { generateProformaDocx, generateProformaPdf } from "@/lib/proforma-utils"
 import { generateQRPrintPDF } from "@/lib/qr-print-utils"
 import QRCode from "qrcode"
-import { supabase } from "@/lib/supabase"
 import { getTariffItemsForLang } from "@/lib/tariff-items"
 import {
   calculateCustomerPaymentProgress,
@@ -584,12 +583,16 @@ export default function ClientDetailPage() {
     try {
       setIsClientsLoading(true)
       setClientsError(null)
-      const { data, error } = await supabase
-        .from('customers')
-        .select('id,name,email,phone,address,city,postal_code,country,status')
-        .order('name', { ascending: true })
-      if (error) throw error
-      const normalized = (data || [])
+      const response = await fetch('/api/customers')
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to fetch customers')
+      }
+
+      const customers = (Array.isArray(result.data) ? result.data : []) as Array<
+        ClientSummary & { status?: string | null }
+      >
+      const normalized = customers
         .filter((customer) => customer.status !== 'archived')
         .map((customer) => ({
           id: customer.id,
@@ -601,6 +604,7 @@ export default function ClientDetailPage() {
           postal_code: customer.postal_code || null,
           country: customer.country || null,
         }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
       setClients(normalized)
     } catch (error) {
       console.error('Error fetching clients:', error)
