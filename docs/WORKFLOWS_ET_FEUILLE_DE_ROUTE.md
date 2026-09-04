@@ -83,6 +83,45 @@ Les schémas Mermaid sont séparés par domaine dans le dossier `docs/workflows/
 - [ ] Documenter le traitement des doublons clients, des paiements partiels, des erreurs de notification et des corrections de suivi.
 - [ ] Définir les responsabilités opérationnelles : qui crée une commande, qui valide un paiement, qui change un statut, qui répond aux messages et dans quels délais.
 
+### Priorité haute — expérience mobile et préparation des vidéos
+
+Cette étape conditionne l'enregistrement des vidéos de formation : les parcours doivent être lisibles, réalisables au tactile et filmés avec des données fictives. La recette couvre au minimum les largeurs 320 px, 360 px et 390 px en portrait, puis une vérification sur un iPhone et un appareil Android réels.
+
+#### Constat UX/UI de la plateforme — 04/09/2026
+
+L'audit statique de `steve-dev-prod-backend` confirme que le site public et le suivi public disposent déjà de bonnes bases mobiles (menu hamburger, logo de retour à l'accueil, suivi en une colonne, scan QR responsive, labels et messages d'erreur). Le back-office reste toutefois majoritairement conçu autour de tableaux desktop. Les points ci-dessous doivent être traités avant de filmer les parcours d'administration.
+
+- [ ] **Navigation administration — P0.** Remplacer la barre basse à huit entrées par cinq accès directs maximum : tableau de bord, clients, suivi, scanner et « Plus ». Le menu « Plus » doit contenir les sections secondaires selon le rôle (conteneurs, analyses, messages, blogs et collaborateurs), indiquer la section active, se fermer après navigation et conserver tous les contrôles de rôle existants. Critère de recette : aucun libellé tronqué et chaque accès mesure au moins 44 × 44 px à 320 px. *(Chantier démarré le 04/09/2026.)*
+- [ ] **En-tête admin à 320 px — P0.** Réduire le libellé de marque et adapter l'accès à la déconnexion afin que l'en-tête ne déborde pas ou ne masque aucune action sur petits écrans. Critère de recette : connexion, tableau de bord et déconnexion utilisables à 320 px sans zoom ni défilement horizontal.
+- [ ] **Listes métier sous forme de cartes — P0.** Prévoir une vue carte sous `lg` pour les clients, commandes et suivi ; ne conserver les tableaux denses qu'à partir du bureau. Chaque carte expose la donnée principale, le statut, le contexte indispensable et une action explicite « Voir »/« Modifier ». Critère de recette : les parcours client, commande et suivi se font sans balayage horizontal.
+- [ ] **Filtres et recherche — P0.** Empiler recherche, filtres et actions sous `sm`, supprimer les largeurs fixes incompatibles avec 320 px et conserver les valeurs après navigation, erreur ou retour. Critère de recette : le champ de recherche reste entièrement visible avec un filtre actif.
+- [ ] **Cibles tactiles du système UI — P0.** Faire évoluer les boutons, boutons icône, sélecteurs et champs utilisés sur mobile vers une hauteur minimale de 44 px ; réserver 48 px aux actions critiques et séparer les actions destructives. Critère de recette : aucun contrôle fréquent inférieur à 44 px dans les parcours P0.
+- [ ] **Modales, clavier et actions de formulaire — P0.** Normaliser toutes les modales : largeur adaptée, hauteur maximale de 90 vh, contenu défilable, fermeture explicite et bouton principal atteignable avec le clavier ouvert. Critère de recette : création d'un client, commande et règlement possible sur iPhone et Android sans perdre la saisie.
+- [ ] **Saisie et validation — P1.** Ajouter `autocomplete` aux informations d'identité et d'adresse, employer `type="tel"` pour les téléphones, conserver un libellé visible et afficher les erreurs près du champ. Les grilles à deux ou trois colonnes doivent revenir à une seule colonne sur mobile. Critère de recette : le clavier approprié s'affiche et chaque erreur est compréhensible sans remonter la page.
+- [ ] **Accessibilité des actions — P1.** Remplacer les lignes de tableau uniquement cliquables et les indices au survol par des liens ou boutons accessibles au clavier ; garantir un focus visible et franciser les libellés non visuels (par exemple « Fermer »). Critère de recette : tous les parcours P0 fonctionnent au clavier sans dépendre d'un survol.
+- [ ] **Confirmation et états — P1.** Uniformiser les confirmations après création, modification, notification, paiement, scan et suppression, ainsi que les états vide, chargement et erreur. Critère de recette : chaque action importante donne un résultat explicite et une prochaine étape.
+- [ ] **Performance et robustesse — P1.** Mesurer les écrans P0 sur réseau mobile : LCP < 2,5 s, INP < 200 ms, CLS < 0,1 et audit Lighthouse mobile documenté. Vérifier les images sans `sizes`, les images brutes du constructeur de blog et les bibliothèques lourdes chargées côté client. Critère de recette : rapport Lighthouse et test réel sur un iPhone et un Android joints à la matrice de recette.
+
+- [ ] Établir une matrice de recette mobile par parcours P0 : connexion, recherche/création/modification d'un client, création et suivi d'une commande, gestion d'un conteneur, ajout d'un paiement et scan QR public. Conserver une capture ou un court enregistrement de validation pour chaque parcours.
+- [ ] Vérifier et corriger l'absence de défilement horizontal à partir de 320 px, y compris dans les tableaux, filtres, graphiques, modales, alertes et messages d'erreur. À moins de 768 px, privilégier les cartes ou le détail progressif aux tableaux denses.
+- [ ] Simplifier la navigation mobile : accès explicite aux sections d'administration prioritaires, état de la section active, retour prévisible et pas d'action dépendante du survol. Limiter les entrées principales visibles simultanément à cinq au maximum.
+- [ ] Rendre les actions principales immédiatement repérables dans chaque écran mobile (créer, enregistrer, rechercher, scanner, payer) et toujours proposer une suite claire après succès, erreur ou état vide.
+- [ ] Standardiser les formulaires mobile : une colonne, libellés visibles, champs adaptés au contenu (`email`, `tel`, date, montant), autocomplétion lorsque pertinente, aide courte et erreurs placées près du champ concerné.
+- [ ] Vérifier que la touche de validation du clavier reste utilisable et que le bouton d'envoi n'est jamais masqué par le clavier, les barres fixes ou une modale ; conserver les saisies lors d'une erreur de validation.
+- [ ] Garantir des cibles tactiles d'au moins 44 × 44 px (48 px pour les actions critiques), un espacement suffisant entre actions destructives et non destructives, ainsi qu'un état de focus visible pour le clavier.
+- [ ] Adapter les modales, menus et tiroirs à la hauteur utile de l'écran : contenu défilable, fermeture explicite, action principale accessible et aucune information critique hors de la zone visible.
+- [ ] Fiabiliser le parcours QR sur mobile : demande d'autorisation caméra compréhensible, indication de cadrage, reprise après refus/erreur et solution de secours par saisie du code de suivi.
+- [ ] Vérifier la lisibilité : hiérarchie de titres, taille de texte lisible sans zoom, contraste suffisant, zoom navigateur jusqu'à 200 %, langue déclarée et prise en charge de la préférence « réduire les animations ».
+- [ ] Mesurer la qualité perçue sur réseau mobile et appareil réel : images compressées et dimensionnées, absence de script bloquant, LCP inférieur à 2,5 s, INP inférieur à 200 ms, CLS inférieur à 0,1 et audit Lighthouse mobile documenté pour les écrans P0.
+- [ ] Préparer un jeu de données de démonstration mobile stable, réinitialisable et sans données personnelles réelles ; fixer les tailles d'écran, le navigateur et le scénario utilisés dans chaque vidéo pour rendre les captures reproductibles.
+
+#### Ordre de traitement mobile recommandé
+
+1. Connexion, navigation et tableau de bord administrateur.
+2. Fiche client et création/modification de commande.
+3. Paiements, conteneurs et suivi QR public.
+4. Inventaire, collaborateurs, blog, messagerie, analyses et exports.
+
 ### Priorité moyenne — expérience utilisateur et fonctionnalités
 
 - [ ] Uniformiser les recherches, filtres, tris, états vides, chargements et messages d'erreur dans tous les écrans d'administration.
@@ -104,7 +143,7 @@ Les schémas Mermaid sont séparés par domaine dans le dossier `docs/workflows/
 
 ## To-do dédié aux vidéos de formation
 
-Chaque vidéo doit utiliser des données de démonstration, éviter toute donnée personnelle réelle, indiquer le rôle requis et se terminer par le résultat attendu. Prévoir une version courte (2 à 5 minutes) et une procédure écrite avec chapitrage.
+Chaque vidéo doit utiliser des données de démonstration, éviter toute donnée personnelle réelle, indiquer le rôle requis et se terminer par le résultat attendu. Prévoir une version courte (2 à 5 minutes) et une procédure écrite avec chapitrage. Une vidéo mobile ne peut être enregistrée qu'après la recette du parcours concerné sur 360 px et 390 px, plus un appareil iPhone ou Android réel.
 
 - [ ] Vidéo : se connecter, comprendre les rôles et se déconnecter.
 - [ ] Vidéo : créer un nouveau client, vérifier la fiche et le modifier.
