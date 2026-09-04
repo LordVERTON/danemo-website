@@ -29,7 +29,7 @@ BEGIN
   -- Admin
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, confirmation_token, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, email_change_token_new, email_change, email_change_token_current, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_admin_id,
@@ -39,6 +39,9 @@ BEGIN
     'admin@danemo.be',
     v_pw_admin,
     NOW(),
+    '',
+    '',
+    '',
     '',
     '{"provider":"email","providers":["email"],"role":"admin"}'::jsonb,
     '{}'::jsonb,
@@ -65,7 +68,7 @@ BEGIN
   -- Opérateur 1
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, confirmation_token, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, email_change_token_new, email_change, email_change_token_current, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_op1_id,
@@ -75,6 +78,9 @@ BEGIN
     'operator@danemo.be',
     v_pw_oper,
     NOW(),
+    '',
+    '',
+    '',
     '',
     '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
     '{}'::jsonb,
@@ -101,7 +107,7 @@ BEGIN
   -- Opérateur 2
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, confirmation_token, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, email_change_token_new, email_change, email_change_token_current, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_op2_id,
@@ -111,6 +117,9 @@ BEGIN
     'operator2@danemo.be',
     v_pw_oper,
     NOW(),
+    '',
+    '',
+    '',
     '',
     '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
     '{}'::jsonb,
@@ -133,6 +142,11 @@ BEGIN
     NOW()
   )
   ON CONFLICT (id) DO NOTHING;
+
+  -- GoTrue v2 expects a non-null recovery token when loading password users.
+  UPDATE auth.users
+  SET recovery_token = COALESCE(recovery_token, '')
+  WHERE id IN (v_admin_id, v_op1_id, v_op2_id);
 END $$;
 
 INSERT INTO public.employees (user_id, name, email, role, salary, position, hire_date, is_active)
