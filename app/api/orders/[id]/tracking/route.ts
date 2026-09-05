@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { trackingApi, ordersApi } from '@/lib/database'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -49,6 +50,9 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
     const body = await request.json()
     

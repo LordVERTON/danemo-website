@@ -84,6 +84,9 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
     const body = await request.json()
     const { user_id, user_name, ...orderData } = body
@@ -266,6 +269,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
     await ordersApi.delete(id)
     
@@ -285,6 +291,9 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { id } = await context.params
     const body = await request.json()
     const action = body.action

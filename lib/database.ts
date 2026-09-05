@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { supabase, supabaseAdmin } from './supabase'
 import { notifyOrderStatusChange } from './order-notifications'
 import type { Database } from './supabase'
@@ -5,6 +7,7 @@ import type { Database } from './supabase'
 type Order = Database['public']['Tables']['orders']['Row']
 type OrderInsert = Database['public']['Tables']['orders']['Insert']
 type OrderUpdate = Database['public']['Tables']['orders']['Update']
+type OrderStatsRow = Pick<Order, 'status' | 'created_at'>
 type TrackingEvent = Database['public']['Tables']['tracking_events']['Row']
 type TrackingEventInsert = Database['public']['Tables']['tracking_events']['Insert']
 type Client = Database['public']['Tables']['clients']['Row']
@@ -27,7 +30,7 @@ type InvoiceUpdate = Database['public']['Tables']['invoices']['Update']
 export const ordersApi = {
   // Récupérer toutes les commandes
   async getAll(): Promise<Order[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as typeof supabase)
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false })
@@ -40,7 +43,7 @@ export const ordersApi = {
 
   // Récupérer une commande par ID
   async getById(id: string): Promise<Order | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as typeof supabase)
       .from('orders')
       .select('*')
       .eq('id', id)
@@ -54,7 +57,7 @@ export const ordersApi = {
 
   // Récupérer une commande par numéro
   async getByOrderNumber(orderNumber: string): Promise<Order | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as typeof supabase)
       .from('orders')
       .select('*')
       .eq('order_number', orderNumber)
@@ -81,7 +84,7 @@ export const ordersApi = {
 
   // Récupérer une commande par QR code
   async getByQr(qr: string): Promise<Order | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as typeof supabase)
       .from('orders')
       .select('*')
       .eq('qr_code', qr)
@@ -150,7 +153,7 @@ export const ordersApi = {
 
   // Rechercher des commandes
   async search(query: string): Promise<Order[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as typeof supabase)
       .from('orders')
       .select('*')
       .or(
@@ -172,7 +175,7 @@ export const ordersApi = {
 
   // Filtrer par statut
   async getByStatus(status: string): Promise<Order[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabaseAdmin as typeof supabase)
       .from('orders')
       .select('*')
       .eq('status', status)
@@ -344,7 +347,7 @@ export const utils = {
 
   // Obtenir les statistiques
   async getStats(startDate?: string) {
-    let query = supabase
+    let query = supabaseAdmin
       .from('orders')
       .select('status, created_at')
     
@@ -353,17 +356,19 @@ export const utils = {
       query = query.gte('created_at', startDate)
     }
     
-    const { data: orders, error } = await query
+    const { data, error } = await query
     
     if (error) throw error
 
+    const orders = (data ?? []) as OrderStatsRow[]
+
     const stats = {
-      total: orders?.length || 0,
-      pending: orders?.filter(o => o.status === 'pending').length || 0,
-      confirmed: orders?.filter(o => o.status === 'confirmed').length || 0,
-      in_progress: orders?.filter(o => o.status === 'in_progress').length || 0,
-      completed: orders?.filter(o => o.status === 'completed').length || 0,
-      cancelled: orders?.filter(o => o.status === 'cancelled').length || 0,
+      total: orders.length,
+      pending: orders.filter(o => o.status === 'pending').length,
+      confirmed: orders.filter(o => o.status === 'confirmed').length,
+      in_progress: orders.filter(o => o.status === 'in_progress').length,
+      completed: orders.filter(o => o.status === 'completed').length,
+      cancelled: orders.filter(o => o.status === 'cancelled').length,
     }
 
     return stats

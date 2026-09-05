@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { utils } from '@/lib/database'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/stats - Récupérer les statistiques des commandes
 export async function GET(request: NextRequest) {
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('start_date')
     

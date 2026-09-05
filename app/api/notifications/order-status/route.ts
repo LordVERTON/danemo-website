@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ordersApi } from "@/lib/database";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
+import { requireStaffApiAccess } from "@/lib/staff-api-auth";
 
 export async function POST(request: NextRequest) {
   try {
+    const accessError = await requireStaffApiAccess(request);
+    if (accessError) return accessError;
+
     const body = await request.json();
     const orderId = String(body.order_id || "").trim();
     const statusOverride = body.status
