@@ -329,7 +329,7 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Évolution des revenus</CardTitle>
-              <CardDescription>Revenus par mois (en milliers d'euros)</CardDescription>
+              <CardDescription>Revenus par mois (en milliers d’euros)</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>

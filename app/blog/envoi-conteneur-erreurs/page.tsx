@@ -19,17 +19,17 @@ export default function EnvoiConteneurErreursPage() {
         <article className="prose prose-lg max-w-none">
           <header className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-extrabold text-[#14171a] mb-4 leading-tight">
-              Envoi de conteneur vers l'Afrique : 7 erreurs fréquentes à éviter absolument
+              Envoi de conteneur vers l&apos;Afrique : 7 erreurs fréquentes à éviter absolument
             </h1>
             <p className="text-gray-600 text-sm">24/07/2025</p>
           </header>
 
           <div className="mb-8">
             <p className="text-lg text-gray-700 leading-relaxed">
-              Envoyer un conteneur vers l'Afrique représente un projet important, que ce soit pour un{" "}
+              Envoyer un conteneur vers l&apos;Afrique représente un projet important, que ce soit pour un{" "}
               <strong>déménagement personnel</strong>, un <strong>transfert professionnel</strong> ou un{" "}
               <strong>approvisionnement commercial</strong>. Mais attention : certaines erreurs courantes peuvent coûter
-              cher, en temps comme en argent. <strong>Danemo</strong>, spécialiste de l'expédition vers l'Afrique, vous
+              cher, en temps comme en argent. <strong>Danemo</strong>, spécialiste de l’expédition vers l’Afrique, vous
               aide à éviter les pièges les plus fréquents pour que votre conteneur arrive à bon port sans stress.
             </p>
           </div>
@@ -37,7 +37,7 @@ export default function EnvoiConteneurErreursPage() {
           <section className="mb-8">
             <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">1. Ne pas anticiper les délais</h2>
             <p className="text-gray-700 mb-4">
-              Beaucoup pensent qu'un conteneur peut être chargé et <strong>expédié</strong> du jour au lendemain. En
+              Beaucoup pensent qu&apos;un conteneur peut être chargé et <strong>expédié</strong> du jour au lendemain. En
               réalité, une expédition demande du temps :
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
@@ -47,7 +47,7 @@ export default function EnvoiConteneurErreursPage() {
               <li>Logistique de chargement</li>
             </ul>
             <p className="text-gray-700">
-              <strong>Conseil Danemo</strong> : contactez-nous au moins <strong>10 jours à l'avance</strong> pour une
+              <strong>Conseil Danemo</strong> : contactez-nous au moins <strong>10 jours à l&apos;avance</strong> pour une
               meilleure planification.
             </p>
           </section>
@@ -60,19 +60,19 @@ export default function EnvoiConteneurErreursPage() {
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>Des frais inutiles</li>
               <li>Des difficultés de chargement</li>
-              <li>Un gaspillage d'espace ou d'argent</li>
+              <li>Un gaspillage d&apos;espace ou d&apos;argent</li>
             </ul>
             <p className="text-gray-700">
               <strong>Astuce</strong> : faites un <strong>inventaire précis</strong> ou demandez notre aide pour
-              l'estimation.
+              l&apos;estimation.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">3. Négliger l'emballage et la protection</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">3. Négliger l&apos;emballage et la protection</h2>
             <p className="text-gray-700 mb-4">
               Un conteneur subit des <strong>secousses</strong>, des <strong>variations de température</strong> et
-              parfois de <strong>l'humidité</strong>. Évitez les objets mal protégés, c'est primordial en voyage :
+              parfois de <strong>l&apos;humidité</strong>. Évitez les objets mal protégés, c&apos;est primordial en voyage :
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>Emballage</li>
@@ -80,7 +80,7 @@ export default function EnvoiConteneurErreursPage() {
               <li>Cristallisation</li>
             </ul>
             <p className="text-gray-700">
-              <strong>Danemo</strong> vous propose des <strong>solutions d'emballage adaptées</strong> : caisses,
+              <strong>Danemo</strong> vous propose des <strong>solutions d’emballage adaptées</strong> : caisses,
               cartons, palettes étanches.
             </p>
           </section>
@@ -93,7 +93,7 @@ export default function EnvoiConteneurErreursPage() {
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>Facture ou liste de colisage</li>
-              <li>Copie de carte d'identité</li>
+              <li>Copie de carte d&apos;identité</li>
               <li>Attestation de déménagement (si les éléments)</li>
             </ul>
             <p className="text-gray-700">
@@ -137,10 +137,10 @@ export default function EnvoiConteneurErreursPage() {
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>Endommager les biens pendant le transport</li>
               <li>Créer des déséquilibres</li>
-              <li>Rendre le déchargement compliqué à l'arrivée</li>
+              <li>Rendre le déchargement compliqué à l&apos;arrivée</li>
             </ul>
             <p className="text-gray-700">
-              <strong>Nos équipes professionnelles</strong> s'occupent du chargement pour optimiser l'espace et
+              <strong>Nos équipes professionnelles</strong> s&apos;occupent du chargement pour optimiser l&apos;espace et
               sécuriser vos produits.
             </p>
           </section>
@@ -169,7 +169,7 @@ export default function EnvoiConteneurErreursPage() {
               <li>Préparation des documents</li>
               <li>Emballage sécurisé</li>
               <li>Chargement et suivi</li>
-              <li>Livraison jusqu'au Cameroun (et ailleurs vers l'Afrique)</li>
+              <li>Livraison jusqu&apos;au Cameroun (et ailleurs vers l&apos;Afrique)</li>
             </ul>
             <p className="text-gray-700">
               <strong>Contactez-nous dès maintenant</strong> pour un devis personnalisé ou un accompagnement sur votre

@@ -40,9 +40,11 @@ export default function ContactezNousPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const sujet = params.get("sujet")
-    if (sujet) {
+    if (!sujet) return
+    const timeoutId = window.setTimeout(() => {
       setFormData((prev) => ({ ...prev, sujet }))
-    }
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

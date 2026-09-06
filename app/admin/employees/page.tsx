@@ -434,7 +434,7 @@ export default function EmployeesPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="hire_date">Date d'embauche *</Label>
+                    <Label htmlFor="hire_date">Date d&apos;embauche *</Label>
                     <Input
                       id="hire_date"
                       type="date"
@@ -454,7 +454,7 @@ export default function EmployeesPage() {
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      placeholder={editingEmployee ? "Laissez vide pour conserver le mot de passe actuel" : "L'employé devra le changer à la première connexion"}
+                      placeholder={editingEmployee ? "Laissez vide pour conserver le mot de passe actuel" : "L’employé devra le changer à la première connexion"}
                       required={!editingEmployee}
                       className="text-base sm:text-sm"
                     />
@@ -723,7 +723,7 @@ export default function EmployeesPage() {
                     <p className="font-medium text-base sm:text-sm">€{selectedEmployee.salary.toLocaleString()}</p>
                   </div>
                   <div>
-                    <Label className="text-sm sm:text-base">Date d'embauche</Label>
+                    <Label className="text-sm sm:text-base">Date d’embauche</Label>
                     <p className="text-base sm:text-sm">{new Date(selectedEmployee.hire_date).toLocaleDateString('fr-FR')}</p>
                   </div>
                 </div>

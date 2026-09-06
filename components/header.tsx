@@ -29,10 +29,6 @@ export default function Header() {
   }, [])
 
   useEffect(() => {
-    setIsMenuOpen(false)
-  }, [pathname])
-
-  useEffect(() => {
     document.body.style.overflow = isMenuOpen ? "hidden" : ""
     return () => {
       document.body.style.overflow = ""
@@ -68,7 +64,13 @@ export default function Header() {
         <nav className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-18 py-2.5">
             <Link href="/" className="flex items-center gap-3 shrink-0">
-              <Image src="/images/logo-clair.webp" alt="Danemo" width={44} height={44} className="object-contain" />
+              <Image
+                src="/images/logo-clair.webp"
+                alt="Danemo"
+                width={450}
+                height={328}
+                className="h-11 w-auto object-contain"
+              />
               <span className="text-xl font-extrabold tracking-tight text-[#14171a]">
                 DANEMO
               </span>
@@ -128,6 +130,7 @@ export default function Header() {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => setIsMenuOpen(false)}
                 className={cn(
                   "px-4 py-3.5 rounded-xl text-base font-semibold transition-colors",
                   active ? "text-orange-600 bg-orange-50" : "text-gray-800 hover:bg-gray-50",

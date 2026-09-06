@@ -26,8 +26,8 @@ export default function DemenagementDiplomatiquePage() {
 
           <div className="mb-8">
             <p className="text-lg text-gray-700 leading-relaxed">
-              Organiser un déménagement diplomatique peut vite devenir un casse-tête logistique, surtout lorsqu'il
-              s'agit de respecter les formalités douanières et la protection des biens personnels. Il est essentiel de
+              Organiser un déménagement diplomatique peut vite devenir un casse-tête logistique, surtout lorsqu&apos;il
+              s&apos;agit de respecter les formalités douanières et la protection des biens personnels. Il est essentiel de
               faire appel à un partenaire de confiance. <strong>Danemo</strong>, spécialiste des transferts
               internationaux, vous accompagne dans cette étape importante pour que vos effets personnels diplomatiques
               dans leurs transferts internationaux, en matière fiscale et sécurisée.
@@ -57,7 +57,7 @@ export default function DemenagementDiplomatiquePage() {
               </li>
             </ul>
             <p className="text-gray-700">
-              C'est pourquoi il est recommandé de faire appel à une entreprise spécialisée, capable d'offrir un{" "}
+              C&apos;est pourquoi il est recommandé de faire appel à une entreprise spécialisée, capable d&apos;offrir un{" "}
               <strong>service sur mesure, discret et fiable</strong>.
             </p>
           </section>
@@ -67,16 +67,16 @@ export default function DemenagementDiplomatiquePage() {
               Danemo, votre allié logistique pour un départ sans stress
             </h2>
             <p className="text-gray-700 mb-4">
-              Fort de son expertise dans les transports entre l'Europe et l'Afrique, <strong>Danemo SRL</strong> propose
-              une <strong>prise en charge complète</strong> de votre déménagement diplomatique, de l'Europe vers
-              l'Afrique.
+              Fort de son expertise dans les transports entre l&apos;Europe et l&apos;Afrique, <strong>Danemo SRL</strong> propose
+              une <strong>prise en charge complète</strong> de votre déménagement diplomatique, de l&apos;Europe vers
+              l&apos;Afrique.
             </p>
 
             <h3 className="text-xl font-bold text-[#14171a] mb-3">Un accompagnement de ce bout</h3>
             <p className="text-gray-700 mb-4">Nous gérons :</p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>
-                L'<strong>emballage sécurisé</strong> de vos biens
+                L&apos;<strong>emballage sécurisé</strong> de vos biens
               </li>
               <li>
                 Le <strong>chargement et transport</strong> en conteneur
@@ -113,18 +113,18 @@ export default function DemenagementDiplomatiquePage() {
           </div>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Un réseau fiable entre l'Europe et le Cameroun</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Un réseau fiable entre l&apos;Europe et le Cameroun</h2>
             <p className="text-gray-700 mb-4">
               Avec des équipes basées en Belgique et au Cameroun, Danemo garantit une{" "}
-              <strong>coordination fluide entre les deux continents</strong>. Vous bénéficiez d'un{" "}
-              <strong>interlocuteur unique</strong> pour gérer l'ensemble des démarches, en toute transparence.
+              <strong>coordination fluide entre les deux continents</strong>. Vous bénéficiez d&apos;un{" "}
+              <strong>interlocuteur unique</strong> pour gérer l&apos;ensemble des démarches, en toute transparence.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Prêt à déménager l'esprit tranquille ?</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Prêt à déménager l&apos;esprit tranquille ?</h2>
             <p className="text-gray-700 mb-4">
-              Que vous soyez en fin de mission diplomatique ou sur le point d'être affecté dans une nouvelle ville,{" "}
+              Que vous soyez en fin de mission diplomatique ou sur le point d&apos;être affecté dans une nouvelle ville,{" "}
               <strong>Danemo</strong> vous accompagne à <strong>chaque étape</strong> de votre{" "}
               <strong>transfert</strong>.
             </p>

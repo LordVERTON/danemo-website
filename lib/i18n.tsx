@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react'
 
 import { resolveTranslationValue, translations, type Lang, type TranslationSchema } from './translations'
 
@@ -14,6 +14,7 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 const STORAGE_KEY = 'danemo_lang'
+const LANGUAGE_CHANGE_EVENT = 'danemo-language-change'
 const SUPPORTED_LANGS: Lang[] = ['fr', 'en']
 
 function isLang(value: unknown): value is Lang {
@@ -26,28 +27,31 @@ function translate(lang: Lang, key: string): string {
   return resolved ?? key
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  // Toujours commencer par 'fr' pour éviter les erreurs d'hydratation
-  // La langue sera mise à jour depuis localStorage après le montage
-  const [lang, setLangState] = useState<Lang>('fr')
-  const [isMounted, setIsMounted] = useState(false)
+function getStoredLanguage(): Lang {
+  const stored = window.localStorage.getItem(STORAGE_KEY)
+  return isLang(stored) ? stored : 'fr'
+}
 
-  // Lire localStorage uniquement après le montage pour éviter les erreurs d'hydratation
-  useEffect(() => {
-    setIsMounted(true)
-    if (typeof window !== 'undefined') {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
-      if (isLang(stored) && stored !== lang) {
-        setLangState(stored)
-      }
-    }
-  }, [])
+function getServerLanguage(): Lang {
+  return 'fr'
+}
+
+function subscribeToLanguageChanges(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange)
+  window.addEventListener(LANGUAGE_CHANGE_EVENT, onStoreChange)
+  return () => {
+    window.removeEventListener('storage', onStoreChange)
+    window.removeEventListener(LANGUAGE_CHANGE_EVENT, onStoreChange)
+  }
+}
+
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+  // Le snapshot serveur reste en français pour conserver une hydratation stable.
+  const lang = useSyncExternalStore<Lang>(subscribeToLanguageChanges, getStoredLanguage, getServerLanguage)
 
   const setLang = useCallback((next: Lang) => {
-    setLangState(next)
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY, next)
-    }
+    window.localStorage.setItem(STORAGE_KEY, next)
+    window.dispatchEvent(new Event(LANGUAGE_CHANGE_EVENT))
   }, [])
 
   const t = useCallback((key: string) => translate(lang, key), [lang])

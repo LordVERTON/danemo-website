@@ -97,7 +97,7 @@ export function RichTextField({ value = "", onChange }: RichTextFieldProps) {
   if (!editor) {
     return (
       <div className="rounded-md border border-slate-700 bg-slate-950 p-4 text-sm text-slate-400">
-        Chargement de l'editeur...
+        Chargement de l’éditeur...
       </div>
     )
   }

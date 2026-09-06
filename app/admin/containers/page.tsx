@@ -365,7 +365,7 @@ export default function ContainersPage() {
                   <Input value={form.departure_port || ''} onChange={e => setForm({ ...form, departure_port: e.target.value })} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Port d'arrivée</Label>
+                  <Label>Port d&apos;arrivée</Label>
                   <Input value={form.arrival_port || ''} onChange={e => setForm({ ...form, arrival_port: e.target.value })} />
                 </div>
                 <div className="grid gap-2">

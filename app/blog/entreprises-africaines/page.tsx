@@ -46,7 +46,7 @@ export default function EntreprisesAfricainesPage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">
-              Danemo, l'intermédiaire logistique entre vos fournisseurs européens et votre entreprise
+              Danemo, l&apos;intermédiaire logistique entre vos fournisseurs européens et votre entreprise
             </h2>
             <p className="text-gray-700 leading-relaxed mb-4">
               Danemo vous propose un service sur mesure : nous centralisons vos commandes auprès de tous vos
@@ -54,7 +54,7 @@ export default function EntreprisesAfricainesPage() {
               Afrique !
             </p>
             <p className="text-gray-700 leading-relaxed">
-              Vous n'avez plus besoin de coordonner chaque envoi avec vos fournisseurs. Nous nous occupons de tout pour
+              Vous n&apos;avez plus besoin de coordonner chaque envoi avec vos fournisseurs. Nous nous occupons de tout pour
               vous.
             </p>
           </section>
@@ -68,7 +68,7 @@ export default function EntreprisesAfricainesPage() {
               </li>
               <li>Vous faites livrer directement les colis à notre entrepôt en Belgique</li>
               <li>Nous réceptionnons, vérifions et stockons vos marchandises pour vous</li>
-              <li>Nous regroupons tous vos colis en un seul envoi groupé vers l'Afrique</li>
+              <li>Nous regroupons tous vos colis en un seul envoi groupé vers l’Afrique</li>
               <li>Nous expédions vers votre entreprise au Cameroun (ou ailleurs, selon vos besoins de déstockage)</li>
               <li>Vous recevez vos marchandises en colis regroupés, avec un seul interlocuteur</li>
             </ol>
@@ -76,7 +76,7 @@ export default function EntreprisesAfricainesPage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">
-              Quels types d'entreprises peuvent faire appel à Danemo ?
+              Quels types d&apos;entreprises peuvent faire appel à Danemo ?
             </h2>
             <ul className="list-disc list-inside space-y-2 text-gray-700">
               <li>Boutiques en gros à partir de commandes très acheteuses en Europe</li>
@@ -85,7 +85,7 @@ export default function EntreprisesAfricainesPage() {
               <li>Pharmacies et commerce ou grossistes</li>
             </ul>
             <p className="text-gray-700 mt-4">
-              Peu importe votre secteur d'activité, nous <strong>adaptons le service à vos besoins</strong>.
+              Peu importe votre secteur d&apos;activité, nous <strong>adaptons le service à vos besoins</strong>.
             </p>
           </section>
 
@@ -118,7 +118,7 @@ export default function EntreprisesAfricainesPage() {
             <h3 className="text-xl font-bold text-[#14171a] mb-3">Sécurité et fiabilité</h3>
             <p className="text-gray-700">
               Vos colis sont traités avec soin, <strong>emballés et étiquetés</strong> dans de{" "}
-              <strong>délais annoncés</strong>. Nos envois vers l'Afrique partent chaque <strong>semaine</strong>.
+              <strong>délais annoncés</strong>. Nos envois vers l’Afrique partent chaque <strong>semaine</strong>.
             </p>
           </section>
 
@@ -127,15 +127,15 @@ export default function EntreprisesAfricainesPage() {
               Danemo, un partenaire logistique au service du commerce Afrique-Europe
             </h2>
             <p className="text-gray-700 mb-4">
-              En tant qu'intermédiaire de choix, nous facilitons vos{" "}
+              En tant qu&apos;intermédiaire de choix, nous facilitons vos{" "}
               <strong>partenaires sérieux, réactif et professionnel</strong> pour toutes vos activités en Europe.
             </p>
             <p className="text-gray-700 mb-4">
-              Notre équipe, basée en Belgique, est votre <strong>pont logistique fiable</strong>, sans l'Inde, votre
+              Notre équipe, basée en Belgique, est votre <strong>pont logistique fiable</strong>, sans l&apos;Inde, votre
               chez-vous en Europe, votre activité.
             </p>
             <p className="text-gray-700">
-              Contactez-nous dès aujourd'hui pour mettre en place un service sur mesure de réception et d'expédition qui
+              Contactez-nous dès aujourd&apos;hui pour mettre en place un service sur mesure de réception et d&apos;expédition qui
               répond pour votre entreprise.
             </p>
           </section>

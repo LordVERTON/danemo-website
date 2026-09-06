@@ -295,7 +295,7 @@ export default function InventoryPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
-            <p>Chargement de l'inventaire...</p>
+            <p>Chargement de l’inventaire...</p>
           </div>
         </div>
       </AdminLayout>
@@ -570,7 +570,7 @@ export default function InventoryPage() {
             {/* Version Desktop - Tableau */}
             <div className="hidden lg:block">
               <div className="mb-4 text-sm text-muted-foreground">
-                💡 Cliquez sur une ligne pour modifier l'article
+                💡 Cliquez sur une ligne pour modifier l’article
               </div>
               <Table>
                 <TableHeader>
@@ -650,7 +650,7 @@ export default function InventoryPage() {
             {/* Version Mobile - Cartes */}
             <div className="lg:hidden space-y-4">
               <div className="mb-4 text-sm text-muted-foreground">
-                💡 Cliquez sur une carte pour modifier l'article
+                💡 Cliquez sur une carte pour modifier l’article
               </div>
               {filteredInventory.map((item) => (
                 <Card
