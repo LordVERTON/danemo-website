@@ -375,14 +375,6 @@ export default function TrackingPage() {
     return matchesSearch && matchesStatus && matchesContainer
   })
 
-  const selectedContainer = selectedOrder
-    ? containers.find(
-        (container) =>
-          container.id === selectedOrder.container_id ||
-          container.code === selectedOrder.container_code,
-      )
-    : undefined
-
   if (isLoading) {
     return (
       <AdminLayout title="Suivi des commandes">
@@ -761,11 +753,11 @@ export default function TrackingPage() {
 
         {/* Modal de suivi avec historique des événements */}
         <Dialog open={isTrackingDialogOpen} onOpenChange={setIsTrackingDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] transition-all duration-300 ease-in-out flex flex-col">
+          <DialogContent className="max-w-4xl flex flex-col">
             <DialogHeader>
               <DialogTitle>Suivi de la commande {selectedOrder?.order_number}</DialogTitle>
               <DialogDescription>
-                Historique des événements et ajout de nouveaux événements
+                Mettez à jour le suivi, puis partagez le QR code si nécessaire.
               </DialogDescription>
               {currentUser && (
                 <div className="mt-2 text-sm text-muted-foreground">
@@ -776,6 +768,66 @@ export default function TrackingPage() {
 
             <div className="flex-1 overflow-y-auto px-1">
               <div className="space-y-6">
+              {/* Action principale : visible en premier sur mobile */}
+              <section className="rounded-xl border border-orange-200 bg-orange-50/60 p-4 sm:p-5">
+                <h3 className="mb-4 text-lg font-semibold text-slate-900">Ajouter un événement</h3>
+                <form onSubmit={handleAddEvent} className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                    <div>
+                      <Label htmlFor="status">Statut</Label>
+                      <Select
+                        value={newEvent.status}
+                        onValueChange={(value) => setNewEvent({ ...newEvent, status: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">En attente</SelectItem>
+                          <SelectItem value="confirmed">Confirmée</SelectItem>
+                          <SelectItem value="in_progress">En cours</SelectItem>
+                          <SelectItem value="completed">Terminée</SelectItem>
+                          <SelectItem value="cancelled">Annulée</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="location">Localisation</Label>
+                      <Input
+                        id="location"
+                        value={newEvent.location}
+                        onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                        placeholder="Ex. Port de Dakar"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={newEvent.description}
+                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                      placeholder="Décrivez l’événement…"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setNewEvent({
+                      status: '',
+                      location: '',
+                      description: '',
+                      operator: '',
+                      event_date: new Date().toISOString().split('T')[0]
+                    })}>
+                      Annuler
+                    </Button>
+                    <Button type="submit" disabled={isUpdating} className="w-full sm:w-auto">
+                      {isUpdating ? 'Ajout…' : 'Ajouter l’événement'}
+                    </Button>
+                  </div>
+                </form>
+              </section>
+
               {/* QR Code Section */}
               {selectedOrder?.qr_code ? (
                 <div className="border rounded-lg p-4 bg-muted/30">
@@ -852,43 +904,6 @@ export default function TrackingPage() {
                   </div>
                 </div>
               )}
-              <div className="border rounded-lg p-4 bg-muted/30">
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                  <PackageSearch className="h-4 w-4 text-orange-600" />
-                  Conteneur associé
-                </h3>
-                {selectedContainer ? (
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <Badge variant="outline" className="font-mono text-xs px-2 py-1">
-                      {selectedContainer.code}
-                    </Badge>
-                    <span className="text-muted-foreground capitalize">
-                      Statut: {selectedContainer.status?.replace(/_/g, " ") || "—"}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        window.open(`/admin/containers?code=${selectedContainer.code}`, '_blank')
-                      }
-                      className="flex items-center gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Voir les conteneurs
-                    </Button>
-                  </div>
-                ) : selectedOrder?.container_code ? (
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <Badge variant="outline" className="font-mono text-xs px-2 py-1">
-                      {selectedOrder.container_code}
-                    </Badge>
-                    <span className="text-muted-foreground">Ce conteneur n’est pas présent dans la liste.</span>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Aucun conteneur associé à cette commande.</p>
-                )}
-              </div>
               {/* Historique des événements */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Historique des événements</h3>
@@ -938,65 +953,6 @@ export default function TrackingPage() {
                 </div>
               </div>
 
-              {/* Formulaire pour ajouter un événement */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Ajouter un événement</h3>
-                <form onSubmit={handleAddEvent} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="status">Statut</Label>
-                      <Select
-                        value={newEvent.status}
-                        onValueChange={(value) => setNewEvent({ ...newEvent, status: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un statut" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">En attente</SelectItem>
-                          <SelectItem value="confirmed">Confirmée</SelectItem>
-                          <SelectItem value="in_progress">En cours</SelectItem>
-                          <SelectItem value="completed">Terminée</SelectItem>
-                          <SelectItem value="cancelled">Annulée</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="location">Localisation</Label>
-                      <Input
-                        id="location"
-                        value={newEvent.location}
-                        onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                        placeholder="Ex: Port de Dakar"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={newEvent.description}
-                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                      placeholder="Décrivez l'événement..."
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setNewEvent({
-                      status: '',
-                      location: '',
-                      description: '',
-                      operator: '',
-                      event_date: new Date().toISOString().split('T')[0]
-                    })}>
-                      Annuler
-                    </Button>
-                    <Button type="submit" disabled={isUpdating}>
-                      {isUpdating ? 'Ajout...' : 'Ajouter l\'événement'}
-                    </Button>
-                  </div>
-                </form>
-              </div>
               </div>
             </div>
           </DialogContent>
