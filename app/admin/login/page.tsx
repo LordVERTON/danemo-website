@@ -5,7 +5,6 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { signIn, useSession } from "next-auth/react"
-import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,10 +21,8 @@ export default function AdminLoginPage() {
   const { status } = useSession()
 
   useEffect(() => {
-    const hasCookieSession = document.cookie.split(";").some((cookie) => cookie.trim().startsWith("danemo_admin_session=authenticated"))
-    const hasLocalSession = localStorage.getItem("danemo_admin_session") === "authenticated"
     if (status === "loading") return
-    if (status === "authenticated" || hasCookieSession || hasLocalSession) {
+    if (status === "authenticated") {
       const params = new URLSearchParams(window.location.search)
       const returnTo = params.get("returnTo")
       const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
@@ -41,54 +38,23 @@ export default function AdminLoginPage() {
     const returnTo = params.get("returnTo")
     const redirectTarget = returnTo && returnTo.startsWith("/") ? returnTo : "/admin"
 
-    const setSession = (role: string) => {
-      localStorage.setItem("danemo_admin_session", "authenticated")
-      localStorage.setItem("danemo_admin_role", role)
-      const maxAge = 60 * 60 * 24 * 7 // 7 jours
-      document.cookie = `danemo_admin_session=authenticated; path=/; max-age=${maxAge}; SameSite=Lax`
-      document.cookie = `danemo_admin_role=${role}; path=/; max-age=${maxAge}; SameSite=Lax`
-    }
-
-    const createNextAuthSession = async () => {
-      await signIn("credentials", {
+    try {
+      const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
+        callbackUrl: redirectTarget,
       })
-    }
-
-    // Vérification des identifiants en dur d'abord
-    if (email === "admin@danemo.be" && password === "admin123") {
-      await createNextAuthSession()
-      setSession("admin")
-      router.push(redirectTarget)
-      return
-    }
-
-    if (email === "operator@danemo.be" && password === "operator123") {
-      await createNextAuthSession()
-      setSession("operator")
-      router.push(redirectTarget)
-      return
-    }
-
-    // Sinon, essayer avec Supabase Auth
-    try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
-      if (authError) {
+      if (!result || result.error) {
         setError("Email ou mot de passe incorrect")
       } else {
-        const roleFromMetadata = (data.user?.user_metadata as any)?.role
-        const derivedRole = roleFromMetadata || (email === "operator@danemo.be" ? "operator" : "admin")
-        await createNextAuthSession()
-        setSession(derivedRole)
         router.push(redirectTarget)
       }
-    } catch (err: any) {
+    } catch {
       setError("Email ou mot de passe incorrect")
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
@@ -96,10 +62,10 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Image src="/images/logo.webp" alt="Danemo Logo" width={120} height={90} className="object-contain" />
+            <Image src="/images/logo.webp" alt="Danemo Logo" width={120} height={90} loading="eager" style={{ height: "auto" }} />
           </div>
           <CardTitle className="text-2xl font-bold text-orange-600">Administration Danemo</CardTitle>
-          <CardDescription>Connectez-vous pour accéder au panneau d'administration</CardDescription>
+          <CardDescription>Connectez-vous pour accéder au panneau d’administration</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
