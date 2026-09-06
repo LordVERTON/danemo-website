@@ -18,47 +18,8 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, ExternalLink, PackageSearch, QrCode, Copy } from "lucide-react"
+import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, ExternalLink, PackageSearch, QrCode } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
-import QRCode from "qrcode"
-
-// Composant pour afficher le QR code
-function QRCodeDisplay({ value }: { value: string }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (canvasRef.current && value) {
-      // Générer une URL complète pour le QR code
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-      const qrUrl = `${baseUrl}/admin/qr?code=${encodeURIComponent(value)}`
-
-      QRCode.toCanvas(canvasRef.current, qrUrl, {
-        width: 200,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      }, (err) => {
-        if (err) {
-          console.error('Error generating QR code:', err)
-          setError('Erreur lors de la génération du QR code')
-        }
-      })
-    }
-  }, [value])
-
-  if (error) {
-    return (
-      <div className="w-[200px] h-[200px] flex items-center justify-center border rounded bg-gray-100 text-xs text-gray-500">
-        {error}
-      </div>
-    )
-  }
-
-  return <canvas ref={canvasRef} className="w-[200px] h-[200px]" />
-}
 
 interface Order {
   id: string
@@ -753,9 +714,9 @@ export default function TrackingPage() {
 
         {/* Modal de suivi avec historique des événements */}
         <Dialog open={isTrackingDialogOpen} onOpenChange={setIsTrackingDialogOpen}>
-          <DialogContent className="max-w-4xl flex flex-col">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl overflow-x-hidden">
             <DialogHeader>
-              <DialogTitle>Suivi de la commande {selectedOrder?.order_number}</DialogTitle>
+              <DialogTitle className="break-words">Suivi de la commande {selectedOrder?.order_number}</DialogTitle>
               <DialogDescription>
                 Mettez à jour le suivi, puis partagez le QR code si nécessaire.
               </DialogDescription>
@@ -766,10 +727,10 @@ export default function TrackingPage() {
               )}
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto px-1">
-              <div className="space-y-6">
+            <div className="min-w-0 overflow-x-hidden px-1">
+              <div className="min-w-0 space-y-6">
               {/* Action principale : visible en premier sur mobile */}
-              <section className="rounded-xl border border-orange-200 bg-orange-50/60 p-4 sm:p-5">
+              <section className="min-w-0 rounded-xl border border-orange-200 bg-orange-50/60 p-4 sm:p-5">
                 <h3 className="mb-4 text-lg font-semibold text-slate-900">Ajouter un événement</h3>
                 <form onSubmit={handleAddEvent} className="space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
@@ -830,64 +791,36 @@ export default function TrackingPage() {
 
               {/* QR Code Section */}
               {selectedOrder?.qr_code ? (
-                <div className="border rounded-lg p-4 bg-muted/30">
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <section className="min-w-0 rounded-xl border bg-muted/30 p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                     <QrCode className="h-4 w-4 text-orange-600" />
                     QR Code de la commande
                   </h3>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="flex-1">
-                      <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 inline-block">
-                        <QRCodeDisplay value={selectedOrder.qr_code} />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2 max-w-xs">
-                        Scannez ce QR code pour accéder aux informations de la commande
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2 p-2 bg-white rounded border">
-                        <code className="text-xs font-mono break-all">{selectedOrder.qr_code}</code>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            navigator.clipboard.writeText(selectedOrder.qr_code || '')
-                            setSuccessMessage('QR code copié dans le presse-papier')
-                            setTimeout(() => setSuccessMessage(''), 2000)
-                          }}
-                          className="flex-shrink-0"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/admin/qr?code=${encodeURIComponent(selectedOrder.qr_code || '')}`, '_blank')}
-                        className="flex items-center gap-2"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Voir la page de suivi QR
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => window.open(`/admin/qr?code=${encodeURIComponent(selectedOrder.qr_code || '')}`, '_blank')}
+                    className="w-full justify-center gap-2 sm:w-auto"
+                  >
+                    <QrCode className="size-4" />
+                    Voir le QR code de la commande
+                  </Button>
+                </section>
               ) : (
-                <div className="border rounded-lg p-4 bg-muted/30">
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <section className="min-w-0 rounded-xl border bg-muted/30 p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                     <QrCode className="h-4 w-4 text-orange-600" />
                     QR Code de la commande
                   </h3>
-                  <div className="flex flex-col items-start gap-3">
+                  <div className="flex min-w-0 flex-col items-stretch gap-3 sm:items-start">
                     <p className="text-sm text-muted-foreground">
                       Cette commande n&apos;a pas encore de QR code. Générez-en un pour permettre le suivi via scan.
                     </p>
                     <Button
                       variant="default"
-                      size="sm"
                       onClick={handleGenerateQRCode}
                       disabled={isGeneratingQR}
-                      className="flex items-center gap-2"
+                      className="w-full justify-center gap-2 sm:w-auto"
                     >
                       {isGeneratingQR ? (
                         <>
@@ -902,10 +835,10 @@ export default function TrackingPage() {
                       )}
                     </Button>
                   </div>
-                </div>
+                </section>
               )}
               {/* Historique des événements */}
-              <div>
+              <section className="min-w-0">
                 <h3 className="text-lg font-semibold mb-4">Historique des événements</h3>
                 <div className="space-y-3">
                   {isLoadingTrackingEvents ? (
@@ -917,14 +850,14 @@ export default function TrackingPage() {
                     </div>
                   ) : trackingEvents.length > 0 ? (
                     trackingEvents.map((event, index) => (
-                      <div key={event.id} className="flex items-start gap-3 rounded-lg border p-3">
+                      <div key={event.id} className="flex min-w-0 items-start gap-3 rounded-lg border p-3">
                         <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
                           <span className="text-orange-600 font-semibold text-sm">{index + 1}</span>
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
                             {getStatusBadge(event.status)}
-                            <span className="text-sm text-muted-foreground">
+                            <span className="break-words text-sm text-muted-foreground">
                               {new Date(event.event_date).toLocaleString('fr-FR')}
                             </span>
                           </div>
@@ -935,7 +868,7 @@ export default function TrackingPage() {
                             </div>
                           )}
                           {event.description && (
-                            <p className="text-sm">{event.description}</p>
+                            <p className="break-words text-sm">{event.description}</p>
                           )}
                           {event.operator && (
                             <p className="text-xs text-muted-foreground mt-1">
@@ -951,7 +884,7 @@ export default function TrackingPage() {
                     </div>
                   )}
                 </div>
-              </div>
+              </section>
 
               </div>
             </div>
