@@ -27,7 +27,7 @@ type InvoiceUpdate = Database['public']['Tables']['invoices']['Update']
 export const ordersApi = {
   // Récupérer toutes les commandes
   async getAll(): Promise<Order[]> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false })
@@ -40,7 +40,7 @@ export const ordersApi = {
 
   // Récupérer une commande par ID
   async getById(id: string): Promise<Order | null> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select('*')
       .eq('id', id)
@@ -54,7 +54,7 @@ export const ordersApi = {
 
   // Récupérer une commande par numéro
   async getByOrderNumber(orderNumber: string): Promise<Order | null> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select('*')
       .eq('order_number', orderNumber)
@@ -81,7 +81,7 @@ export const ordersApi = {
 
   // Récupérer une commande par QR code
   async getByQr(qr: string): Promise<Order | null> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select('*')
       .eq('qr_code', qr)
@@ -150,7 +150,7 @@ export const ordersApi = {
 
   // Rechercher des commandes
   async search(query: string): Promise<Order[]> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select('*')
       .or(
@@ -172,7 +172,7 @@ export const ordersApi = {
 
   // Filtrer par statut
   async getByStatus(status: string): Promise<Order[]> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select('*')
       .eq('status', status)
@@ -344,7 +344,7 @@ export const utils = {
 
   // Obtenir les statistiques
   async getStats(startDate?: string) {
-    let query = supabase
+    let query = (supabaseAdmin as typeof supabase)
       .from('orders')
       .select('status, created_at')
     
