@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { ArrowLeft, CreditCard, ExternalLink, FileDown, FileText, Loader2, PackagePlus, Plus, QrCode, UserRound } from "lucide-react"
+import { ArrowLeft, CreditCard, FileDown, FileText, Loader2, MoreHorizontal, PackagePlus, Pencil, Plus, QrCode, UserRound } from "lucide-react"
 import AdminLayout from "@/components/admin-layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -16,8 +17,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { calculateCustomerPaymentProgress, type CustomerPaymentRecord } from "@/lib/customer-payment-progress"
 import { downloadInvoicePdf, downloadProformaDocx, downloadProformaPdf, downloadQrLabel } from "@/lib/client-documents"
 
-type Order = { id: string; order_number: string; service_type: string; origin: string; destination: string; status: string; value?: number | null; qr_code?: string | null; created_at: string }
-type Customer = { id: string; name: string; email?: string | null; phone?: string | null; company?: string | null; address?: string | null; city?: string | null; country?: string | null; status?: string; orders: Order[]; payments: CustomerPaymentRecord[]; invoices: Array<{ id: string; invoice_number?: string; status?: string; total_amount?: number }> }
+type Order = { id: string; order_number: string; service_type: string; description?: string | null; origin: string; destination: string; status: string; value?: number | null; weight?: number | null; estimated_delivery?: string | null; recipient_name?: string | null; recipient_email?: string | null; recipient_phone?: string | null; recipient_address?: string | null; recipient_city?: string | null; recipient_postal_code?: string | null; recipient_country?: string | null; qr_code?: string | null; created_at: string }
+type Customer = { id: string; name: string; email?: string | null; phone?: string | null; company?: string | null; address?: string | null; city?: string | null; postal_code?: string | null; country?: string | null; status?: string; orders: Order[]; payments: CustomerPaymentRecord[]; invoices: Array<{ id: string; invoice_number?: string; status?: string; total_amount?: number }> }
 
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
 
@@ -29,13 +30,14 @@ export default function ClientDetailsPage() {
   const [error, setError] = useState("")
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [orderOpen, setOrderOpen] = useState(false)
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [saving, setSaving] = useState(false)
   const [payment, setPayment] = useState({ amount: "", paid_at: new Date().toISOString().slice(0, 10), payment_method: "bank_transfer", reference: "", notes: "" })
-  const [order, setOrder] = useState({ service_type: "fret_maritime", origin: "Bruxelles", destination: "", value: "", estimated_delivery: "" })
+  const [order, setOrder] = useState({ service_type: "fret_maritime", description: "", origin: "Bruxelles", destination: "", weight: "", value: "", estimated_delivery: "", recipient_name: "", recipient_email: "", recipient_phone: "", recipient_address: "", recipient_city: "", recipient_postal_code: "", recipient_country: "" })
 
   const summary = useMemo(() => calculateCustomerPaymentProgress(customer?.orders || [], customer?.payments || []), [customer])
 
-  async function loadCustomer() {
+  const loadCustomer = useCallback(async () => {
     if (!customerId) return
     setLoading(true)
     try {
@@ -48,9 +50,9 @@ export default function ClientDetailsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [customerId])
 
-  useEffect(() => { loadCustomer() }, [customerId])
+  useEffect(() => { void loadCustomer() }, [loadCustomer])
 
   async function addPayment(event: React.FormEvent) {
     event.preventDefault()
@@ -68,19 +70,31 @@ export default function ClientDetailsPage() {
     } finally { setSaving(false) }
   }
 
+  function openOrder(orderToEdit?: Order) {
+    if (!customer) return
+    setEditingOrder(orderToEdit || null)
+    setOrder({
+      service_type: orderToEdit?.service_type || "fret_maritime", description: orderToEdit?.description || "", origin: orderToEdit?.origin || "Bruxelles", destination: orderToEdit?.destination || "", weight: orderToEdit?.weight ? String(orderToEdit.weight) : "", value: orderToEdit?.value ? String(orderToEdit.value) : "", estimated_delivery: orderToEdit?.estimated_delivery?.slice(0, 10) || "",
+      recipient_name: orderToEdit?.recipient_name || customer.name, recipient_email: orderToEdit?.recipient_email || customer.email || "", recipient_phone: orderToEdit?.recipient_phone || customer.phone || "", recipient_address: orderToEdit?.recipient_address || customer.address || "", recipient_city: orderToEdit?.recipient_city || customer.city || "", recipient_postal_code: orderToEdit?.recipient_postal_code || customer.postal_code || "", recipient_country: orderToEdit?.recipient_country || customer.country || "",
+    })
+    setOrderOpen(true)
+  }
+
   async function addOrder(event: React.FormEvent) {
     event.preventDefault()
     if (!customer) return
     setSaving(true)
     setError("")
     try {
-      const response = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        ...order, value: Number(order.value || 0), customer_id: customer.id, client_name: customer.name, client_email: customer.email || "", client_phone: customer.phone || "",
-      }) })
+      const payload = {
+        ...order, weight: order.weight || null, value: order.value || null, estimated_delivery: order.estimated_delivery || null,
+        customer_id: customer.id, client_name: customer.name, client_email: customer.email || "", client_phone: customer.phone || "", client_address: customer.address || "", client_city: customer.city || "", client_postal_code: customer.postal_code || "", client_country: customer.country || "",
+      }
+      const response = await fetch(editingOrder ? `/api/orders/${editingOrder.id}` : "/api/orders", { method: editingOrder ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       const result = await response.json()
       if (!result.success) throw new Error(result.error || "Création impossible")
       setOrderOpen(false)
-      setOrder({ service_type: "fret_maritime", origin: "Bruxelles", destination: "", value: "", estimated_delivery: "" })
+      setEditingOrder(null)
       await loadCustomer()
     } catch (cause: any) {
       setError(cause?.message || "Impossible de créer la commande")
@@ -131,13 +145,32 @@ export default function ClientDetailsPage() {
           <Card><CardHeader><CardTitle className="text-base">Règlements</CardTitle><CardDescription>{summary.paymentStatus === "paid" ? "Soldé" : summary.paymentStatus === "partial" ? "Partiellement réglé" : "À régler"}</CardDescription></CardHeader><CardContent><p className="text-2xl font-bold">{euro.format(summary.remainingAmount)}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-orange-600" style={{ width: `${summary.progressPercent}%` }} /></div><p className="mt-2 text-xs text-muted-foreground">{euro.format(summary.paidAmount)} réglés sur {euro.format(summary.totalAmount)}</p><Button className="mt-4 w-full" onClick={() => setPaymentOpen(true)}><CreditCard className="mr-2 size-4" />Ajouter un règlement</Button></CardContent></Card>
         </div>
 
-        <Card><CardHeader className="flex-row items-center justify-between"><div><CardTitle>Commandes</CardTitle><CardDescription>{customer.orders.length} commande(s) associée(s)</CardDescription></div><Button onClick={() => setOrderOpen(true)}><PackagePlus className="mr-2 size-4" />Nouvelle commande</Button></CardHeader><CardContent><div className="space-y-2">{customer.orders.length ? customer.orders.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div><p className="font-medium">{item.order_number}</p><p className="text-sm text-muted-foreground">{item.origin} → {item.destination} · {item.service_type}</p></div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{item.status}</Badge><span className="font-medium">{euro.format(Number(item.value || 0))}</span><Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => createInvoice(item)}><FileText className="mr-1 size-3.5" />Facture</Button><Button type="button" variant="outline" size="sm" onClick={() => downloadProformaPdf(documentOrder(item))}>Proforma PDF</Button><Button type="button" variant="outline" size="sm" onClick={() => downloadProformaDocx(documentOrder(item))}>DOCX</Button><Button type="button" variant="outline" size="sm" onClick={() => downloadQrLabel(documentOrder(item))}><QrCode className="mr-1 size-3.5" />Étiquette</Button>{item.qr_code && <Button asChild variant="outline" size="sm"><Link href={`/admin/qr?code=${encodeURIComponent(item.qr_code)}`}><ExternalLink className="mr-1 size-3.5" />Scanner</Link></Button>}</div></div>) : <p className="py-6 text-center text-sm text-muted-foreground">Aucune commande pour ce client.</p>}</div></CardContent></Card>
+        <Card><CardHeader className="flex-row items-center justify-between gap-3"><div><CardTitle>Commandes</CardTitle><CardDescription>{customer.orders.length} commande(s) associée(s)</CardDescription></div><Button className="hidden sm:inline-flex" onClick={() => openOrder()}><PackagePlus className="mr-2 size-4" />Nouvelle commande</Button></CardHeader><CardContent><div className="space-y-3">{customer.orders.length ? customer.orders.map((item) => <article key={item.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{item.order_number}</p><p className="mt-1 text-sm text-muted-foreground">{item.origin} → {item.destination} · {item.service_type}</p></div><Badge variant="outline" className="shrink-0">{item.status}</Badge></div><div className="mt-4 flex items-center gap-2"><span className="mr-auto font-medium">{euro.format(Number(item.value || 0))}</span><Button type="button" variant="outline" onClick={() => openOrder(item)}><Pencil className="mr-2 size-4" />Modifier</Button><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="outline" size="icon" aria-label={`Plus d’actions pour ${item.order_number}`}><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-52"><DropdownMenuLabel>Documents</DropdownMenuLabel><DropdownMenuItem disabled={saving} onSelect={() => createInvoice(item)}><FileText className="mr-2 size-4" />Créer la facture</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadProformaPdf(documentOrder(item))}>Proforma PDF</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadProformaDocx(documentOrder(item))}>Proforma DOCX</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadQrLabel(documentOrder(item))}><QrCode className="mr-2 size-4" />Étiquette QR</DropdownMenuItem>{item.qr_code && <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href={`/admin/qr?code=${encodeURIComponent(item.qr_code)}`}><QrCode className="mr-2 size-4" />Ouvrir le scanner</Link></DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu></div></article>) : <p className="py-6 text-center text-sm text-muted-foreground">Aucune commande pour ce client.</p>}</div></CardContent></Card>
 
         <Card><CardHeader><CardTitle>Historique des règlements</CardTitle></CardHeader><CardContent><div className="space-y-2">{customer.payments.length ? customer.payments.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg border p-3 text-sm"><div><p className="font-medium">{euro.format(Number(item.amount))}</p><p className="text-muted-foreground">{item.paid_at} · {item.payment_method || "—"}{item.reference ? ` · ${item.reference}` : ""}</p></div><Badge variant="secondary">Enregistré</Badge></div>) : <p className="py-4 text-sm text-muted-foreground">Aucun règlement enregistré.</p>}</div></CardContent></Card>
       </div>
 
-      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}><DialogContent><DialogHeader><DialogTitle>Ajouter un règlement</DialogTitle></DialogHeader><form onSubmit={addPayment} className="space-y-4"><div><Label>Montant (€)</Label><Input type="number" min="0.01" step="0.01" required value={payment.amount} onChange={(event) => setPayment({ ...payment, amount: event.target.value })} /></div><div><Label>Date</Label><Input type="date" required value={payment.paid_at} onChange={(event) => setPayment({ ...payment, paid_at: event.target.value })} /></div><div><Label>Méthode</Label><Select value={payment.payment_method} onValueChange={(value) => setPayment({ ...payment, payment_method: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bank_transfer">Virement</SelectItem><SelectItem value="cash">Espèces</SelectItem><SelectItem value="card">Carte</SelectItem><SelectItem value="mobile">Mobile</SelectItem><SelectItem value="other">Autre</SelectItem></SelectContent></Select></div><div><Label>Référence</Label><Input value={payment.reference} onChange={(event) => setPayment({ ...payment, reference: event.target.value })} /></div><div><Label>Note</Label><Textarea value={payment.notes} onChange={(event) => setPayment({ ...payment, notes: event.target.value })} /></div><Button className="w-full" disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</Button></form></DialogContent></Dialog>
-      <Dialog open={orderOpen} onOpenChange={setOrderOpen}><DialogContent><DialogHeader><DialogTitle>Nouvelle commande</DialogTitle></DialogHeader><form onSubmit={addOrder} className="space-y-4"><div><Label>Service</Label><Select value={order.service_type} onValueChange={(value) => setOrder({ ...order, service_type: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fret_maritime">Fret maritime</SelectItem><SelectItem value="fret_aerien">Fret aérien</SelectItem><SelectItem value="demenagement">Déménagement</SelectItem></SelectContent></Select></div><div><Label>Origine</Label><Input required value={order.origin} onChange={(event) => setOrder({ ...order, origin: event.target.value })} /></div><div><Label>Destination</Label><Input required value={order.destination} onChange={(event) => setOrder({ ...order, destination: event.target.value })} /></div><div><Label>Montant (€)</Label><Input type="number" min="0" step="0.01" value={order.value} onChange={(event) => setOrder({ ...order, value: event.target.value })} /></div><div><Label>Livraison estimée</Label><Input type="date" value={order.estimated_delivery} onChange={(event) => setOrder({ ...order, estimated_delivery: event.target.value })} /></div><Button className="w-full" disabled={saving}><Plus className="mr-2 size-4" />{saving ? "Création..." : "Créer la commande"}</Button></form></DialogContent></Dialog>
+      <Button type="button" size="icon" className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 rounded-full shadow-lg sm:hidden" onClick={() => openOrder()} aria-label="Créer une commande"><PackagePlus className="size-6" /></Button>
+
+      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}><DialogContent><DialogHeader><DialogTitle>Ajouter un règlement</DialogTitle><DialogDescription>Enregistrez le montant reçu et son moyen de paiement.</DialogDescription></DialogHeader><form onSubmit={addPayment} className="space-y-4"><div><Label>Montant (€)</Label><Input type="number" min="0.01" step="0.01" required value={payment.amount} onChange={(event) => setPayment({ ...payment, amount: event.target.value })} /></div><div><Label>Date</Label><Input type="date" required value={payment.paid_at} onChange={(event) => setPayment({ ...payment, paid_at: event.target.value })} /></div><div><Label>Méthode</Label><Select value={payment.payment_method} onValueChange={(value) => setPayment({ ...payment, payment_method: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bank_transfer">Virement</SelectItem><SelectItem value="cash">Espèces</SelectItem><SelectItem value="card">Carte</SelectItem><SelectItem value="mobile">Mobile</SelectItem><SelectItem value="other">Autre</SelectItem></SelectContent></Select></div><div><Label>Référence</Label><Input value={payment.reference} onChange={(event) => setPayment({ ...payment, reference: event.target.value })} /></div><div><Label>Note</Label><Textarea value={payment.notes} onChange={(event) => setPayment({ ...payment, notes: event.target.value })} /></div><Button className="w-full" disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</Button></form></DialogContent></Dialog>
+      <Dialog open={orderOpen} onOpenChange={(open) => { setOrderOpen(open); if (!open) setEditingOrder(null) }}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader><DialogTitle>{editingOrder ? "Modifier la commande" : "Nouvelle commande"}</DialogTitle><DialogDescription>Renseignez les informations d’expédition et du destinataire.</DialogDescription></DialogHeader>
+          <form onSubmit={addOrder} className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div><Label>Service</Label><Select value={order.service_type} onValueChange={(value) => setOrder({ ...order, service_type: value })}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fret_maritime">Fret maritime</SelectItem><SelectItem value="fret_aerien">Fret aérien</SelectItem><SelectItem value="demenagement">Déménagement</SelectItem><SelectItem value="dedouanement">Dédouanement</SelectItem><SelectItem value="negoce">Négoce</SelectItem></SelectContent></Select></div>
+              <div><Label>Livraison estimée</Label><Input type="date" value={order.estimated_delivery} onChange={(event) => setOrder({ ...order, estimated_delivery: event.target.value })} /></div>
+              <div><Label>Origine</Label><Input required autoComplete="address-level2" value={order.origin} onChange={(event) => setOrder({ ...order, origin: event.target.value })} /></div>
+              <div><Label>Destination</Label><Input required autoComplete="address-level2" value={order.destination} onChange={(event) => setOrder({ ...order, destination: event.target.value })} /></div>
+              <div><Label>Poids (kg)</Label><Input type="number" min="0" step="0.01" inputMode="decimal" value={order.weight} onChange={(event) => setOrder({ ...order, weight: event.target.value })} /></div>
+              <div><Label>Montant (€)</Label><Input type="number" min="0" step="0.01" inputMode="decimal" value={order.value} onChange={(event) => setOrder({ ...order, value: event.target.value })} /></div>
+            </div>
+            <div><Label>Description du colis</Label><Textarea value={order.description} onChange={(event) => setOrder({ ...order, description: event.target.value })} placeholder="Contenu, nombre de colis ou consignes utiles" /></div>
+            <fieldset className="space-y-4 rounded-lg border p-4"><legend className="px-1 text-sm font-semibold">Destinataire</legend><div className="grid gap-4 sm:grid-cols-2"><div><Label>Nom</Label><Input required autoComplete="name" value={order.recipient_name} onChange={(event) => setOrder({ ...order, recipient_name: event.target.value })} /></div><div><Label>Téléphone</Label><Input required type="tel" autoComplete="tel" value={order.recipient_phone} onChange={(event) => setOrder({ ...order, recipient_phone: event.target.value })} /></div><div className="sm:col-span-2"><Label>Email</Label><Input type="email" autoComplete="email" value={order.recipient_email} onChange={(event) => setOrder({ ...order, recipient_email: event.target.value })} /></div><div className="sm:col-span-2"><Label>Adresse</Label><Input required autoComplete="street-address" value={order.recipient_address} onChange={(event) => setOrder({ ...order, recipient_address: event.target.value })} /></div><div><Label>Ville</Label><Input required autoComplete="address-level2" value={order.recipient_city} onChange={(event) => setOrder({ ...order, recipient_city: event.target.value })} /></div><div><Label>Code postal</Label><Input required autoComplete="postal-code" value={order.recipient_postal_code} onChange={(event) => setOrder({ ...order, recipient_postal_code: event.target.value })} /></div><div className="sm:col-span-2"><Label>Pays</Label><Input required autoComplete="country-name" value={order.recipient_country} onChange={(event) => setOrder({ ...order, recipient_country: event.target.value })} /></div></div></fieldset>
+            <div className="sticky bottom-0 -mx-4 flex gap-2 border-t bg-background px-4 pt-3 sm:static sm:mx-0 sm:justify-end sm:border-0 sm:bg-transparent sm:px-0"><Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => setOrderOpen(false)}>Annuler</Button><Button className="flex-1 sm:flex-none" disabled={saving}>{saving ? "Enregistrement..." : editingOrder ? "Enregistrer" : "Créer la commande"}</Button></div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   )
 }

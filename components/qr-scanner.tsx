@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useEffect, useId, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { QrCode, Camera, X, RotateCcw } from "lucide-react"
 import { Html5Qrcode } from "html5-qrcode"
 
@@ -23,13 +24,14 @@ export default function QRScanner({
   keepOpenAfterScan = false,
   requireReauthOnFirstScanInSession = false,
 }: QRScannerProps) {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState("")
   const [lastScanned, setLastScanned] = useState<string | null>(null)
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const scanAreaRef = useRef<HTMLDivElement>(null)
-  const scannerIdRef = useRef(`qr-reader-${Math.random().toString(36).substring(7)}`)
+  const scannerId = `qr-reader-${useId().replace(/:/g, "")}`
   const SESSION_REAUTH_KEY = "danemo_qr_reauth_done"
 
   const forceReauthentication = () => {
@@ -38,7 +40,7 @@ export default function QRScanner({
     document.cookie = "danemo_admin_session=; path=/; max-age=0"
     document.cookie = "danemo_admin_role=; path=/; max-age=0"
     const returnTo = encodeURIComponent(window.location.pathname + window.location.search)
-    window.location.href = `/admin/login?returnTo=${returnTo}`
+    router.push(`/admin/login?returnTo=${returnTo}`)
   }
 
   const startScanning = async () => {
@@ -46,8 +48,6 @@ export default function QRScanner({
       setError("")
       setIsScanning(true)
       setLastScanned(null)
-
-      const scannerId = scannerIdRef.current
 
       // Créer une instance du scanner si elle n'existe pas
       if (!scannerRef.current) {
@@ -138,14 +138,6 @@ export default function QRScanner({
     setLastScanned(null)
   }
 
-  // Réinitialiser l'état quand le dialog s'ouvre
-  useEffect(() => {
-    if (isOpen && !isScanning && !lastScanned) {
-      // Le dialog vient de s'ouvrir, réinitialiser l'état
-      setError("")
-    }
-  }, [isOpen])
-
   // Nettoyer lors du démontage
   useEffect(() => {
     return () => {
@@ -179,14 +171,14 @@ export default function QRScanner({
             <QrCode className="h-5 w-5" />
             {title}
           </DialogTitle>
-          <p className="text-sm sm:text-base text-muted-foreground">{description}</p>
+          <DialogDescription className="text-sm sm:text-base">{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 sm:space-y-6">
           {/* Zone de scan */}
           <div className="relative bg-gray-100 rounded-lg aspect-square flex items-center justify-center min-h-[200px] sm:min-h-[300px] overflow-hidden">
             <div
-              id={scannerIdRef.current}
+              id={scannerId}
               ref={scanAreaRef}
               className="w-full h-full"
             />
@@ -195,7 +187,7 @@ export default function QRScanner({
               <div className="absolute inset-0 flex items-center justify-center text-center p-4">
                 <div>
                   <Camera className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs sm:text-sm text-gray-500">Cliquez sur "Démarrer le scan" pour commencer</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Cliquez sur « Démarrer le scan » pour commencer</p>
                 </div>
               </div>
             )}

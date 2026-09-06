@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, Eye, ExternalLink, PackageSearch, QrCode, Copy } from "lucide-react"
+import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, ExternalLink, PackageSearch, QrCode, Copy } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 import QRCode from "qrcode"
 
@@ -397,15 +397,11 @@ export default function TrackingPage() {
   }
 
   return (
-    <AdminLayout title="Suivi des commandes">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-muted-foreground">
-              Suivez les expéditions et mettez à jour les statuts
-            </p>
-          </div>
+    <AdminLayout>
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Suivi des commandes</h1>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">Consultez l’avancement et ajoutez un événement de suivi.</p>
         </div>
 
         {/* Messages */}
@@ -423,12 +419,6 @@ export default function TrackingPage() {
         {/* Filtres */}
         <Card className="overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
-                <Eye className="h-4 w-4 shrink-0" />
-                <span className="truncate">Cliquez sur une ligne pour voir le suivi de la commande</span>
-              </div>
-            </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 min-w-0">
               <div className="flex-1 min-w-0">
                 <div className="relative">
@@ -474,14 +464,43 @@ export default function TrackingPage() {
         </Card>
 
         {/* Table des commandes */}
-        <Card>
-          <CardHeader>
+        <Card className="border-0 bg-transparent py-0 shadow-none lg:border lg:bg-card lg:py-6 lg:shadow-sm">
+          <CardHeader className="hidden lg:grid">
             <CardTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5" />
               Commandes ({filteredOrders.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 lg:px-6">
+            <div className="space-y-3 lg:hidden">
+              {filteredOrders.map((order) => {
+                const containerForOrder = containers.find(
+                  (container) => container.id === order.container_id || container.code === order.container_code,
+                )
+
+                return (
+                  <article key={order.id} className="rounded-xl border p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-mono font-medium text-slate-900">{order.order_number}</p>
+                        <p className="mt-1 truncate text-sm text-muted-foreground">{order.client_name}</p>
+                      </div>
+                      {getStatusBadge(order.status)}
+                    </div>
+                    <p className="mt-3 text-sm text-slate-700">{order.origin} <span className="text-muted-foreground">→</span> {order.destination}</p>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                      <span className="truncate">{containerForOrder ? `Conteneur ${containerForOrder.code}` : "Sans conteneur"}</span>
+                      <span className="shrink-0">{order.estimated_delivery ? `Prévu le ${new Date(order.estimated_delivery).toLocaleDateString('fr-FR')}` : "Date non définie"}</span>
+                    </div>
+                    <Button type="button" variant="outline" className="mt-4 w-full" onClick={() => handleRowClick(order)}>
+                      <MapPin className="mr-2 size-4" />
+                      Ouvrir le suivi
+                    </Button>
+                  </article>
+                )
+              })}
+            </div>
+            <div className="hidden lg:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -507,14 +526,10 @@ export default function TrackingPage() {
                   return (
                     <TableRow
                       key={order.id}
-                      className="cursor-pointer hover:bg-gray-50 hover:shadow-sm hover:scale-[1.01] transition-all duration-200 ease-in-out group"
-                      onClick={() => handleRowClick(order)}
+                      className="transition-colors hover:bg-gray-50"
                     >
                       <TableCell className="font-mono font-medium">
-                        <div className="flex items-center gap-2">
-                          {order.order_number}
-                          <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                        </div>
+                        {order.order_number}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -740,6 +755,7 @@ export default function TrackingPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -758,7 +774,7 @@ export default function TrackingPage() {
               )}
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="flex-1 overflow-y-auto px-1">
               <div className="space-y-6">
               {/* QR Code Section */}
               {selectedOrder?.qr_code ? (
@@ -876,9 +892,7 @@ export default function TrackingPage() {
               {/* Historique des événements */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Historique des événements</h3>
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 relative">
-                  {/* Gradient fade pour indiquer qu'il y a plus de contenu */}
-                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none z-10"></div>
+                <div className="space-y-3">
                   {isLoadingTrackingEvents ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="flex items-center gap-3">
@@ -888,7 +902,7 @@ export default function TrackingPage() {
                     </div>
                   ) : trackingEvents.length > 0 ? (
                     trackingEvents.map((event, index) => (
-                      <div key={event.id} className="flex items-start gap-3 p-3 border rounded-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 100}ms` }}>
+                      <div key={event.id} className="flex items-start gap-3 rounded-lg border p-3">
                         <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
                           <span className="text-orange-600 font-semibold text-sm">{index + 1}</span>
                         </div>
@@ -921,8 +935,6 @@ export default function TrackingPage() {
                       Aucun événement de suivi enregistré
                     </div>
                   )}
-                  {/* Padding en bas pour éviter que le contenu soit coupé par le gradient */}
-                  <div className="h-8"></div>
                 </div>
               </div>
 

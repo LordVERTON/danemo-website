@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import type React from "react"
 
 import { signOut, useSession } from "next-auth/react"
@@ -34,14 +34,12 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
   ]
   const visibleNavigation = navigation.filter((item) => !item.roles || item.roles.includes(role))
   const desktopNavigation = visibleNavigation.filter((item) => item.href !== "/admin/qr")
-  const mobilePrimaryHrefs = new Set(["/admin", "/admin/clients", "/admin/tracking", "/admin/qr"])
-  const mobilePrimaryNavigation = visibleNavigation.filter((item) => mobilePrimaryHrefs.has(item.href))
-  const mobileSecondaryNavigation = visibleNavigation.filter((item) => !mobilePrimaryHrefs.has(item.href))
+  const mobilePrimaryHrefs = ["/admin", "/admin/clients", "/admin/qr", "/admin/tracking"]
+  const mobilePrimaryNavigation = mobilePrimaryHrefs.flatMap((href) =>
+    visibleNavigation.filter((item) => item.href === href),
+  )
+  const mobileSecondaryNavigation = visibleNavigation.filter((item) => !mobilePrimaryHrefs.includes(item.href))
   const isMoreMenuActive = mobileSecondaryNavigation.some((item) => pathname.startsWith(item.href))
-
-  useEffect(() => {
-    setIsMoreMenuOpen(false)
-  }, [pathname])
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/admin/login" })
@@ -50,7 +48,7 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
   if (status !== "authenticated") {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">Vérification de l'authentification...</div>
+        <div className="text-center">Vérification de l’authentification...</div>
       </div>
     )
   }
