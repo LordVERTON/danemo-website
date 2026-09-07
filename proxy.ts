@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 
-const PUBLIC_PATHS = new Set(["/admin/login"])
+const PUBLIC_PATHS = new Set(["/admin/login", "/admin/reset-password"])
+const AUTH_REDIRECT_PATHS = new Set(["/admin/login"])
 const ADMIN_ONLY_PREFIXES = ["/admin/analytics", "/admin/employees"]
 
 type RateLimitPolicy = {
@@ -169,7 +170,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (PUBLIC_PATHS.has(pathname)) {
-    if (authState.isAuthenticated) {
+    if (AUTH_REDIRECT_PATHS.has(pathname) && authState.isAuthenticated) {
       return NextResponse.redirect(new URL("/admin", request.url))
     }
     return NextResponse.next()

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdminApiAccess } from '@/lib/staff-api-auth'
+import { isStaffRole } from '@/lib/staff-authorization'
 
 interface Employee {
   user_id: string
@@ -53,6 +54,13 @@ export async function PUT(
         { status: 400 }
       )
     }
+
+    if (!isStaffRole(body.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Le rôle doit être administrateur ou opérateur.' },
+        { status: 400 },
+      )
+    }
     
     // Récupérer l'employé pour avoir le user_id
     const { data: employee, error: fetchError } = await supabaseAdmin
@@ -64,16 +72,31 @@ export async function PUT(
     if (fetchError) throw fetchError
     if (!employee) throw new Error('Employee not found')
 
-    // Mettre à jour l'utilisateur auth si email, role ou password changé
+    // Keep the server-controlled app_metadata role aligned with employees.
     if (body.email || body.role || body.password) {
       const updateData: any = {}
       if (body.email) updateData.email = body.email
-      if (body.role) updateData.user_metadata = { role: body.role }
       if (body.password && body.password.trim() !== '') {
         updateData.password = body.password
       }
+
+      const { data: currentAuthUser, error: currentAuthUserError } = await supabaseAdmin.auth.admin.getUserById(
+        (employee as Employee).user_id,
+      )
+      if (currentAuthUserError || !currentAuthUser.user) {
+        throw new Error('Unable to load collaborator access account')
+      }
+
+      updateData.app_metadata = {
+        ...(currentAuthUser.user.app_metadata || {}),
+        role: body.role,
+      }
       
-      await supabaseAdmin.auth.admin.updateUserById((employee as Employee).user_id, updateData)
+      const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
+        (employee as Employee).user_id,
+        updateData,
+      )
+      if (updateAuthError) throw updateAuthError
     }
 
     // Mettre à jour l'employé

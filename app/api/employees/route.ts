@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdminApiAccess } from '@/lib/staff-api-auth'
+import { isStaffRole } from '@/lib/staff-authorization'
 
 type EmployeeRole = 'admin' | 'operator'
 
@@ -8,8 +9,8 @@ function normalizeEmail(email: string | null | undefined) {
   return String(email || '').trim().toLowerCase()
 }
 
-function normalizeRole(role: unknown): EmployeeRole {
-  return role === 'admin' ? 'admin' : 'operator'
+function parseEmployeeRole(role: unknown): EmployeeRole | null {
+  return isStaffRole(role) ? role : null
 }
 
 function nameFromAuthUser(user: any) {
@@ -69,7 +70,10 @@ async function syncAuthUsersToEmployees() {
 
   for (const authUser of authUsers) {
     const email = normalizeEmail(authUser.email)
-    if (!email || byUserId.has(authUser.id)) continue
+    const role = parseEmployeeRole(authUser.app_metadata?.role)
+    // Only server-provisioned staff may be imported into the employee table.
+    // Auth users may freely change user_metadata, so it is not an authority.
+    if (!email || !role || byUserId.has(authUser.id)) continue
 
     const existingByEmail = byEmail.get(email)
     if (existingByEmail) {
@@ -93,7 +97,7 @@ async function syncAuthUsersToEmployees() {
         user_id: authUser.id,
         name: nameFromAuthUser(authUser),
         email,
-        role: normalizeRole(authUser.user_metadata?.role),
+        role,
         salary: 0,
         position: 'Collaborateur',
         hire_date: today,
@@ -219,18 +223,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const password = typeof body.password === 'string' ? body.password : ''
+    if (!password.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Un mot de passe initial est requis pour créer le compte.' },
+        { status: 400 },
+      )
+    }
+
+    const role = parseEmployeeRole(body.role)
+    if (!role) {
+      return NextResponse.json(
+        { success: false, error: 'Le rôle doit être administrateur ou opérateur.' },
+        { status: 400 },
+      )
+    }
+
+    const email = normalizeEmail(body.email)
+
     // Créer l'utilisateur dans auth.users d'abord
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: body.email,
-      password: body.password || 'temp123',
+      email,
+      password,
       email_confirm: true,
-      user_metadata: { role: body.role }
+      user_metadata: { name: String(body.name).trim() },
+      app_metadata: { role },
     })
 
     if (authError) {
-      console.error('Auth error:', authError)
+      console.error('Unable to create collaborator auth account')
       return NextResponse.json(
-        { success: false, error: `Erreur lors de la création du compte: ${authError.message}` },
+        { success: false, error: 'Impossible de créer le compte d’accès. Vérifiez les informations saisies.' },
         { status: 400 }
       )
     }
@@ -239,8 +262,8 @@ export async function POST(request: NextRequest) {
     const employeeData = {
       user_id: authData.user.id,
       name: body.name,
-      email: body.email,
-      role: body.role,
+      email,
+      role,
       salary: parseFloat(body.salary),
       position: body.position,
       hire_date: body.hire_date,
@@ -274,10 +297,10 @@ export async function POST(request: NextRequest) {
       } as any)
     
     return NextResponse.json({ success: true, data }, { status: 201 })
-  } catch (error: any) {
-    console.error('Error creating employee:', error)
+  } catch {
+    console.error('Error creating employee')
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create employee' },
+      { success: false, error: 'Failed to create employee' },
       { status: 500 }
     )
   }

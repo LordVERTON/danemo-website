@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@danemo.be"
+                placeholder="vous@entreprise.fr"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

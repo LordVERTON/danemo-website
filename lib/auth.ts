@@ -1,8 +1,9 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { createClient } from "@supabase/supabase-js"
+import { getActiveStaffUser, type StaffRole } from "@/lib/staff-authorization"
 
-type AdminRole = "admin" | "operator"
+type AdminRole = StaffRole
 
 function getSupabaseAuthClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -42,14 +43,16 @@ export const authOptions: NextAuthOptions = {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error || !data.user) return null
 
-        const metadata = data.user.user_metadata as { role?: AdminRole; name?: string } | null
-        const role: AdminRole = metadata?.role === "admin" ? "admin" : "operator"
+        const staffUser = await getActiveStaffUser(data.user.id)
+        if (!staffUser) return null
+
+        const metadata = data.user.user_metadata as { name?: string } | null
 
         return {
           id: data.user.id,
           email: data.user.email || email,
           name: metadata?.name || data.user.email?.split("@")[0] || "Utilisateur",
-          role,
+          role: staffUser.role,
         }
       },
     }),

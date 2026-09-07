@@ -454,8 +454,9 @@ export default function EmployeesPage() {
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      placeholder={editingEmployee ? "Laissez vide pour conserver le mot de passe actuel" : "L’employé devra le changer à la première connexion"}
+                      placeholder={editingEmployee ? "Laissez vide pour conserver le mot de passe actuel" : "À communiquer à l’employé par un canal sécurisé"}
                       required={!editingEmployee}
+                      autoComplete="new-password"
                       className="text-base sm:text-sm"
                     />
                   </div>

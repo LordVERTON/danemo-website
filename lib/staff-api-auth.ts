@@ -1,7 +1,8 @@
 import { getToken } from "next-auth/jwt"
 import { NextRequest, NextResponse } from "next/server"
+import { getActiveStaffUser, type StaffRole } from "@/lib/staff-authorization"
 
-export type StaffApiRole = "admin" | "operator"
+export type StaffApiRole = StaffRole
 
 export type StaffApiActor = {
   id: string | null
@@ -20,17 +21,14 @@ export async function getStaffApiActor(
   // Important : permet à TypeScript de savoir que token n'est plus null
   if (!token) return null
 
-  const role: StaffApiRole | null =
-    token.role === "admin" || token.role === "operator"
-      ? token.role
-      : null
-
-  if (!role) return null
+  const userId = typeof token.sub === "string" ? token.sub : ""
+  const staffUser = await getActiveStaffUser(userId)
+  if (!staffUser) return null
 
   return {
-    id: typeof token.sub === "string" ? token.sub : null,
-    email: typeof token.email === "string" ? token.email : null,
-    role,
+    id: userId,
+    email: staffUser.email,
+    role: staffUser.role,
   }
 }
 

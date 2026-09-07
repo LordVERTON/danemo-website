@@ -11,6 +11,7 @@
     "dev": "next dev",
     "lint": "eslint .",
     "test": "node scripts/smoke-business-workflows.mjs",
+    "auth:sync-staff-roles": "node scripts/sync-staff-app-metadata.mjs",
     "resend:hello": "node scripts/resend-hello.mjs",
     "blog:migrate-articles": "node scripts/migrate-blog-posts-to-articles.mjs",
     "mailpit": "docker compose -f docker-compose.mailpit.yml up",
