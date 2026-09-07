@@ -1,29 +1,71 @@
-# Workflow 06 — Inventaire et suppression contrôlée
+# Workflow 06 — Inventaire et suppression
 
-**Priorité :** P1 · **Rôles :** administrateur, opérateur (suppression : administrateur)
+## Objectif
+
+Gérer les articles physiques (`colis`, `vehicule`, `marchandise`), leur emplacement et leur association éventuelle à un conteneur. Documenter sans masquer que la suppression est actuellement immédiate.
+
+## Acteurs et autorisations
+
+| Acteur | Droit |
+| --- | --- |
+| Opérateur / administrateur actif | Lire, créer, modifier et supprimer les articles d'inventaire. |
+| Visiteur | Aucun accès à l'inventaire. |
+
+## Points d'entrée
+
+- `GET, POST /api/inventory`; `GET, PUT, DELETE /api/inventory/[id]`
+- `POST /api/qr/scan` pour le scan de colis, pas pour la création d'un article d'inventaire.
+
+## Déroulé
+
+1. L'équipe liste les articles, avec recherche par référence/description/client et filtres type/statut.
+2. Le serveur enrichit la lecture du code conteneur lorsque `container_id` est présent.
+3. À la création, les données sont insérées telles que reçues, sauf une chaîne vide de conteneur convertie en `null`.
+4. À la modification, seuls type, référence, description, client, statut, localisation, poids, dimensions, valeur et conteneur sont retenus.
+5. La suppression exécute un `DELETE` direct sur l'identifiant fourni.
+
+## Diagramme principal
 
 ```mermaid
 flowchart TD
-    A[Administrateur ou opérateur] --> B[Rechercher ou filtrer un article]
-    B --> C{Article existant ?}
-    C -- Non --> D["Créer l'article<br/>ou préremplir par scan QR"]
-    C -- Oui --> E[Ouvrir et modifier l'article]
-    D --> F[Enregistrer l'article]
-    E --> F
-    F --> G[Associer l'article à un conteneur si nécessaire]
-    G --> H{Suppression demandée ?}
-    H -- Non --> I[Conserver l'article et son historique]
-    H -- Oui --> J{"Suppression autorisée<br/>et sans conséquence bloquante ?"}
-    J -- Non --> K[Proposer archivage ou désactivation]
-    J -- Oui --> L[Afficher une confirmation explicite]
-    L --> M{Confirmer la suppression ?}
-    M -- Non --> I
-    M -- Oui --> N[Supprimer et tracer l'opération]
-
-    classDef internal fill:#dbeafe,stroke:#2563eb,color:#111827;
-    classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
-    class A,B,D,E,F,G,I,K,L,N internal;
-    class C,H,J,M control;
+  A[Équipe interne] --> B{Nouvel article ?}
+  B -- oui --> C[POST inventaire]
+  B -- non --> D[GET et filtres]
+  D --> E[PUT champs autorisés]
+  C --> F[(inventory)]
+  E --> F
+  F --> G{Conteneur associé ?}
+  G -- oui --> H[Retourner aussi son code]
+  A --> I[DELETE article]
+  I --> J[Suppression physique]
 ```
 
-Ce même contrôle s'applique aux collaborateurs et aux contenus de blog, suivant leurs règles d'autorisation.
+## Règles métier et sécurité
+
+- Valeurs contrôlées par la base : types `colis`, `vehicule`, `marchandise`; statuts `en_stock`, `en_transit`, `livre`, `en_attente`.
+- Référence unique, description, client, statut, localisation et valeur requis par le schéma SQL.
+- Le handler de création ne valide pas explicitement ces champs : la contrainte SQL devient le dernier rempart.
+- Toute opération requiert une session interne active; l'autorisation n'est pas restreinte à l'administrateur.
+
+## Effets de bord
+
+- Écriture ou suppression dans `inventory`; mise à jour automatique de `updated_at` par trigger SQL.
+- Aucun audit métier, e-mail, SMS ou événement de suivi n'est produit par les routes d'inventaire.
+
+## Échecs et cas limites
+
+- La suppression n'est ni archivage, ni réversible, ni confirmée côté serveur. Elle est également autorisée à l'opérateur. **À confirmer comme règle métier.**
+- Le scan QR agit sur `packages`, non sur `inventory`; l'affirmation d'un préremplissage d'inventaire par scan n'est pas étayée par les routes.
+- Une valeur de type/statut non valide est rejetée par la base et devient actuellement une erreur générique 500 de l'API.
+
+## Tests de recette
+
+1. Créer un article de chaque type/statut et vérifier le filtrage et le code conteneur enrichi.
+2. Modifier un champ autorisé puis un champ non autorisé : vérifier que le second est ignoré.
+3. Tenter une référence dupliquée et un statut invalide : contrôler que la création échoue sans nouvelle ligne.
+4. En environnement de test, supprimer un article avec compte opérateur et vérifier le caractère physique de l'opération.
+
+## Références code
+
+- `app/api/inventory/route.ts`, `app/api/inventory/[id]/route.ts`, `app/api/qr/scan/route.ts`
+- `lib/staff-api-auth.ts`, `supabase/migrations/0001_initial_schema.sql`
