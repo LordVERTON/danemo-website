@@ -14,7 +14,7 @@ DANEMO propose une gamme complète de services logistiques :
 
 ## 🚀 Technologies utilisées
 
-- **Framework** : Next.js 15 (App Router)
+- **Framework** : Next.js 16 (App Router)
 - **Langage** : TypeScript
 - **Styling** : Tailwind CSS v4
 - **UI Components** : shadcn/ui avec Radix UI
@@ -61,7 +61,17 @@ Créez un fichier `.env.local` à la racine du projet avec vos clés Supabase :
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+AUTH_SECRET=replace-with-a-long-random-value
 ```
+
+Ne versionnez jamais ce fichier ni un mot de passe de démonstration. Les comptes
+synthétiques créés par `supabase/seed.sql` n'ont volontairement pas de mot de
+passe connu ; créez un accès local depuis Supabase Studio ou configurez les
+variables de seed uniquement dans votre environnement de développement.
+La route de seed protégée attend `ADMIN_SEED_KEY`, `DANEMO_DEMO_ADMIN_EMAIL`,
+`DANEMO_DEMO_ADMIN_PASSWORD`, `DANEMO_DEMO_OPERATOR_EMAIL` et
+`DANEMO_DEMO_OPERATOR_PASSWORD` au runtime ; aucune de ces valeurs ne doit être
+placée dans un fichier suivi par Git.
 
 ### 4. Configuration de la base de données
 
@@ -180,9 +190,8 @@ CREATE POLICY "Inventory is insertable by authenticated users" ON inventory FOR 
 CREATE POLICY "Inventory is updatable by authenticated users" ON inventory FOR UPDATE USING (true);
 CREATE POLICY "Inventory is deletable by authenticated users" ON inventory FOR DELETE USING (true);
 
--- Insérer un utilisateur admin par défaut
-INSERT INTO admin_users (email, password_hash, name, role) 
-VALUES ('admin@danemo.be', '$2a$10$rQZ8K9vL2mN3pO4qR5sT6uV7wX8yZ9aB0cD1eF2gH3iJ4kL5mN6oP7qR8sT9uV', 'Admin DANEMO', 'admin');
+-- Créez les comptes d'administration via Supabase Auth.
+-- Ne stockez jamais de mot de passe ou d'empreinte réutilisable dans ce document.
 ```
 
 ### 5. Lancer le serveur de développement

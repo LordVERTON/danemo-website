@@ -75,36 +75,26 @@ export async function sendEmail(to: string, subject: string, html: string) {
   }
 
   const resendKey = process.env.RESEND_API_KEY
-  console.info('[notifications] RESEND_API_KEY exists:', Boolean(resendKey))
   if (resendKey) {
+    console.info('[notifications] Resend configured')
     const resend = new Resend(resendKey)
     // `from` must use a domain verified in Resend (https://resend.com/domains).
     // Default matches the Danemo Resend domain; override with RESEND_FROM if needed.
     const from =
       process.env.RESEND_FROM?.trim() ||
       'Danemo <noreply@danemo.app>'
-    console.info('[notifications] RESEND_FROM:', from)
     if (!isDanemoAppSender(from)) {
-      console.warn(
-        '[notifications] RESEND_FROM should use a verified @danemo.app sender. Current value:',
-        from,
-      )
+      console.warn('[notifications] RESEND_FROM should use a verified @danemo.app sender')
     }
     try {
       const { error } = await resend.emails.send({ from, to, subject, html })
       if (error) {
-        const msg =
-          typeof error === 'object' && error && 'message' in error
-            ? String((error as { message: string }).message)
-            : String(error)
-        console.error('[notifications] Resend API returned an error:', msg)
-        throw new Error(msg)
+        console.error('[notifications] Resend API returned an error')
+        throw new Error('Email delivery failed')
       }
-    } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : 'Unknown Resend transport error'
-      console.error('[notifications] Resend request failed before API response:', msg)
-      throw err
+    } catch {
+      console.error('[notifications] Resend delivery failed')
+      throw new Error('Email delivery failed')
     }
     return
   }
@@ -116,5 +106,10 @@ export async function sendEmail(to: string, subject: string, html: string) {
     secure: cfg.port === 465,
     auth: { user: cfg.user, pass: cfg.pass },
   })
-  await transporter.sendMail({ from: cfg.from, to, subject, html })
+  try {
+    await transporter.sendMail({ from: cfg.from, to, subject, html })
+  } catch {
+    console.error('[notifications] SMTP delivery failed')
+    throw new Error('Email delivery failed')
+  }
 }

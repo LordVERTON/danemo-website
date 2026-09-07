@@ -2,20 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireDevelopmentSeedAccess } from '@/lib/admin-seed-auth'
 
+function getConfiguredSeedUsers() {
+  const adminEmail = process.env.DANEMO_DEMO_ADMIN_EMAIL?.trim()
+  const adminPassword = process.env.DANEMO_DEMO_ADMIN_PASSWORD
+  const operatorEmail = process.env.DANEMO_DEMO_OPERATOR_EMAIL?.trim()
+  const operatorPassword = process.env.DANEMO_DEMO_OPERATOR_PASSWORD
+
+  if (!adminEmail || !adminPassword || !operatorEmail || !operatorPassword) {
+    return null
+  }
+
+  return [
+    { email: adminEmail, password: adminPassword, user_metadata: { role: 'admin' } },
+    { email: operatorEmail, password: operatorPassword, user_metadata: { role: 'operator' } },
+  ]
+}
+
 export async function POST(request: NextRequest) {
   const authError = await requireDevelopmentSeedAccess(request)
   if (authError) return authError
 
   try {
-    // Simple protection: require a header that matches an env key
     if (!supabaseAdmin) {
       return NextResponse.json({ success: false, error: 'Supabase admin not initialized' }, { status: 500 })
     }
 
-    const usersToCreate = [
-      { email: 'admin@danemo.be', password: 'admin123', user_metadata: { role: 'admin' } },
-      { email: 'operator@danemo.be', password: 'operator123', user_metadata: { role: 'operator' } },
-    ]
+    const usersToCreate = getConfiguredSeedUsers()
+    if (!usersToCreate) {
+      return NextResponse.json(
+        { success: false, error: 'La configuration des comptes de démonstration est incomplète.' },
+        { status: 503 },
+      )
+    }
 
     const results: Array<{ email: string; ok: boolean; message?: string; id?: string }> = []
 
@@ -33,7 +51,8 @@ export async function POST(request: NextRequest) {
           results.push({ email: u.email, ok: true, message: 'Already exists' })
           continue
         }
-        results.push({ email: u.email, ok: false, message: msg })
+        console.error('[seed-users] Unable to create a demo user')
+        results.push({ email: u.email, ok: false, message: 'Unable to create user' })
       } else {
         results.push({ email: u.email, ok: true, id: data.user?.id })
       }
@@ -41,9 +60,10 @@ export async function POST(request: NextRequest) {
 
     const allOk = results.every(r => r.ok)
     return NextResponse.json({ success: allOk, results }, { status: allOk ? 200 : 207 })
-  } catch (error: any) {
+  } catch {
+    console.error('[seed-users] Unexpected seed failure')
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to seed users' },
+      { success: false, error: 'Failed to seed users' },
       { status: 500 }
     )
   }

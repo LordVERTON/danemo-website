@@ -2,8 +2,9 @@
 -- Foreign keys: customers → containers → orders; optional packages / inventory / tracking.
 
 -- ---------------------------------------------------------------------------
--- Auth + employees (admin / operators) — mêmes identifiants que /api/admin/seed-users
--- Mots de passe : admin123 (admin), operator123 (opérateurs). Uniquement pour le dev local.
+-- Auth + employees (admin / operators) — comptes synthétiques sans mot de passe connu.
+-- Les empreintes de mot de passe sont aléatoires à chaque reset. Pour créer un accès
+-- local, configurez un mot de passe dans Supabase Studio ; ne le mettez jamais dans Git.
 -- ---------------------------------------------------------------------------
 -- pgcrypto est déjà créé dans les migrations ; fonctions typiquement dans le schéma extensions.
 -- Accès local en lecture seule nécessaire à la homepage de développement.
@@ -23,8 +24,8 @@ DECLARE
   v_admin_id   UUID := 'e1111111-1111-4111-8111-111111111101';
   v_op1_id     UUID := 'e2222222-2222-4222-8222-222222222202';
   v_op2_id     UUID := 'e3333333-3333-4333-8333-333333333303';
-  v_pw_admin   TEXT := extensions.crypt('admin123', extensions.gen_salt('bf'));
-  v_pw_oper    TEXT := extensions.crypt('operator123', extensions.gen_salt('bf'));
+  v_pw_admin   TEXT := extensions.crypt(extensions.gen_random_uuid()::text, extensions.gen_salt('bf'));
+  v_pw_oper    TEXT := extensions.crypt(extensions.gen_random_uuid()::text, extensions.gen_salt('bf'));
 BEGIN
   -- Admin
   INSERT INTO auth.users (
@@ -36,11 +37,11 @@ BEGIN
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'admin@danemo.be',
+    'admin@demo.danemo.test',
     v_pw_admin,
     NOW(),
     '{"provider":"email","providers":["email"],"role":"admin"}'::jsonb,
-    '{}'::jsonb,
+    '{"name":"Administrateur démo","role":"admin"}'::jsonb,
     NOW(),
     NOW()
   )
@@ -60,7 +61,7 @@ BEGIN
   VALUES (
     v_admin_id,
     v_admin_id,
-    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@danemo.be'),
+    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@demo.danemo.test'),
     'email',
     v_admin_id::text,
     NOW(),
@@ -79,11 +80,11 @@ BEGIN
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'operator@danemo.be',
+    'operator@demo.danemo.test',
     v_pw_oper,
     NOW(),
     '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
-    '{}'::jsonb,
+    '{"name":"Opérateur démo","role":"operator"}'::jsonb,
     NOW(),
     NOW()
   )
@@ -103,7 +104,7 @@ BEGIN
   VALUES (
     v_op1_id,
     v_op1_id,
-    jsonb_build_object('sub', v_op1_id::text, 'email', 'operator@danemo.be'),
+    jsonb_build_object('sub', v_op1_id::text, 'email', 'operator@demo.danemo.test'),
     'email',
     v_op1_id::text,
     NOW(),
@@ -122,11 +123,11 @@ BEGIN
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'operator2@danemo.be',
+    'operator2@demo.danemo.test',
     v_pw_oper,
     NOW(),
     '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
-    '{}'::jsonb,
+    '{"name":"Opérateur démo 2","role":"operator"}'::jsonb,
     NOW(),
     NOW()
   )
@@ -146,7 +147,7 @@ BEGIN
   VALUES (
     v_op2_id,
     v_op2_id,
-    jsonb_build_object('sub', v_op2_id::text, 'email', 'operator2@danemo.be'),
+    jsonb_build_object('sub', v_op2_id::text, 'email', 'operator2@demo.danemo.test'),
     'email',
     v_op2_id::text,
     NOW(),
@@ -158,9 +159,9 @@ END $$;
 
 INSERT INTO public.employees (user_id, name, email, role, salary, position, hire_date, is_active)
 VALUES
-  ('e1111111-1111-4111-8111-111111111101', 'Administrateur démo', 'admin@danemo.be', 'admin', 5000.00, 'Administrateur', DATE '2024-01-15', TRUE),
-  ('e2222222-2222-4222-8222-222222222202', 'Opérateur démo', 'operator@danemo.be', 'operator', 3200.00, 'Opérateur logistique', DATE '2024-01-15', TRUE),
-  ('e3333333-3333-4333-8333-333333333303', 'Opérateur démo 2', 'operator2@danemo.be', 'operator', 3100.00, 'Opérateur logistique', DATE '2024-03-01', TRUE);
+  ('e1111111-1111-4111-8111-111111111101', 'Administrateur démo', 'admin@demo.danemo.test', 'admin', 5000.00, 'Administrateur', DATE '2024-01-15', TRUE),
+  ('e2222222-2222-4222-8222-222222222202', 'Opérateur démo', 'operator@demo.danemo.test', 'operator', 3200.00, 'Opérateur logistique', DATE '2024-01-15', TRUE),
+  ('e3333333-3333-4333-8333-333333333303', 'Opérateur démo 2', 'operator2@demo.danemo.test', 'operator', 3100.00, 'Opérateur logistique', DATE '2024-03-01', TRUE);
 
 INSERT INTO public.customers (
   name,
