@@ -9,6 +9,11 @@ export interface MailConfig {
   from: string
 }
 
+export interface SendEmailOptions {
+  cc?: string
+  replyTo?: string
+}
+
 export function getMailConfig(): MailConfig {
   const host = process.env.SMTP_HOST || ''
   const port = Number(process.env.SMTP_PORT || '587')
@@ -48,7 +53,7 @@ function isDanemoAppSender(from: string): boolean {
 }
 
 /** SMTP vers Mailpit (aucune auth par défaut). Prioritaire en dev si MAILPIT_ENABLED. */
-async function sendViaMailpit(to: string, subject: string, html: string) {
+async function sendViaMailpit(to: string, subject: string, html: string, options: SendEmailOptions) {
   const host = process.env.MAILPIT_SMTP_HOST || '127.0.0.1'
   const port = Number(process.env.MAILPIT_SMTP_PORT || '1025')
   const transporter = nodemailer.createTransport({
@@ -59,7 +64,7 @@ async function sendViaMailpit(to: string, subject: string, html: string) {
   const from =
     process.env.MAILPIT_FROM?.trim() ||
     'Danemo (dev) <dev@localhost>'
-  await transporter.sendMail({ from, to, subject, html })
+  await transporter.sendMail({ from, to, subject, html, cc: options.cc, replyTo: options.replyTo })
 }
 
 /**
@@ -68,9 +73,9 @@ async function sendViaMailpit(to: string, subject: string, html: string) {
  * 2. Sinon Resend si RESEND_API_KEY
  * 3. Sinon SMTP classique (SMTP_HOST / SMTP_USER / SMTP_PASS)
  */
-export async function sendEmail(to: string, subject: string, html: string) {
+export async function sendEmail(to: string, subject: string, html: string, options: SendEmailOptions = {}) {
   if (isMailpitEnabled()) {
-    await sendViaMailpit(to, subject, html)
+    await sendViaMailpit(to, subject, html, options)
     return
   }
 
@@ -87,7 +92,14 @@ export async function sendEmail(to: string, subject: string, html: string) {
       console.warn('[notifications] RESEND_FROM should use a verified @danemo.app sender')
     }
     try {
-      const { error } = await resend.emails.send({ from, to, subject, html })
+      const { error } = await resend.emails.send({
+        from,
+        to,
+        subject,
+        html,
+        ...(options.cc ? { cc: options.cc } : {}),
+        ...(options.replyTo ? { replyTo: options.replyTo } : {}),
+      })
       if (error) {
         console.error('[notifications] Resend API returned an error')
         throw new Error('Email delivery failed')
@@ -107,7 +119,14 @@ export async function sendEmail(to: string, subject: string, html: string) {
     auth: { user: cfg.user, pass: cfg.pass },
   })
   try {
-    await transporter.sendMail({ from: cfg.from, to, subject, html })
+    await transporter.sendMail({
+      from: cfg.from,
+      to,
+      subject,
+      html,
+      cc: options.cc,
+      replyTo: options.replyTo,
+    })
   } catch {
     console.error('[notifications] SMTP delivery failed')
     throw new Error('Email delivery failed')

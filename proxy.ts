@@ -39,6 +39,10 @@ function getRateLimitPolicy(pathname: string, method: string, isPublicTrackingRo
     return { name: "self-register", limit: 5, windowMs: 15 * 60 * 1000 }
   }
 
+  if (pathname === "/api/public/contact" && method === "POST") {
+    return { name: "contact", limit: 5, windowMs: 15 * 60 * 1000 }
+  }
+
   if (isPublicTrackingRoute) {
     return { name: "public-tracking", limit: 60, windowMs: 60 * 1000 }
   }
