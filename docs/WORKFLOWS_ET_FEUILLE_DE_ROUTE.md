@@ -85,6 +85,70 @@ Les schémas Mermaid sont séparés par domaine dans le dossier `docs/workflows/
 
 ### Priorité haute — expérience mobile et préparation des vidéos
 
+### Roadmap UX/UI opérateurs — parcours d'administration
+
+Cette feuille de route complète les chantiers mobile ci-dessous. Elle priorise le travail quotidien d'un opérateur, sur téléphone **et** poste fixe, plutôt qu'une amélioration écran par écran. L'objectif est de réduire le nombre de recherches, de changements de contexte et de saisies répétées nécessaires pour enregistrer une opération fiable.
+
+#### Principes de conception à conserver
+
+- L'opérateur doit pouvoir partir d'une référence, d'un client ou d'un QR code et atteindre la même fiche opérationnelle sans connaître l'organisation interne des rubriques.
+- Une action métier doit expliciter son impact : statut modifié, client concerné, conteneur lié et notification éventuellement déclenchée.
+- Les listes servent à trouver et prioriser ; la fiche détail sert à agir. Éviter de mettre une action irréversible ou une mise à jour complexe directement dans une ligne de tableau.
+- Les rôles restent appliqués côté serveur. L'interface doit aussi réduire la charge cognitive en mettant en avant les fonctions opérationnelles et en reléguant les contenus éditoriaux dans « Plus ».
+- Conserver la continuité de contexte : retour à la liste avec recherche et filtres conservés, brouillon préservé après une erreur et lien retour vers l'objet d'origine après une action transversale.
+
+#### Constats utilisés pour la priorisation — 10/09/2026
+
+- Le point d'entrée « Clients » concentre déjà la création de commande, le règlement et les documents, mais les actions sont réparties entre liste, modales et fiche client ; une commande n'a pas encore de fiche opérationnelle unifiée.
+- Le tableau de bord affiche des compteurs et des tuiles de navigation, sans file de travail ni action immédiate pour traiter une commande, un scan ou une arrivée proche.
+- Le suivi et le scanner sont deux parcours voisins mais séparés : le scanner demande actuellement le nouveau statut avant d'avoir reconnu l'objet ; la suite du travail après un scan réussi n'est pas proposée.
+- La mise à jour d'un conteneur peut notifier des clients ; l'opérateur doit donc voir avant validation le changement, les commandes concernées et le résultat de l'envoi.
+- Les vues client et suivi disposent de cartes mobiles, tandis que les conteneurs, l'inventaire et la page générale des commandes conservent des logiques de tableau/formulaire plus denses. La page « Commandes » n'est pas exposée dans la navigation principale : elle ne doit pas devenir un deuxième flux concurrent tant que son rôle n'est pas défini.
+
+#### P0 — rendre les opérations fréquentes rapides et sûres
+
+| Chantier | Parcours cible | Évolution UX/UI attendue | Critère de recette |
+| --- | --- | --- | --- |
+| 1. Accueil opérateur orienté actions | Connexion → début de journée | Remplacer les seules tuiles de navigation par une file « À traiter » : commandes sans événement récent, paiements incomplets, départs/arrivées proches et erreurs à reprendre. Ajouter trois actions persistantes : rechercher, scanner, créer une commande. | Un opérateur identifie et ouvre une prochaine tâche en moins de 10 s, sans parcourir plusieurs rubriques. Les données affichées sont filtrées selon son rôle. |
+| 2. Recherche opérationnelle unique | Référence de commande, QR, client ou code conteneur → action | Ajouter une recherche globale accessible depuis l'en-tête et l'accueil, avec résultats groupés (client, commande, conteneur) et accès au scanner. Conserver la recherche locale et les filtres dans les listes. | Une référence exacte mène à l'objet en un seul résultat ; une recherche incomplète affiche un état vide utile, sans perdre la requête. |
+| 3. Fiche opérationnelle de commande | Client → créer/consulter commande → suivi, règlement ou documents | Faire de la commande le pivot : identité client, trajet, statut, conteneur, paiement, QR, documents et historique dans une fiche avec actions principales visibles. Depuis la fiche client, « Nouvelle commande » doit ouvrir ce contexte et revenir à la fiche après enregistrement. Ne pas créer de second parcours parallèle dans `/admin/orders` avant décision produit. | Création, association à un conteneur, ajout d'événement et accès au QR réalisables sans rechercher de nouveau le client. Chaque action ramène à un résultat compréhensible. |
+| 4. Mise à jour de suivi guidée | Commande → nouvel événement | Préremplir le statut courant, la date et l'opérateur ; afficher l'historique récent et distinguer « ajouter une note » de « changer le statut ». Si le statut change, présenter un court récapitulatif avant enregistrement. | Un événement sans changement de statut ne modifie pas la commande ; un changement affiche l'ancien et le nouveau statut, puis une confirmation avec lien vers le suivi public. |
+| 5. Scan d'abord, décision ensuite | Ouvrir caméra/saisir code → reconnaître → confirmer | Scinder le flux QR en deux étapes : identification de la commande, puis proposition des seules actions et statuts applicables. Après validation, afficher la commande, le statut enregistré, l'heure et des suites explicites (« Ajouter un événement », « Scanner le suivant », « Ouvrir la fiche »). | Aucun statut invalide n'est proposé ; refus caméra, code invalide et erreur réseau ont une solution de secours claire. |
+| 6. Statut conteneur avec impact maîtrisé | Conteneur → modifier statut → notifier | Présenter les transitions autorisées après validation métier. Avant confirmation, montrer statut courant/nouveau statut, ETA/ETD, nombre de commandes et destinataires concernés ; après enregistrement, distinguer mise à jour réussie et résultat de notification asynchrone. | L'opérateur comprend ce qui sera notifié avant validation. Une erreur d'envoi n'est jamais interprétée comme un échec de la mise à jour du conteneur. |
+| 7. Sécurité de saisie et actions destructives | Formulaires, règlement, suppression | Ajouter validation en ligne, résumé avant les actions sensibles et états de progression. Pour l'inventaire, remplacer la suppression immédiate par archivage ou, à défaut, une confirmation contextualisée avec conséquence et possibilité d'annuler dans la fenêtre autorisée. | Les erreurs serveur sont rattachées au champ ou expliquées dans le contexte. Aucune suppression ne peut être déclenchée par erreur depuis une liste dense. |
+
+**Séquence P0 recommandée :** 1) accueil + recherche, 2) fiche commande et suivi, 3) scanner, 4) conteneur et garde-fous de saisie. Les validations métier (statuts et transitions, suppression/archivage, responsabilités de notification) restent un prérequis fonctionnel ; elles ne doivent pas être inventées uniquement dans l'interface.
+
+#### P1 — fiabiliser le travail récurrent et le passage mobile/desktop
+
+| Chantier | Évolution UX/UI attendue | Critère de recette |
+| --- | --- | --- |
+| Listes cohérentes | Unifier recherche, filtres, tri, compteur de résultats, filtres actifs effaçables, pagination ou chargement progressif et état vide actionnable. Conserver l'état dans l'URL pour partager/reprendre une recherche. | Client, suivi, conteneur et inventaire ont la même grammaire de liste et supportent retour navigateur sans perte de contexte. |
+| Inventaire orienté terrain | Vue carte mobile avec référence, type, statut, emplacement et conteneur ; action explicite pour modifier, affecter ou scanner. Supprimer la duplication de recherche entre en-tête et panneau de filtres. | Recherche, filtre et mise à jour d'un article possibles à 320 px sans défilement horizontal. |
+| Formulaires progressifs | Regrouper les champs par intention (client, expédition, destinataire, conteneur, documents) et afficher les champs conditionnels au bon moment. Sauvegarder un brouillon local pour les formulaires longs. | Le formulaire de commande peut être interrompu puis repris sans ressaisie ; les champs obligatoires et le prochain bouton à utiliser restent visibles. |
+| États et retours homogènes | Standardiser chargement, vide, erreur, succès et erreur partielle ; employer des messages métier et une prochaine action, pas seulement une notification éphémère. | Chaque mutation P0 produit un état persistant ou consultable après changement de page. |
+| Accessibilité et efficacité | Raccourcis clavier limités aux actions sûres (recherche, scanner), ordre de tabulation, focus, contraste, libellés, annonces d'état et respect de « réduire les animations ». | Les flux P0 se réalisent entièrement au clavier ; les contrôles fréquents respectent 44 px au tactile. |
+
+#### P2 — pilotage, apprentissage et amélioration continue
+
+- Ajouter une chronologie d'activité par commande/conteneur (actions, changements, notifications) lisible pour l'opérateur et compatible avec la piste d'audit métier.
+- Afficher des alertes exploitables, avec propriétaire et échéance : ETA dépassée/proche, commande sans suivi, information client manquante, paiement incomplet, échec de notification.
+- Prévoir des exports qui respectent les filtres actifs et indiquent clairement les données incluses.
+- Intégrer une aide contextuelle courte et des liens vers les procédures de formation depuis les écrans P0.
+- Instrumenter les parcours avec des indicateurs non sensibles : durée jusqu'à création de commande, taux d'erreur de saisie, scans échoués, abandons de formulaire, délai de mise à jour de suivi. Revoir ces mesures avec l'équipe opérationnelle chaque mois.
+
+#### Mesure de succès et gouvernance
+
+Avant chaque chantier, documenter le scénario opérateur, le rôle, la donnée de démonstration et le résultat attendu. Après livraison, réaliser une recette sur 360 px, 390 px et desktop, puis une observation de 3 à 5 opérateurs sur les cinq parcours P0. Les cibles initiales sont :
+
+- créer une commande complète en moins de 4 minutes ;
+- enregistrer un scan ou un événement de suivi en moins de 45 secondes ;
+- retrouver une commande connue en moins de 20 secondes ;
+- aucun abandon causé par une validation incompréhensible ou une navigation perdue dans les parcours P0 ;
+- zéro suppression involontaire remontée durant la phase pilote.
+
+Les seuils sont des objectifs de départ à recalibrer après une première mesure terrain, et non des règles métier.
+
 Cette étape conditionne l'enregistrement des vidéos de formation : les parcours doivent être lisibles, réalisables au tactile et filmés avec des données fictives. La recette couvre au minimum les largeurs 320 px, 360 px et 390 px en portrait, puis une vérification sur un iPhone et un appareil Android réels.
 
 #### Constat UX/UI de la plateforme — 04/09/2026
