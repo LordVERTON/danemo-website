@@ -20,14 +20,14 @@ Pour chaque workflow, la future procédure doit préciser :
 | P0 | Connexion et rôles | Administrateur, opérateur | Connexion, déconnexion, accès selon le rôle et utilisation de l'administration. |
 | P0 | Création d'un client | Administrateur, opérateur | Création depuis l'administration, informations client, statut, coordonnées et vérification de la fiche créée. |
 | P0 | Création d'une commande pour un client | Administrateur, opérateur | Création depuis la fiche client ou la gestion des commandes, expéditeur, destinataire, service, colis, valeurs, dates, et association éventuelle à un conteneur. |
-| P0 | Consultation et mise à jour d'une fiche client | Administrateur, opérateur | Recherche, filtres, modification du client, commandes liées, historique et navigation vers la fiche détaillée. |
+| P0 | Consultation et mise à jour d'une fiche client | Administrateur, opérateur | Recherche, filtres, modification du client, commandes liées, règlements, factures PDF par commande ou récapitulative, étiquette QR et navigation vers la fiche détaillée. |
 | P0 | Gestion des règlements | Administrateur, opérateur | Ajout d'un règlement, méthode de paiement, référence, montant, solde/progression de paiement et correction d'une saisie. |
 | P0 | Création et gestion d'un conteneur | Administrateur, opérateur | Code conteneur, navire, ports, ETD/ETA, client lié, modification des informations et association aux opérations. |
 | P0 | Changement de statut d'un conteneur | Administrateur, opérateur | Sélection du statut, enregistrement, notification automatique des clients liés et contrôle du résultat. |
 | P0 | Suivi d'une commande | Administrateur, opérateur | Recherche/filtrage, ajout d'événements de suivi, mise à jour du statut et consultation de l'historique. |
 | P0 | QR code et suivi public | Client public, équipe interne | Génération d'un QR code, impression/copie, scan par l'équipe, accès public au suivi et lecture des informations disponibles. |
 | P1 | Inscription client depuis le site public | Client public | Formulaire via le QR code, choix des articles/prestations, informations d'expédition et du destinataire, confirmation et création des données côté administration. |
-| P1 | Gestion de l'inventaire | Administrateur, opérateur | Création, recherche, filtres, modification, affectation à un conteneur et scan QR pour préremplir un article. |
+| P1 | Gestion de l'inventaire | Administrateur, opérateur | Création, recherche, filtres, modification et affectation à un conteneur. Le scan QR concerne les commandes, pas l’inventaire. |
 | P1 | Suppression d'éléments | Administrateur | Éléments réellement supprimables (inventaire, collaborateurs, contenus de blog), confirmation, conséquences, contrôles avant suppression et alternative de désactivation lorsque disponible. |
 | P1 | Gestion des collaborateurs | Administrateur | Création de compte, rôle, activation/désactivation, modification, activités et bonnes pratiques d'attribution des accès. |
 | P1 | Messagerie et notifications | Administrateur | Envoi de messages, modèles, destinataires, suivi des erreurs d'envoi et notifications de commandes/conteneurs. |

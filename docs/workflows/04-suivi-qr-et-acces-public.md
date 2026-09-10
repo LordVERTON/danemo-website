@@ -25,6 +25,7 @@ Permettre à l'équipe de tracer une commande et à un visiteur de consulter un 
 4. L'équipe ajoute un événement avec statut, lieu, description, opérateur et date. Un statut fourni différent met aussi à jour la commande et génère un audit.
 5. Le `PATCH` d'une commande peut retourner le QR existant ou en générer un unique, jusqu'à dix essais.
 6. Un scan QR résout d'abord une commande par QR ou numéro de commande, met à jour son statut si nécessaire, puis ajoute un événement de suivi relié à son identifiant.
+7. Depuis la fiche client, l’action **Étiquette QR** produit un PDF A6 avec le QR de suivi opérateur, le client, le destinataire, le trajet, le service et le statut de la commande.
 
 ## Diagramme principal
 
@@ -66,9 +67,10 @@ flowchart TD
 2. Ajouter un événement sans statut puis avec statut : vérifier respectivement l'absence puis la présence de mise à jour de commande et d'audit.
 3. Vérifier l'accès à `GET /tracking` par UUID sans session (401) puis par numéro de commande (résultat public).
 4. Scanner un QR de commande en environnement isolé et contrôler le statut, l'événement lié au bon `order_id` et l'écriture d'audit.
+5. Générer une étiquette QR depuis la fiche client et contrôler que son QR ouvre `/admin/qr` avec le code de commande prérempli.
 
 ## Références code
 
 - `app/api/orders/search/route.ts`, `app/api/orders/[id]/tracking/route.ts`, `app/api/orders/[id]/route.ts`
-- `app/api/qr/scan/route.ts`, `proxy.ts`
+- `app/api/qr/scan/route.ts`, `app/admin/clients/[id]/page.tsx`, `lib/client-documents.ts`, `proxy.ts`
 - `lib/database.ts`, `supabase/migrations/0001_initial_schema.sql`

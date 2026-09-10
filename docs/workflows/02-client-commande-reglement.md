@@ -2,13 +2,13 @@
 
 ## Objectif
 
-Gérer le client, sa commande logistique, ses règlements et une facture brouillon éventuelle. Toutes ces opérations sont accessibles aux deux rôles internes.
+Gérer le client, sa commande logistique, ses règlements et les documents opérateur associés : facture PDF par commande, facture récapitulative et étiquette QR. Toutes ces opérations sont accessibles aux deux rôles internes.
 
 ## Acteurs et autorisations
 
 | Acteur | Droits |
 | --- | --- |
-| Opérateur / administrateur actif | Lire, créer, modifier et supprimer clients/commandes; ajouter des règlements; créer une facture brouillon. |
+| Opérateur / administrateur actif | Lire, créer, modifier et supprimer clients/commandes; ajouter des règlements; générer les factures PDF et l’étiquette QR. |
 | Visiteur | Aucun accès aux fiches ; seulement inscription et suivi public, documentés séparément. |
 
 ## Points d'entrée
@@ -24,7 +24,9 @@ Gérer le client, sa commande logistique, ses règlements et une facture brouill
 3. Une commande sans `customer_id` cherche d'abord le client par e-mail, puis crée une fiche active si nécessaire.
 4. La commande commence à `pending`. Elle peut être affectée à un conteneur et recevoir des événements de suivi.
 5. Les règlements sont enregistrés au niveau client, sans affectation à une commande. La fiche retourne un résumé calculé à partir des commandes et paiements.
-6. Une facture brouillon peut être créée une seule fois par commande, à partir de la valeur de celle-ci et d'un taux de taxe de 0 à 100.
+6. L’action **Facture PDF** de la fiche client crée une facture brouillon si la commande n’en possède pas encore, puis génère le PDF. Si la facture existe déjà, elle régénère directement le PDF avec le même numéro, sans renvoyer l’opérateur vers une erreur de doublon.
+7. L’action **Générer la facture** de la fiche crée un PDF récapitulatif de toutes les commandes du client. Chaque commande devient une ligne et les règlements sont répartis par ancienneté pour afficher le total réglé et le solde ; ce document récapitulatif n’insère pas de nouvelle facture en base.
+8. L’action **Étiquette QR** produit une étiquette A6 contenant les coordonnées utiles du client et du destinataire, le trajet, le service, le statut et le QR destiné au scanner opérateur.
 
 ## Diagramme principal
 
@@ -38,10 +40,12 @@ flowchart LR
   E --> F[Numéro de commande et QR attribués]
   F --> G[Ajouter règlement client]
   G --> H[Calculer progression]
-  D --> I[Créer facture brouillon pour une commande]
+  D --> I[Facture PDF pour une commande]
   I --> J{Facture déjà présente ?}
-  J -- non --> K[Insérer la facture]
-  J -- oui --> L[Refus 409]
+  J -- non --> K[Insérer la facture puis générer le PDF]
+  J -- oui --> L[Régénérer le PDF existant]
+  D --> M[Générer la facture récapitulative]
+  M --> N[Une ligne par commande et répartition des règlements]
 ```
 
 ## Règles métier et sécurité
@@ -49,19 +53,21 @@ flowchart LR
 - Statuts client : `active`, `inactive`, `archived`; statuts commande : `pending`, `confirmed`, `in_progress`, `completed`, `cancelled`.
 - Services autorisés à la création manuelle : fret maritime/aérien, déménagement, dédouanement, négoce, colis.
 - Le règlement est strictement positif, en EUR, daté au format `YYYY-MM-DD`, avec l'un des modes `bank_transfer`, `cash`, `card`, `mobile`, `other`.
-- La facture vérifie l'appartenance de la commande au client, refuse une valeur négative/non numérique et empêche le doublon par commande.
+- La route de création de facture vérifie l'appartenance de la commande au client, refuse une valeur négative/non numérique et empêche le doublon par commande. L’interface contourne ce cas en utilisant la facture existante pour produire le PDF.
+- Les PDF de facture utilisent le générateur commun `generateInvoice`, avec les adresses de facturation/livraison, les lignes de commande, TVA, total, paiements et solde.
 - Les créations, modifications et suppressions de client/commande, ainsi que les paiements, alimentent `business_audit_log` lorsqu'il est disponible.
 
 ## Effets de bord
 
 - Les triggers SQL génèrent un QR de commande, maintiennent le code conteneur et enregistrent les changements de commande dans `order_history`.
 - Une mise à jour de statut de commande via `ordersApi.update` peut déclencher une notification e-mail; l'échec ne doit pas annuler la mise à jour.
-- Le calcul de TVA et le numéro de facture sont des triggers SQL.
+- Le calcul de TVA et le numéro de facture sont des triggers SQL. La facture récapitulative est un export PDF opérateur et ne crée pas de ligne `invoices` supplémentaire.
 
 ## Échecs et cas limites
 
 - Email client dupliqué : la contrainte DB peut refuser la création; l'inscription publique retourne explicitement 409.
 - Un règlement n'est ni modifiable ni supprimable par route dédiée dans le dépôt : une erreur de saisie exige aujourd'hui une correction administrée en dehors de ce flux. **À confirmer.**
+- Un appel direct répété à `POST /api/customers/[id]/invoices` reste refusé avec HTTP 409 ; la réutilisation du PDF est un comportement de la fiche client, pas une modification de ce contrat API.
 - La suppression est physique et peut se propager selon les clés étrangères; elle n'est pas limitée à l'administrateur.
 
 ## Tests de recette
@@ -69,11 +75,14 @@ flowchart LR
 1. Créer client puis commande, contrôler le statut `pending`, le numéro unique et la présence d'un QR.
 2. Créer une commande sans `customer_id` pour un e-mail connu puis inconnu : contrôler réutilisation puis création de fiche.
 3. Ajouter un règlement valide, puis montant nul, date invalide et mode inconnu : contrôler 201 puis 400.
-4. Créer une facture pour une commande du client, puis recommencer : contrôler 201 puis 409.
-5. Vérifier dans `business_audit_log` les événements créés en environnement de test.
+4. Depuis la fiche client, générer une **Facture PDF** deux fois pour la même commande : contrôler que le second clic régénère le PDF avec la même référence, sans erreur visible.
+5. Appeler directement l’API de création de facture deux fois : contrôler 201 puis 409.
+6. Générer la facture récapitulative : contrôler une ligne par commande et des montants réglé/solde cohérents avec la progression affichée sur la fiche.
+7. Générer l’étiquette QR et vérifier que le scan préremplit le code dans le scanner opérateur.
+8. Vérifier dans `business_audit_log` les événements créés en environnement de test.
 
 ## Références code
 
 - `app/api/customers/route.ts`, `app/api/customers/[id]/route.ts`, `app/api/customers/[id]/payments/route.ts`, `app/api/customers/[id]/invoices/route.ts`
-- `app/api/orders/route.ts`, `app/api/orders/[id]/route.ts`, `lib/customer-payment-progress.ts`, `lib/database.ts`, `lib/business-audit.ts`
+- `app/api/orders/route.ts`, `app/api/orders/[id]/route.ts`, `app/admin/clients/[id]/page.tsx`, `lib/customer-payment-progress.ts`, `lib/invoice-utils.ts`, `lib/client-documents.ts`, `lib/database.ts`, `lib/business-audit.ts`
 - `supabase/migrations/0001_initial_schema.sql`, `supabase/migrations/20260902090000_add_customer_payments.sql`
