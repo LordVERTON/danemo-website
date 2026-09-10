@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { utils } from '@/lib/database'
-import { requireAdminApiAccess } from '@/lib/staff-api-auth'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/stats - Récupérer les statistiques des commandes
 export async function GET(request: NextRequest) {
-  const authError = await requireAdminApiAccess(request)
+  const authError = await requireStaffApiAccess(request)
   if (authError) return authError
 
   try {

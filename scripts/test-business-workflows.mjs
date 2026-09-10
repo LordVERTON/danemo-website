@@ -198,7 +198,7 @@ function customerPayload(name, email = null) {
   }
 }
 
-function orderPayload(customerId, containerId, containerCode) {
+function orderPayload(customerId, containerId) {
   return {
     customer_id: customerId,
     client_name: `${marker} Client`,
@@ -221,7 +221,6 @@ function orderPayload(customerId, containerId, containerCode) {
     description: 'Créée par la suite de tests automatisés',
     value: 250,
     container_id: containerId,
-    container_code: containerCode,
     parcels_count: 1,
   }
 }
@@ -306,8 +305,8 @@ async function main() {
     await authenticate(operator, operatorCredentials)
   })
 
-  await run('l’opérateur est bloqué sur les fonctions administrateur', 'opérateur', async () => {
-    await expectDenied(operator, '/api/stats', 'GET', undefined, 403)
+  await run('l’opérateur lit les volumes et reste bloqué sur les fonctions administrateur', 'opérateur', async () => {
+    await expectSuccess(operator, '/api/stats')
     await expectDenied(operator, '/api/employees', 'GET', undefined, 403)
     await expectDenied(operator, '/api/admin/messages/send?mode=all', 'GET', undefined, 403)
     await expectDenied(operator, '/api/notifications/order-status', 'POST', { order_id: 'inexistant' }, 403)
@@ -346,9 +345,11 @@ async function main() {
     })
     assert(updatedContainer.data?.vessel === 'Navire de test modifié', 'Conteneur non mis à jour.')
 
-    const order = await expectSuccess(operator, '/api/orders', 'POST', orderPayload(resources.customerId, resources.containerId, `${marker}-CTR`), 201)
+    const order = await expectSuccess(operator, '/api/orders', 'POST', orderPayload(resources.customerId, resources.containerId), 201)
     resources.orderId = order.data?.id
     assert(resources.orderId && order.data?.order_number, 'Commande de test incomplète.')
+    assert(order.data?.container_id === resources.containerId, 'Conteneur non associé à la commande.')
+    assert(order.data?.container_code === `${marker}-CTR`, 'Code conteneur non synchronisé.')
 
     const orderRead = await expectSuccess(operator, `/api/orders/${resources.orderId}`)
     assert(orderRead.data?.id === resources.orderId, 'Commande non relue.')

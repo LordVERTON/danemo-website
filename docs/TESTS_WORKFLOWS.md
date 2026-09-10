@@ -21,7 +21,7 @@ npm run test
 | Rôle | Tests automatisés |
 | --- | --- |
 | Visiteur | Tarifs FR/EN, blog, prochain départ, conteneurs publics, recherche, refus des API internes, inscription publique et suivi créé. |
-| Opérateur | Connexion, refus des fonctions admin, CRUD client/conteneur/commande, changement de statut sans destinataire, suivi, QR, export XLSX, règlement, facture, inventaire, création/modification/révision d'article. |
+| Opérateur | Connexion, lecture des volumes agrégés de commandes, refus des fonctions admin, CRUD client/conteneur/commande, changement de statut sans destinataire, suivi, QR, export XLSX, règlement, facture, inventaire, création/modification/révision d'article. |
 | Administrateur | Connexion, statistiques, santé, accès collaborateurs, création d'un collaborateur et lecture d'activités, simulation de campagne, suppression article. |
 
 ## Sécurité et nettoyage
