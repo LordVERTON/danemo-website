@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { ArrowLeft, CreditCard, FileDown, FileText, Loader2, MoreHorizontal, PackagePlus, Pencil, Plus, QrCode, UserRound } from "lucide-react"
+import { ArrowLeft, CreditCard, FileText, Loader2, MoreHorizontal, PackagePlus, Pencil, Plus, QrCode, UserRound } from "lucide-react"
 import AdminLayout from "@/components/admin-layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,10 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { calculateCustomerPaymentProgress, type CustomerPaymentRecord } from "@/lib/customer-payment-progress"
 import { defaultCompanyData, generateInvoice, type InvoiceData } from "@/lib/invoice-utils"
-import { downloadQrLabel } from "@/lib/client-documents"
+import { generateQRPrintPDF } from "@/lib/qr-print-utils"
 
-type Order = { id: string; order_number: string; service_type: string; description?: string | null; origin: string; destination: string; status: string; value?: number | null; weight?: number | null; estimated_delivery?: string | null; recipient_name?: string | null; recipient_email?: string | null; recipient_phone?: string | null; recipient_address?: string | null; recipient_city?: string | null; recipient_postal_code?: string | null; recipient_country?: string | null; qr_code?: string | null; created_at: string }
+type Order = { id: string; order_number: string; service_type: string; description?: string | null; origin: string; destination: string; status: string; value?: number | null; weight?: number | null; estimated_delivery?: string | null; recipient_name?: string | null; recipient_email?: string | null; recipient_phone?: string | null; recipient_address?: string | null; recipient_city?: string | null; recipient_postal_code?: string | null; recipient_country?: string | null; qr_code?: string | null; container_id?: string | null; container_code?: string | null; created_at: string }
 type Customer = { id: string; name: string; email?: string | null; phone?: string | null; company?: string | null; address?: string | null; city?: string | null; postal_code?: string | null; country?: string | null; status?: string; orders: Order[]; payments: CustomerPaymentRecord[]; invoices: Array<{ id: string; order_id?: string | null; invoice_number?: string; tax_rate?: number | null; created_at?: string | null; status?: string; total_amount?: number }> }
+type Container = { id: string; code: string; departure_port?: string | null; arrival_port?: string | null; status?: string | null }
 
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
 
@@ -43,7 +44,10 @@ export default function ClientDetailsPage() {
   const [saving, setSaving] = useState(false)
   const [generatingSummaryInvoice, setGeneratingSummaryInvoice] = useState(false)
   const [payment, setPayment] = useState({ amount: "", paid_at: new Date().toISOString().slice(0, 10), payment_method: "bank_transfer", reference: "", notes: "" })
-  const [order, setOrder] = useState({ service_type: "fret_maritime", description: "", origin: "Bruxelles", destination: "", weight: "", value: "", estimated_delivery: "", recipient_name: "", recipient_email: "", recipient_phone: "", recipient_address: "", recipient_city: "", recipient_postal_code: "", recipient_country: "" })
+  const [order, setOrder] = useState({ service_type: "fret_maritime", container_id: "", description: "", origin: "Bruxelles", destination: "", weight: "", value: "", estimated_delivery: "", recipient_name: "", recipient_email: "", recipient_phone: "", recipient_address: "", recipient_city: "", recipient_postal_code: "", recipient_country: "" })
+  const [containers, setContainers] = useState<Container[]>([])
+  const [containersLoading, setContainersLoading] = useState(false)
+  const [containersError, setContainersError] = useState("")
 
   const summary = useMemo(() => calculateCustomerPaymentProgress(customer?.orders || [], customer?.payments || []), [customer])
 
@@ -63,6 +67,21 @@ export default function ClientDetailsPage() {
   }, [customerId])
 
   useEffect(() => { void loadCustomer() }, [loadCustomer])
+
+  const loadContainers = useCallback(async () => {
+    setContainersLoading(true)
+    setContainersError("")
+    try {
+      const response = await fetch("/api/containers")
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || "Chargement des conteneurs impossible")
+      setContainers(Array.isArray(result.data) ? result.data : [])
+    } catch (cause: any) {
+      setContainersError(cause?.message || "Chargement des conteneurs impossible")
+    } finally {
+      setContainersLoading(false)
+    }
+  }, [])
 
   async function addPayment(event: React.FormEvent) {
     event.preventDefault()
@@ -84,9 +103,10 @@ export default function ClientDetailsPage() {
     if (!customer) return
     setEditingOrder(orderToEdit || null)
     setOrder({
-      service_type: orderToEdit?.service_type || "fret_maritime", description: orderToEdit?.description || "", origin: orderToEdit?.origin || "Bruxelles", destination: orderToEdit?.destination || "", weight: orderToEdit?.weight ? String(orderToEdit.weight) : "", value: orderToEdit?.value ? String(orderToEdit.value) : "", estimated_delivery: orderToEdit?.estimated_delivery?.slice(0, 10) || "",
+      service_type: orderToEdit?.service_type || "fret_maritime", container_id: orderToEdit?.container_id || "", description: orderToEdit?.description || "", origin: orderToEdit?.origin || "Bruxelles", destination: orderToEdit?.destination || "", weight: orderToEdit?.weight ? String(orderToEdit.weight) : "", value: orderToEdit?.value ? String(orderToEdit.value) : "", estimated_delivery: orderToEdit?.estimated_delivery?.slice(0, 10) || "",
       recipient_name: orderToEdit?.recipient_name || customer.name, recipient_email: orderToEdit?.recipient_email || customer.email || "", recipient_phone: orderToEdit?.recipient_phone || customer.phone || "", recipient_address: orderToEdit?.recipient_address || customer.address || "", recipient_city: orderToEdit?.recipient_city || customer.city || "", recipient_postal_code: orderToEdit?.recipient_postal_code || customer.postal_code || "", recipient_country: orderToEdit?.recipient_country || customer.country || "",
     })
+    void loadContainers()
     setOrderOpen(true)
   }
 
@@ -97,7 +117,7 @@ export default function ClientDetailsPage() {
     setError("")
     try {
       const payload = {
-        ...order, weight: order.weight || null, value: order.value || null, estimated_delivery: order.estimated_delivery || null,
+        ...order, container_id: order.service_type === "fret_maritime" && order.container_id ? order.container_id : null, weight: order.weight || null, value: order.value || null, estimated_delivery: order.estimated_delivery || null,
         customer_id: customer.id, client_name: customer.name, client_email: customer.email || "", client_phone: customer.phone || "", client_address: customer.address || "", client_city: customer.city || "", client_postal_code: customer.postal_code || "", client_country: customer.country || "",
       }
       const response = await fetch(editingOrder ? `/api/orders/${editingOrder.id}` : "/api/orders", { method: editingOrder ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
@@ -301,19 +321,27 @@ export default function ClientDetailsPage() {
     }
   }
 
-  function documentOrder(order: Order) {
-    if (!customer) throw new Error("Client absent")
-    return { ...order, client_name: customer.name, client_company: customer.company, client_email: customer.email, client_phone: customer.phone }
-  }
-
-  function exportSummary() {
+  async function printQrLabel(order: Order) {
     if (!customer) return
-    const rows = [["Client", customer.name], ["Email", customer.email || ""], ["Total commandes", String(summary.totalAmount)], ["Règlements reçus", String(summary.paidAmount)], ["Solde", String(summary.remainingAmount)]]
-    const blob = new Blob([rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";")).join("\n")], { type: "text/csv;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url; anchor.download = `client-${customer.name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}.csv`; anchor.click()
-    URL.revokeObjectURL(url)
+    setSaving(true)
+    setError("")
+    try {
+      await generateQRPrintPDF({
+        qrCode: order.qr_code || order.order_number,
+        orderNumber: order.order_number,
+        clientName: customer.name,
+        senderName: customer.company || customer.name,
+        recipientName: order.recipient_name,
+        recipientPhone: order.recipient_phone,
+        serviceType: order.service_type,
+        origin: order.origin,
+        destination: order.destination,
+      })
+    } catch (cause: any) {
+      setError(cause?.message || "Impossible d’imprimer l’étiquette QR")
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) return <AdminLayout title="Fiche client"><div className="flex h-64 items-center justify-center"><Loader2 className="size-7 animate-spin text-orange-600" /></div></AdminLayout>
@@ -324,7 +352,7 @@ export default function ClientDetailsPage() {
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button asChild variant="outline"><Link href="/admin/clients"><ArrowLeft className="mr-2 size-4" />Clients</Link></Button>
-          <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={exportSummary}><FileDown className="mr-2 size-4" />Exporter CSV</Button><Button type="button" onClick={generateSummaryInvoice} disabled={generatingSummaryInvoice || saving || customer.orders.length === 0}>{generatingSummaryInvoice ? <Loader2 className="mr-2 size-4 animate-spin" /> : <FileText className="mr-2 size-4" />}Générer la facture</Button></div>
+          <div className="flex flex-wrap gap-2"><Button type="button" onClick={generateSummaryInvoice} disabled={generatingSummaryInvoice || saving || customer.orders.length === 0}>{generatingSummaryInvoice ? <Loader2 className="mr-2 size-4 animate-spin" /> : <FileText className="mr-2 size-4" />}Générer la facture</Button></div>
         </div>
 
         {error && <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -333,7 +361,7 @@ export default function ClientDetailsPage() {
           <Card><CardHeader><CardTitle className="text-base">Règlements</CardTitle><CardDescription>{summary.paymentStatus === "paid" ? "Soldé" : summary.paymentStatus === "partial" ? "Partiellement réglé" : "À régler"}</CardDescription></CardHeader><CardContent><p className="text-2xl font-bold">{euro.format(summary.remainingAmount)}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-orange-600" style={{ width: `${summary.progressPercent}%` }} /></div><p className="mt-2 text-xs text-muted-foreground">{euro.format(summary.paidAmount)} réglés sur {euro.format(summary.totalAmount)}</p><Button className="mt-4 w-full" onClick={() => setPaymentOpen(true)}><CreditCard className="mr-2 size-4" />Ajouter un règlement</Button></CardContent></Card>
         </div>
 
-        <Card><CardHeader className="flex-row items-center justify-between gap-3"><div><CardTitle>Commandes</CardTitle><CardDescription>{customer.orders.length} commande(s) associée(s)</CardDescription></div><Button className="hidden sm:inline-flex" onClick={() => openOrder()}><PackagePlus className="mr-2 size-4" />Nouvelle commande</Button></CardHeader><CardContent><div className="space-y-3">{customer.orders.length ? customer.orders.map((item) => <article key={item.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{item.order_number}</p><p className="mt-1 text-sm text-muted-foreground">{item.origin} → {item.destination} · {item.service_type}</p></div><Badge variant="outline" className="shrink-0">{item.status}</Badge></div><div className="mt-4 flex items-center gap-2"><span className="mr-auto font-medium">{euro.format(Number(item.value || 0))}</span><Button type="button" variant="outline" onClick={() => openOrder(item)}><Pencil className="mr-2 size-4" />Modifier</Button><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="outline" size="icon" aria-label={`Plus d’actions pour ${item.order_number}`}><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-52"><DropdownMenuLabel>Documents</DropdownMenuLabel><DropdownMenuItem disabled={saving} onSelect={() => downloadInvoice(item)}><FileText className="mr-2 size-4" />Facture PDF</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadQrLabel(documentOrder(item))}><QrCode className="mr-2 size-4" />Étiquette QR</DropdownMenuItem>{item.qr_code && <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href={`/admin/qr?code=${encodeURIComponent(item.qr_code)}`}><QrCode className="mr-2 size-4" />Ouvrir le scanner</Link></DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu></div></article>) : <p className="py-6 text-center text-sm text-muted-foreground">Aucune commande pour ce client.</p>}</div></CardContent></Card>
+        <Card><CardHeader className="flex-row items-center justify-between gap-3"><div><CardTitle>Commandes</CardTitle><CardDescription>{customer.orders.length} commande(s) associée(s)</CardDescription></div><Button className="hidden sm:inline-flex" onClick={() => openOrder()}><PackagePlus className="mr-2 size-4" />Nouvelle commande</Button></CardHeader><CardContent><div className="space-y-3">{customer.orders.length ? customer.orders.map((item) => <article key={item.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{item.order_number}</p><p className="mt-1 text-sm text-muted-foreground">{item.origin} → {item.destination} · {item.service_type}</p>{item.container_code && <p className="mt-1 text-sm text-muted-foreground">Conteneur associé : {item.container_code}</p>}</div><Badge variant="outline" className="shrink-0">{item.status}</Badge></div><div className="mt-4 flex items-center gap-2"><span className="mr-auto font-medium">{euro.format(Number(item.value || 0))}</span><Button type="button" variant="outline" onClick={() => openOrder(item)}><Pencil className="mr-2 size-4" />Modifier</Button><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="outline" size="icon" aria-label={`Plus d’actions pour ${item.order_number}`}><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-52"><DropdownMenuLabel>Documents</DropdownMenuLabel><DropdownMenuItem disabled={saving} onSelect={() => downloadInvoice(item)}><FileText className="mr-2 size-4" />Facture PDF</DropdownMenuItem><DropdownMenuItem disabled={saving} onSelect={() => printQrLabel(item)}><QrCode className="mr-2 size-4" />Étiquette QR</DropdownMenuItem>{item.qr_code && <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href={`/admin/qr?code=${encodeURIComponent(item.qr_code)}`}><QrCode className="mr-2 size-4" />Ouvrir le scanner</Link></DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu></div></article>) : <p className="py-6 text-center text-sm text-muted-foreground">Aucune commande pour ce client.</p>}</div></CardContent></Card>
 
         <Card><CardHeader><CardTitle>Historique des règlements</CardTitle></CardHeader><CardContent><div className="space-y-2">{customer.payments.length ? customer.payments.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg border p-3 text-sm"><div><p className="font-medium">{euro.format(Number(item.amount))}</p><p className="text-muted-foreground">{item.paid_at} · {item.payment_method || "—"}{item.reference ? ` · ${item.reference}` : ""}</p></div><Badge variant="secondary">Enregistré</Badge></div>) : <p className="py-4 text-sm text-muted-foreground">Aucun règlement enregistré.</p>}</div></CardContent></Card>
       </div>
@@ -342,12 +370,13 @@ export default function ClientDetailsPage() {
 
       <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}><DialogContent><DialogHeader><DialogTitle>Ajouter un règlement</DialogTitle><DialogDescription>Enregistrez le montant reçu et son moyen de paiement.</DialogDescription></DialogHeader><form onSubmit={addPayment} className="space-y-4"><div><Label>Montant (€)</Label><Input type="number" min="0.01" step="0.01" required value={payment.amount} onChange={(event) => setPayment({ ...payment, amount: event.target.value })} /></div><div><Label>Date</Label><Input type="date" required value={payment.paid_at} onChange={(event) => setPayment({ ...payment, paid_at: event.target.value })} /></div><div><Label>Méthode</Label><Select value={payment.payment_method} onValueChange={(value) => setPayment({ ...payment, payment_method: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bank_transfer">Virement</SelectItem><SelectItem value="cash">Espèces</SelectItem><SelectItem value="card">Carte</SelectItem><SelectItem value="mobile">Mobile</SelectItem><SelectItem value="other">Autre</SelectItem></SelectContent></Select></div><div><Label>Référence</Label><Input value={payment.reference} onChange={(event) => setPayment({ ...payment, reference: event.target.value })} /></div><div><Label>Note</Label><Textarea value={payment.notes} onChange={(event) => setPayment({ ...payment, notes: event.target.value })} /></div><Button className="w-full" disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</Button></form></DialogContent></Dialog>
       <Dialog open={orderOpen} onOpenChange={(open) => { setOrderOpen(open); if (!open) setEditingOrder(null) }}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="overflow-x-hidden sm:max-w-xl">
           <DialogHeader><DialogTitle>{editingOrder ? "Modifier la commande" : "Nouvelle commande"}</DialogTitle><DialogDescription>Renseignez les informations d’expédition et du destinataire.</DialogDescription></DialogHeader>
-          <form onSubmit={addOrder} className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div><Label>Service</Label><Select value={order.service_type} onValueChange={(value) => setOrder({ ...order, service_type: value })}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fret_maritime">Fret maritime</SelectItem><SelectItem value="fret_aerien">Fret aérien</SelectItem><SelectItem value="demenagement">Déménagement</SelectItem><SelectItem value="dedouanement">Dédouanement</SelectItem><SelectItem value="negoce">Négoce</SelectItem></SelectContent></Select></div>
+          <form onSubmit={addOrder} className="min-w-0 space-y-5">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <div className="min-w-0"><Label>Service</Label><Select value={order.service_type} onValueChange={(value) => setOrder({ ...order, service_type: value, container_id: value === "fret_maritime" ? order.container_id : "" })}><SelectTrigger className="w-full min-w-0"><SelectValue className="min-w-0 truncate" /></SelectTrigger><SelectContent><SelectItem value="fret_maritime">Fret maritime</SelectItem><SelectItem value="fret_aerien">Fret aérien</SelectItem><SelectItem value="demenagement">Déménagement</SelectItem><SelectItem value="dedouanement">Dédouanement</SelectItem><SelectItem value="negoce">Négoce</SelectItem></SelectContent></Select></div>
               <div><Label>Livraison estimée</Label><Input type="date" value={order.estimated_delivery} onChange={(event) => setOrder({ ...order, estimated_delivery: event.target.value })} /></div>
+              {order.service_type === "fret_maritime" && <div className="min-w-0 sm:col-span-2"><Label>Conteneur associé</Label><Select value={order.container_id || "unassigned"} onValueChange={(value) => setOrder({ ...order, container_id: value === "unassigned" ? "" : value })} disabled={containersLoading || containers.length === 0}><SelectTrigger className="w-full min-w-0"><SelectValue className="min-w-0 truncate" placeholder={containersLoading ? "Chargement des conteneurs..." : "Aucun conteneur sélectionné"} /></SelectTrigger><SelectContent className="max-w-[calc(100vw-2rem)]"><SelectItem value="unassigned">Aucun conteneur pour le moment</SelectItem>{containers.map((container) => <SelectItem key={container.id} value={container.id} className="min-w-0 whitespace-normal break-words">{container.code}{container.departure_port && container.arrival_port ? ` · ${container.departure_port} → ${container.arrival_port}` : ""}</SelectItem>)}</SelectContent></Select>{containersLoading ? <p className="mt-1 text-xs text-muted-foreground">Chargement des conteneurs...</p> : containers.length === 0 ? <p className="mt-1 text-xs text-muted-foreground">{containersError || "Aucun conteneur disponible."} <Link href="/admin/containers" className="font-medium text-orange-600 hover:underline">Créez d’abord un conteneur</Link> pour l’associer à cette commande.</p> : <p className="mt-1 text-xs text-muted-foreground">Sélectionnez un conteneur existant ou laissez la commande non associée.</p>}</div>}
               <div><Label>Origine</Label><Input required autoComplete="address-level2" value={order.origin} onChange={(event) => setOrder({ ...order, origin: event.target.value })} /></div>
               <div><Label>Destination</Label><Input required autoComplete="address-level2" value={order.destination} onChange={(event) => setOrder({ ...order, destination: event.target.value })} /></div>
               <div><Label>Poids (kg)</Label><Input type="number" min="0" step="0.01" inputMode="decimal" value={order.weight} onChange={(event) => setOrder({ ...order, weight: event.target.value })} /></div>
