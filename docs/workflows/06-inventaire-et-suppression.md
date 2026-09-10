@@ -14,7 +14,7 @@ Gérer les articles physiques (`colis`, `vehicule`, `marchandise`), leur emplace
 ## Points d'entrée
 
 - `GET, POST /api/inventory`; `GET, PUT, DELETE /api/inventory/[id]`
-- `POST /api/qr/scan` pour le scan de colis, pas pour la création d'un article d'inventaire.
+- Le scan QR concerne les commandes ; il ne crée ni ne préremplit un article d'inventaire.
 
 ## Déroulé
 
@@ -55,7 +55,7 @@ flowchart TD
 ## Échecs et cas limites
 
 - La suppression n'est ni archivage, ni réversible, ni confirmée côté serveur. Elle est également autorisée à l'opérateur. **À confirmer comme règle métier.**
-- Le scan QR agit sur `packages`, non sur `inventory`; l'affirmation d'un préremplissage d'inventaire par scan n'est pas étayée par les routes.
+- Le scan QR ne concerne pas l'inventaire ; l'affirmation d'un préremplissage d'inventaire par scan n'est pas étayée par les routes.
 - Une valeur de type/statut non valide est rejetée par la base et devient actuellement une erreur générique 500 de l'API.
 
 ## Tests de recette

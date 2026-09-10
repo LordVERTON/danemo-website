@@ -28,7 +28,7 @@ npm run test
 
 - Chaque exécution porte un préfixe `TEST-<aléa>` et supprime dans un `finally` les clients, commandes, conteneurs, inventaires, article et collaborateur créés.
 - Les commandes créées n'ont pas d'adresse e-mail : les mises à jour de statut ne déclenchent pas d'envoi e-mail réel.
-- La messagerie est appelée avec `dryRun: true`; les routes e-mail, SMS/WhatsApp réels, upload média, scan QR colis et seed/reseed ne sont jamais exécutés.
+- La messagerie est appelée avec `dryRun: true`; les routes e-mail, SMS/WhatsApp réels, upload média, scan QR de commande et seed/reseed ne sont jamais exécutés.
 - En cas d'interruption, rechercher le préfixe `TEST-` dans l'administration locale puis supprimer les éventuelles données restantes.
 
 La suite est un test d'intégration des contrats API. Elle ne remplace pas les recettes visuelles (mise en page, caméra QR, rendu PDF/graphes) ni les tests de délivrabilité avec un fournisseur réel.
