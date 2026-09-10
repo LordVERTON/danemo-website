@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ordersApi, utils } from '@/lib/database'
+import { containersApi, ordersApi, utils } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 import { recordBusinessAudit } from '@/lib/business-audit'
@@ -122,6 +122,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const requestedContainerId =
+      typeof body.container_id === 'string' ? body.container_id.trim() : ''
+    let containerId: string | null = null
+
+    if (requestedContainerId) {
+      if (body.service_type !== 'fret_maritime') {
+        return NextResponse.json(
+          { success: false, error: 'A container can only be assigned to maritime freight' },
+          { status: 400 },
+        )
+      }
+
+      const container = await containersApi.getById(requestedContainerId)
+      if (!container) {
+        return NextResponse.json(
+          { success: false, error: 'Selected container not found' },
+          { status: 400 },
+        )
+      }
+
+      containerId = container.id
+    }
+
     // Sanitisation des données
     const sanitizedClientName = body.client_name?.trim().substring(0, 100) || ''
     const sanitizedClientEmail = body.client_email?.trim().toLowerCase() || ''
@@ -194,8 +217,7 @@ export async function POST(request: NextRequest) {
       weight: body.weight ? (typeof body.weight === 'string' ? body.weight.trim().substring(0, 20) : String(body.weight).substring(0, 20)) : null,
       value: body.value ? (typeof body.value === 'string' ? body.value.trim().substring(0, 20) : String(body.value).substring(0, 20)) : null,
       estimated_delivery: body.estimated_delivery,
-      container_id: body.container_id && body.container_id !== '' ? body.container_id : null,
-      container_code: body.container_code && body.container_code !== '' ? body.container_code.trim().substring(0, 50) : null,
+      container_id: containerId,
       customer_id: resolvedCustomerId,
       parcels_count: (() => {
         const v = body.parcels_count

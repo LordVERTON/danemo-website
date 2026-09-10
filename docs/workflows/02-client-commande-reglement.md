@@ -20,13 +20,13 @@ Gérer le client, sa commande logistique, ses règlements et les documents opér
 ## Déroulé
 
 1. L'équipe crée ou retrouve un client. Nom, téléphone, adresse, ville, code postal et pays sont requis; l'e-mail est facultatif et normalisé.
-2. À la création manuelle d'une commande, les coordonnées expéditeur et destinataire, le service, l'origine et la destination sont requis. Le serveur génère un numéro unique, avec jusqu'à cinq tentatives en cas de collision.
+2. À la création manuelle d'une commande, les coordonnées expéditeur et destinataire, le service, l'origine et la destination sont requis. Pour le fret maritime, l’opérateur peut sélectionner un conteneur existant ou laisser la commande non associée ; s’il n’existe aucun conteneur, il doit en créer un avant de pouvoir l’associer. Le serveur génère un numéro unique, avec jusqu'à cinq tentatives en cas de collision.
 3. Une commande sans `customer_id` cherche d'abord le client par e-mail, puis crée une fiche active si nécessaire.
 4. La commande commence à `pending`. Elle peut être affectée à un conteneur et recevoir des événements de suivi.
 5. Les règlements sont enregistrés au niveau client, sans affectation à une commande. La fiche retourne un résumé calculé à partir des commandes et paiements.
 6. L’action **Facture PDF** de la fiche client crée une facture brouillon si la commande n’en possède pas encore, puis génère le PDF. Si la facture existe déjà, elle régénère directement le PDF avec le même numéro, sans renvoyer l’opérateur vers une erreur de doublon.
 7. L’action **Générer la facture** de la fiche crée un PDF récapitulatif de toutes les commandes du client. Chaque commande devient une ligne et les règlements sont répartis par ancienneté pour afficher le total réglé et le solde ; ce document récapitulatif n’insère pas de nouvelle facture en base.
-8. L’action **Étiquette QR** produit une étiquette A6 contenant les coordonnées utiles du client et du destinataire, le trajet, le service, le statut et le QR destiné au scanner opérateur.
+8. L’action **Étiquette QR** ouvre le format d’impression PDF de production : logo Danemo, nom et prénom du destinataire, téléphone, destination, expéditeur, QR destiné au scanner opérateur et référence de commande.
 
 ## Diagramme principal
 
@@ -52,6 +52,7 @@ flowchart LR
 
 - Statuts client : `active`, `inactive`, `archived`; statuts commande : `pending`, `confirmed`, `in_progress`, `completed`, `cancelled`.
 - Services autorisés à la création manuelle : fret maritime/aérien, déménagement, dédouanement, négoce, colis.
+- Une association de conteneur est admise uniquement pour `fret_maritime`. L’API vérifie que l’identifiant sélectionné existe et la base maintient elle-même `container_code` depuis `container_id`.
 - Le règlement est strictement positif, en EUR, daté au format `YYYY-MM-DD`, avec l'un des modes `bank_transfer`, `cash`, `card`, `mobile`, `other`.
 - La route de création de facture vérifie l'appartenance de la commande au client, refuse une valeur négative/non numérique et empêche le doublon par commande. L’interface contourne ce cas en utilisant la facture existante pour produire le PDF.
 - Les PDF de facture utilisent le générateur commun `generateInvoice`, avec les adresses de facturation/livraison, les lignes de commande, TVA, total, paiements et solde.
@@ -72,7 +73,7 @@ flowchart LR
 
 ## Tests de recette
 
-1. Créer client puis commande, contrôler le statut `pending`, le numéro unique et la présence d'un QR.
+1. Créer client puis commande, contrôler le statut `pending`, le numéro unique et la présence d'un QR. Pour une commande de fret maritime, sélectionner un conteneur existant et vérifier l’association et le code conteneur retournés.
 2. Créer une commande sans `customer_id` pour un e-mail connu puis inconnu : contrôler réutilisation puis création de fiche.
 3. Ajouter un règlement valide, puis montant nul, date invalide et mode inconnu : contrôler 201 puis 400.
 4. Depuis la fiche client, générer une **Facture PDF** deux fois pour la même commande : contrôler que le second clic régénère le PDF avec la même référence, sans erreur visible.

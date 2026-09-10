@@ -174,6 +174,39 @@ export async function PUT(
 
     const sanitizedOrderData = sanitizeRecipient()
 
+    const effectiveServiceType = orderData.service_type ?? oldOrder.service_type
+    if ('container_id' in orderData) {
+      const requestedContainerId =
+        typeof orderData.container_id === 'string' ? orderData.container_id.trim() : ''
+
+      if (requestedContainerId) {
+        if (effectiveServiceType !== 'fret_maritime') {
+          return NextResponse.json(
+            { success: false, error: 'A container can only be assigned to maritime freight' },
+            { status: 400 },
+          )
+        }
+
+        const container = await containersApi.getById(requestedContainerId)
+        if (!container) {
+          return NextResponse.json(
+            { success: false, error: 'Selected container not found' },
+            { status: 400 },
+          )
+        }
+
+        sanitizedOrderData.container_id = container.id
+      } else {
+        sanitizedOrderData.container_id = null
+      }
+    } else if (effectiveServiceType !== 'fret_maritime' && oldOrder.container_id) {
+      sanitizedOrderData.container_id = null
+    }
+
+    // The database trigger mirrors the container code from container_id.
+    // Never accept a manually supplied code from the client.
+    delete sanitizedOrderData.container_code
+
     const requiredValues = {
       client_name: orderData.client_name ?? oldOrder.client_name,
       client_phone: orderData.client_phone ?? oldOrder.client_phone,

@@ -20,7 +20,7 @@ Créer un transport conteneur, l'associer aux commandes et articles d'inventaire
 ## Déroulé
 
 1. L'équipe crée un conteneur : seul le code est vérifié par le handler; navire, ports, ETD, ETA, statut et client sont facultatifs.
-2. Elle affecte des commandes et articles via leurs flux respectifs.
+2. Elle affecte des commandes et articles via leurs flux respectifs. Dans la fiche client, la commande de fret maritime propose uniquement les conteneurs existants ; sans conteneur disponible, l’opérateur doit d’abord en créer un.
 3. Une mise à jour accepte les champs connus, dont `status`. Le conteneur est d'abord écrit puis audité.
 4. Si le statut diffère de l'ancien, le serveur recherche les commandes du conteneur et tente un e-mail par commande à l'adresse destinataire, sinon client.
 5. La réponse API est renvoyée sans attendre l'envoi e-mail.
