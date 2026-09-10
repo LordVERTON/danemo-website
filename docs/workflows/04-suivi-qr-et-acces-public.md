@@ -25,7 +25,7 @@ Permettre à l'équipe de tracer une commande et à un visiteur de consulter un 
 4. L'équipe ajoute un événement avec statut, lieu, description, opérateur et date. Un statut fourni différent met aussi à jour la commande et génère un audit.
 5. Le `PATCH` d'une commande peut retourner le QR existant ou en générer un unique, jusqu'à dix essais.
 6. Un scan QR résout d'abord une commande par QR ou numéro de commande, met à jour son statut si nécessaire, puis ajoute un événement de suivi relié à son identifiant.
-7. Depuis la fiche client, l’action **Étiquette QR** produit un PDF A6 avec le QR de suivi opérateur, le client, le destinataire, le trajet, le service et le statut de la commande.
+7. Depuis la fiche client, l’action **Étiquette QR** ouvre le PDF imprimable au format de production : logo Danemo, nom et prénom du destinataire, téléphone, destination, expéditeur, QR de suivi opérateur et référence de commande.
 
 ## Diagramme principal
 

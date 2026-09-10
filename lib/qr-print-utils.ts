@@ -6,6 +6,8 @@ export interface QRPrintData {
   orderNumber: string
   clientName: string
   recipientName?: string | null
+  recipientPhone?: string | null
+  senderName?: string | null
   parcelsCount?: number | null
   serviceType?: string
   origin?: string
@@ -46,7 +48,7 @@ function splitName(fullName: string): { nom: string; prenom: string } {
 
 /**
  * Génère un PDF imprimable avec le QR code du colis
- * Structure : Logo + Slogan | Nom | Prénom | QR CODE DU COLIS | Numéro de colis
+ * Structure : Logo + Slogan | Nom | Prénom | Coordonnées | QR CODE DU COLIS | Numéro de colis
  */
 export const generateQRPrintPDF = async (data: QRPrintData) => {
   const pdf = new jsPDF('p', 'mm', 'a4')
@@ -114,7 +116,17 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
   // Prénom (police assez grande)
   pdf.setFontSize(20)
   pdf.text(prenom, pageWidth / 2, yPos, { align: 'center' })
-  yPos += 25
+  yPos += 8
+
+  // Informations opérationnelles utiles sur le colis.
+  pdf.setFontSize(9)
+  pdf.setFont('helvetica', 'normal')
+  pdf.text(`Téléphone : ${data.recipientPhone || '—'}`, pageWidth / 2, yPos, { align: 'center' })
+  yPos += 6
+  pdf.text(`Destination : ${data.destination || '—'}`, pageWidth / 2, yPos, { align: 'center' })
+  yPos += 6
+  pdf.text(`Expéditeur : ${data.senderName || data.clientName || '—'}`, pageWidth / 2, yPos, { align: 'center' })
+  yPos += 11
 
   // Ligne séparatrice
   pdf.setDrawColor(blackColor[0], blackColor[1], blackColor[2])
@@ -137,10 +149,10 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
       color: { dark: '#000000', light: '#FFFFFF' }
     })
 
-    const qrSize = 55
+    const qrSize = 50
     const qrX = (pageWidth - qrSize) / 2
     pdf.addImage(qrCodeDataURL, 'PNG', qrX, yPos, qrSize, qrSize)
-    yPos += qrSize + 15
+    yPos += qrSize + 12
   } catch (error) {
     console.error('Erreur génération QR:', error)
     pdf.setFontSize(10)
@@ -152,7 +164,7 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
   // Ligne séparatrice
   pdf.setDrawColor(blackColor[0], blackColor[1], blackColor[2])
   pdf.line(margin + 20, yPos, pageWidth - margin - 20, yPos)
-  yPos += 18
+  yPos += 14
 
   // Numéro de colis (numéro de la commande)
   pdf.setFontSize(12)
