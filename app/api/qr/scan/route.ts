@@ -1,44 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { packagesApi, trackingApi } from '@/lib/database'
+import { ordersApi, trackingApi } from '@/lib/database'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
+import { z } from 'zod'
 
 // POST /api/qr/scan
-// Body: { qr: string, status?: Package['status'], location?: string, description?: string, operator?: string }
+// Body: { qr: string, status?: Order['status'], location?: string, description?: string, operator?: string }
+const scanSchema = z.object({
+  qr: z.string().trim().min(1, 'Le code QR est requis.').max(255),
+  status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']).optional(),
+  location: z.string().trim().max(255).optional(),
+  description: z.string().trim().max(2_000).optional(),
+  operator: z.string().trim().max(255).optional(),
+})
+
 export async function POST(request: NextRequest) {
   const authError = await requireStaffApiAccess(request)
   if (authError) return authError
 
   try {
-    const body = await request.json()
-    const qr = String(body.qr || '').trim()
-    if (!qr) {
-      return NextResponse.json({ success: false, error: 'Missing qr' }, { status: 400 })
+    const parsed = scanSchema.safeParse(await request.json())
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues[0]?.message || 'Données de scan invalides.' },
+        { status: 400 },
+      )
     }
-    const pkg = await packagesApi.getByQr(qr)
-    if (!pkg) {
-      return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 })
+
+    const { qr, status, location, description, operator } = parsed.data
+    // Les QR actifs sont générés pour les commandes et sont résolus dans orders.
+    const order = await ordersApi.getByQr(qr) || await ordersApi.getByOrderNumber(qr)
+    if (!order) {
+      return NextResponse.json({ success: false, error: 'Commande introuvable pour ce code QR.' }, { status: 404 })
     }
-    const nextStatus = (body.status as typeof pkg.status) || pkg.status
-    const updated = await packagesApi.updateStatus(pkg.id, nextStatus, {})
-    // Mirror to tracking_events (linked to orders if applicable)
-    try {
-      if (pkg.container_id) {
-        await trackingApi.addEvent({
-          order_id: pkg.container_id, // if you later separate order vs container, adjust
-          status: nextStatus,
-          location: body.location || null,
-          description: body.description || `Scan QR: ${qr}`,
-          operator: body.operator || null,
-          event_date: new Date().toISOString(),
-        })
-      }
-    } catch (e) {
-      console.warn('Could not add tracking event for QR scan:', e)
-    }
-    return NextResponse.json({ success: true, data: updated })
+
+    const nextStatus = status || order.status
+    const updatedOrder = nextStatus === order.status
+      ? order
+      : await ordersApi.update(order.id, { status: nextStatus })
+    const event = await trackingApi.addEvent({
+      order_id: order.id,
+      status: nextStatus,
+      location: location || null,
+      description: description || `Scan QR : ${qr}`,
+      operator: operator || null,
+      event_date: new Date().toISOString(),
+    })
+
+    await recordBusinessAudit(request, {
+      action: 'update',
+      entityType: 'order',
+      entityId: order.id,
+      changedFields: nextStatus === order.status ? ['tracking_event'] : ['tracking_event', 'status'],
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: { type: 'order', item: updatedOrder, event },
+    })
   } catch (error) {
     console.error('Error processing QR scan:', error)
-    return NextResponse.json({ success: false, error: 'Failed to process scan' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Impossible de traiter le scan.' }, { status: 500 })
   }
 }
 

@@ -406,51 +406,6 @@ export interface Database {
           updated_at?: string
         }
       }
-      // NEW: packages table (colis) with QR tracking
-      packages: {
-        Row: {
-          id: string
-          qr_code: string // unique QR content (e.g., URL token)
-          reference: string
-          description: string | null
-          client_id: string | null
-          container_id: string | null
-          weight: number | null
-          value: number | null
-          status: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
-          last_scan_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          qr_code: string
-          reference: string
-          description?: string | null
-          client_id?: string | null
-          container_id?: string | null
-          weight?: number | null
-          value?: number | null
-          status?: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
-          last_scan_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          qr_code?: string
-          reference?: string
-          description?: string | null
-          client_id?: string | null
-          container_id?: string | null
-          weight?: number | null
-          value?: number | null
-          status?: 'preparation' | 'expedie' | 'en_transit' | 'arrive_port' | 'dedouane' | 'livre'
-          last_scan_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
       inventory: {
         Row: {
           id: string

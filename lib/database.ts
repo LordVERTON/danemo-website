@@ -13,9 +13,6 @@ type ClientUpdate = Database['public']['Tables']['clients']['Update']
 type Container = Database['public']['Tables']['containers']['Row']
 type ContainerInsert = Database['public']['Tables']['containers']['Insert']
 type ContainerUpdate = Database['public']['Tables']['containers']['Update']
-type Package = Database['public']['Tables']['packages']['Row']
-type PackageInsert = Database['public']['Tables']['packages']['Insert']
-type PackageUpdate = Database['public']['Tables']['packages']['Update']
 type Customer = Database['public']['Tables']['customers']['Row']
 type CustomerInsert = Database['public']['Tables']['customers']['Insert']
 type CustomerUpdate = Database['public']['Tables']['customers']['Update']
@@ -230,38 +227,6 @@ export const containersApi = {
       .delete()
       .eq('id', id)
     if (error) throw error
-  },
-}
-
-// Fonctions pour les colis (packages) avec QR
-export const packagesApi = {
-  async getByQr(qr: string): Promise<Package | null> {
-    const { data, error } = await supabase
-      .from('packages')
-      .select('*')
-      .eq('qr_code', qr)
-      .single()
-    if (error) throw error
-    return data
-  },
-  async updateStatus(id: string, status: Package['status'], extras?: Partial<PackageUpdate>): Promise<Package> {
-    const { data, error } = await (supabaseAdmin as any)
-      .from('packages')
-      .update({ status, last_scan_at: new Date().toISOString(), ...extras })
-      .eq('id', id)
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-  async create(payload: PackageInsert): Promise<Package> {
-    const { data, error } = await (supabaseAdmin as any)
-      .from('packages')
-      .insert(payload)
-      .select()
-      .single()
-    if (error) throw error
-    return data
   },
 }
 

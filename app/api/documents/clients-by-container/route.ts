@@ -25,18 +25,21 @@ export async function GET(request: NextRequest) {
     if (cErr) throw cErr
     if (!container) return NextResponse.json({ success: false, error: 'Container not found' }, { status: 404 })
 
-    // Find packages in this container
-    const { data: packages, error: pErr } = await (supabaseAdmin as any)
-      .from('packages')
-      .select('client_id')
+    // Les clients d'un conteneur sont ceux des commandes qui lui sont affectées.
+    const { data: orders, error: oErr } = await (supabaseAdmin as any)
+      .from('orders')
+      .select('customer_id')
       .eq('container_id', containerId)
-    if (pErr) throw pErr
+    if (oErr) throw oErr
 
     const clientIds = Array.from(
-      new Set((packages || []).map((p: { client_id?: string | null }) => p.client_id).filter(Boolean)),
+      new Set([
+        container.client_id,
+        ...(orders || []).map((order: { customer_id?: string | null }) => order.customer_id),
+      ].filter(Boolean)),
     ) as string[]
 
-    // Load customers (legacy field name `client_id` kept on packages)
+    // Charger les clients liés au conteneur ou à ses commandes.
     let rows: any[] = []
     if (clientIds.length > 0) {
       const { data: clients, error: clErr } = await (supabaseAdmin as any)
