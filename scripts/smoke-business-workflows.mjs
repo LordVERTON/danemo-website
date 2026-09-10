@@ -22,6 +22,7 @@ const cookies = new Map()
 let customerId
 let containerId
 let orderId
+let customerName = `${marker} Client`
 
 function requiredEnv(name) {
   const value = process.env[name]?.trim()
@@ -154,7 +155,7 @@ async function main() {
   await authenticate()
 
   const customer = await jsonRequest('/api/customers', 'POST', {
-    name: `${marker} Client`,
+    name: customerName,
     email: `${marker.toLowerCase()}@smoke.invalid`,
     phone: '+32470000000',
     address: '1 rue du Smoke Test',
@@ -172,6 +173,7 @@ async function main() {
     ...customer.data,
     name: updatedCustomerName,
   })
+  customerName = updatedCustomerName
   await expectRead(`/api/customers/${customerId}`, 'name', updatedCustomerName)
 
   const container = await jsonRequest('/api/containers', 'POST', {
@@ -229,7 +231,7 @@ async function main() {
   containerId = undefined
   await expectDeleted(`/api/containers/${container.data.id}`)
 
-  await jsonRequest(`/api/customers/${customerId}`, 'DELETE')
+  await jsonRequest(`/api/customers/${customerId}`, 'DELETE', { confirmationName: customerName })
   customerId = undefined
   await expectDeleted(`/api/customers/${customer.data.id}`)
 
@@ -245,7 +247,8 @@ async function cleanup() {
 
   for (const [collection, id] of pending) {
     try {
-      await jsonRequest(`${collection}/${id}`, 'DELETE')
+      const body = collection === '/api/customers' ? { confirmationName: customerName } : undefined
+      await jsonRequest(`${collection}/${id}`, 'DELETE', body)
       console.log(`Nettoyage effectué : ${collection}/${id}`)
     } catch (error) {
       console.error(`Échec du nettoyage de ${collection}/${id}:`, error instanceof Error ? error.message : error)

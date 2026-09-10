@@ -27,6 +27,8 @@ Gérer le client, sa commande logistique, ses règlements et les documents opér
 6. L’action **Facture PDF** de la fiche client crée une facture brouillon si la commande n’en possède pas encore, puis génère le PDF. Si la facture existe déjà, elle régénère directement le PDF avec le même numéro, sans renvoyer l’opérateur vers une erreur de doublon.
 7. L’action **Générer la facture** de la fiche crée un PDF récapitulatif de toutes les commandes du client. Chaque commande devient une ligne et les règlements sont répartis par ancienneté pour afficher le total réglé et le solde ; ce document récapitulatif n’insère pas de nouvelle facture en base.
 8. L’action **Étiquette QR** ouvre le format d’impression PDF de production : logo Danemo, nom et prénom du destinataire, téléphone, destination, expéditeur, QR destiné au scanner opérateur et référence de commande.
+9. La fiche permet la suppression définitive d'un client sans commande uniquement. L'opérateur saisit exactement son nom pour confirmer ; l'API vérifie elle aussi cette confirmation avant de supprimer et d'auditer l'action.
+10. Le menu « Plus d’actions » de chaque commande permet également sa suppression après confirmation explicite, puis la fiche est rechargée.
 
 ## Diagramme principal
 
@@ -57,6 +59,7 @@ flowchart LR
 - La route de création de facture vérifie l'appartenance de la commande au client, refuse une valeur négative/non numérique et empêche le doublon par commande. L’interface contourne ce cas en utilisant la facture existante pour produire le PDF.
 - Les PDF de facture utilisent le générateur commun `generateInvoice`, avec les adresses de facturation/livraison, les lignes de commande, TVA, total, paiements et solde.
 - Les créations, modifications et suppressions de client/commande, ainsi que les paiements, alimentent `business_audit_log` lorsqu'il est disponible.
+- La suppression d'un client exige une session interne, une confirmation exacte de son nom et l'absence de commande associée ; l'API retourne `400` pour une confirmation invalide et `409` si des commandes existent.
 
 ## Effets de bord
 
@@ -69,7 +72,7 @@ flowchart LR
 - Email client dupliqué : la contrainte DB peut refuser la création; l'inscription publique retourne explicitement 409.
 - Un règlement n'est ni modifiable ni supprimable par route dédiée dans le dépôt : une erreur de saisie exige aujourd'hui une correction administrée en dehors de ce flux. **À confirmer.**
 - Un appel direct répété à `POST /api/customers/[id]/invoices` reste refusé avec HTTP 409 ; la réutilisation du PDF est un comportement de la fiche client, pas une modification de ce contrat API.
-- La suppression est physique et peut se propager selon les clés étrangères; elle n'est pas limitée à l'administrateur.
+- La suppression est physique et reste disponible aux opérateurs et administrateurs actifs. Les commandes liées empêchent cette action afin de préserver leur rattachement ; les règlements et factures associés au client sont ensuite soumis à leurs clés étrangères en cascade.
 
 ## Tests de recette
 
@@ -81,6 +84,8 @@ flowchart LR
 6. Générer la facture récapitulative : contrôler une ligne par commande et des montants réglé/solde cohérents avec la progression affichée sur la fiche.
 7. Générer l’étiquette QR et vérifier que le scan préremplit le code dans le scanner opérateur.
 8. Vérifier dans `business_audit_log` les événements créés en environnement de test.
+9. Depuis la fiche d'un client sans commande, saisir un nom erroné puis son nom exact : contrôler le refus puis la suppression et le retour à la liste. Avec une commande associée, contrôler que le bouton et l'API refusent la suppression.
+10. Depuis le menu « Plus d’actions » d'une commande, choisir sa suppression puis annuler : contrôler que la commande reste présente. Refaire l'action et confirmer : contrôler sa disparition de la fiche.
 
 ## Références code
 

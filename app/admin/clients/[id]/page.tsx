@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
-import { ArrowLeft, CreditCard, FileText, Loader2, MoreHorizontal, PackagePlus, Pencil, Plus, QrCode, UserRound } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
+import { ArrowLeft, CreditCard, FileText, Loader2, MoreHorizontal, PackagePlus, Pencil, Plus, QrCode, Trash2, UserRound } from "lucide-react"
 import AdminLayout from "@/components/admin-layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,6 +34,7 @@ const serviceLabels: Record<string, string> = {
 
 export default function ClientDetailsPage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const customerId = String(params.id || "")
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,6 +49,13 @@ export default function ClientDetailsPage() {
   const [containers, setContainers] = useState<Container[]>([])
   const [containersLoading, setContainersLoading] = useState(false)
   const [containersError, setContainersError] = useState("")
+  const [deleteCustomerOpen, setDeleteCustomerOpen] = useState(false)
+  const [deleteConfirmationName, setDeleteConfirmationName] = useState("")
+  const [deleteCustomerError, setDeleteCustomerError] = useState("")
+  const [deletingCustomer, setDeletingCustomer] = useState(false)
+  const [orderPendingDeletion, setOrderPendingDeletion] = useState<Order | null>(null)
+  const [deleteOrderError, setDeleteOrderError] = useState("")
+  const [deletingOrder, setDeletingOrder] = useState(false)
 
   const summary = useMemo(() => calculateCustomerPaymentProgress(customer?.orders || [], customer?.payments || []), [customer])
 
@@ -344,6 +352,55 @@ export default function ClientDetailsPage() {
     }
   }
 
+  async function deleteCustomer(event: React.FormEvent) {
+    event.preventDefault()
+    if (!customer) return
+
+    if (customer.orders.length > 0) {
+      setDeleteCustomerError("Ce client possède des commandes et ne peut pas être supprimé.")
+      return
+    }
+    if (deleteConfirmationName.trim() !== customer.name) {
+      setDeleteCustomerError("Saisissez exactement le nom du client pour confirmer la suppression.")
+      return
+    }
+
+    setDeletingCustomer(true)
+    setDeleteCustomerError("")
+    try {
+      const response = await fetch(`/api/customers/${customer.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmationName: deleteConfirmationName }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || "Impossible de supprimer le client.")
+      router.push("/admin/clients")
+    } catch (cause: any) {
+      setDeleteCustomerError(cause?.message || "Erreur de connexion lors de la suppression du client.")
+    } finally {
+      setDeletingCustomer(false)
+    }
+  }
+
+  async function deleteOrder() {
+    if (!orderPendingDeletion) return
+
+    setDeletingOrder(true)
+    setDeleteOrderError("")
+    try {
+      const response = await fetch(`/api/orders/${orderPendingDeletion.id}`, { method: "DELETE" })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || "Impossible de supprimer la commande.")
+      setOrderPendingDeletion(null)
+      await loadCustomer()
+    } catch (cause: any) {
+      setDeleteOrderError(cause?.message || "Erreur de connexion lors de la suppression de la commande.")
+    } finally {
+      setDeletingOrder(false)
+    }
+  }
+
   if (loading) return <AdminLayout title="Fiche client"><div className="flex h-64 items-center justify-center"><Loader2 className="size-7 animate-spin text-orange-600" /></div></AdminLayout>
   if (!customer) return <AdminLayout title="Fiche client"><Card><CardContent className="p-6"><p className="text-red-600">{error || "Client introuvable"}</p><Button asChild className="mt-4"><Link href="/admin/clients">Retour aux clients</Link></Button></CardContent></Card></AdminLayout>
 
@@ -361,14 +418,43 @@ export default function ClientDetailsPage() {
           <Card><CardHeader><CardTitle className="text-base">Règlements</CardTitle><CardDescription>{summary.paymentStatus === "paid" ? "Soldé" : summary.paymentStatus === "partial" ? "Partiellement réglé" : "À régler"}</CardDescription></CardHeader><CardContent><p className="text-2xl font-bold">{euro.format(summary.remainingAmount)}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-orange-600" style={{ width: `${summary.progressPercent}%` }} /></div><p className="mt-2 text-xs text-muted-foreground">{euro.format(summary.paidAmount)} réglés sur {euro.format(summary.totalAmount)}</p><Button className="mt-4 w-full" onClick={() => setPaymentOpen(true)}><CreditCard className="mr-2 size-4" />Ajouter un règlement</Button></CardContent></Card>
         </div>
 
-        <Card><CardHeader className="flex-row items-center justify-between gap-3"><div><CardTitle>Commandes</CardTitle><CardDescription>{customer.orders.length} commande(s) associée(s)</CardDescription></div><Button className="hidden sm:inline-flex" onClick={() => openOrder()}><PackagePlus className="mr-2 size-4" />Nouvelle commande</Button></CardHeader><CardContent><div className="space-y-3">{customer.orders.length ? customer.orders.map((item) => <article key={item.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{item.order_number}</p><p className="mt-1 text-sm text-muted-foreground">{item.origin} → {item.destination} · {item.service_type}</p>{item.container_code && <p className="mt-1 text-sm text-muted-foreground">Conteneur associé : {item.container_code}</p>}</div><Badge variant="outline" className="shrink-0">{item.status}</Badge></div><div className="mt-4 flex items-center gap-2"><span className="mr-auto font-medium">{euro.format(Number(item.value || 0))}</span><Button type="button" variant="outline" onClick={() => openOrder(item)}><Pencil className="mr-2 size-4" />Modifier</Button><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="outline" size="icon" aria-label={`Plus d’actions pour ${item.order_number}`}><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-52"><DropdownMenuLabel>Documents</DropdownMenuLabel><DropdownMenuItem disabled={saving} onSelect={() => downloadInvoice(item)}><FileText className="mr-2 size-4" />Facture PDF</DropdownMenuItem><DropdownMenuItem disabled={saving} onSelect={() => printQrLabel(item)}><QrCode className="mr-2 size-4" />Étiquette QR</DropdownMenuItem>{item.qr_code && <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href={`/admin/qr?code=${encodeURIComponent(item.qr_code)}`}><QrCode className="mr-2 size-4" />Ouvrir le scanner</Link></DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu></div></article>) : <p className="py-6 text-center text-sm text-muted-foreground">Aucune commande pour ce client.</p>}</div></CardContent></Card>
+        <Card><CardHeader className="flex-row items-center justify-between gap-3"><div><CardTitle>Commandes</CardTitle><CardDescription>{customer.orders.length} commande(s) associée(s)</CardDescription></div><Button className="hidden sm:inline-flex" onClick={() => openOrder()}><PackagePlus className="mr-2 size-4" />Nouvelle commande</Button></CardHeader><CardContent><div className="space-y-3">{customer.orders.length ? customer.orders.map((item) => <article key={item.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{item.order_number}</p><p className="mt-1 text-sm text-muted-foreground">{item.origin} → {item.destination} · {item.service_type}</p>{item.container_code && <p className="mt-1 text-sm text-muted-foreground">Conteneur associé : {item.container_code}</p>}</div><Badge variant="outline" className="shrink-0">{item.status}</Badge></div><div className="mt-4 flex items-center gap-2"><span className="mr-auto font-medium">{euro.format(Number(item.value || 0))}</span><Button type="button" variant="outline" onClick={() => openOrder(item)}><Pencil className="mr-2 size-4" />Modifier</Button><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="outline" size="icon" aria-label={`Plus d’actions pour ${item.order_number}`}><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-52"><DropdownMenuLabel>Documents</DropdownMenuLabel><DropdownMenuItem disabled={saving} onSelect={() => downloadInvoice(item)}><FileText className="mr-2 size-4" />Facture PDF</DropdownMenuItem><DropdownMenuItem disabled={saving} onSelect={() => printQrLabel(item)}><QrCode className="mr-2 size-4" />Étiquette QR</DropdownMenuItem>{item.qr_code && <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href={`/admin/qr?code=${encodeURIComponent(item.qr_code)}`}><QrCode className="mr-2 size-4" />Ouvrir le scanner</Link></DropdownMenuItem></>}<DropdownMenuSeparator /><DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuItem className="text-red-600 focus:text-red-600" disabled={deletingOrder} onSelect={() => { setDeleteOrderError(""); setOrderPendingDeletion(item) }}><Trash2 className="mr-2 size-4" />Supprimer la commande</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div></article>) : <p className="py-6 text-center text-sm text-muted-foreground">Aucune commande pour ce client.</p>}</div></CardContent></Card>
 
         <Card><CardHeader><CardTitle>Historique des règlements</CardTitle></CardHeader><CardContent><div className="space-y-2">{customer.payments.length ? customer.payments.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg border p-3 text-sm"><div><p className="font-medium">{euro.format(Number(item.amount))}</p><p className="text-muted-foreground">{item.paid_at} · {item.payment_method || "—"}{item.reference ? ` · ${item.reference}` : ""}</p></div><Badge variant="secondary">Enregistré</Badge></div>) : <p className="py-4 text-sm text-muted-foreground">Aucun règlement enregistré.</p>}</div></CardContent></Card>
+
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700"><Trash2 className="size-5" />Zone dangereuse</CardTitle>
+            <CardDescription>{customer.orders.length > 0 ? `Ce client possède ${customer.orders.length} commande${customer.orders.length > 1 ? "s" : ""} et ne peut pas être supprimé.` : "La suppression est définitive et doit être confirmée avec le nom complet du client."}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button type="button" variant="destructive" disabled={customer.orders.length > 0} onClick={() => { setDeleteCustomerError(""); setDeleteConfirmationName(""); setDeleteCustomerOpen(true) }}><Trash2 className="mr-2 size-4" />Supprimer le client</Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Button type="button" size="icon" className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 rounded-full shadow-lg sm:hidden" onClick={() => openOrder()} aria-label="Créer une commande"><PackagePlus className="size-6" /></Button>
 
       <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}><DialogContent><DialogHeader><DialogTitle>Ajouter un règlement</DialogTitle><DialogDescription>Enregistrez le montant reçu et son moyen de paiement.</DialogDescription></DialogHeader><form onSubmit={addPayment} className="space-y-4"><div><Label>Montant (€)</Label><Input type="number" min="0.01" step="0.01" required value={payment.amount} onChange={(event) => setPayment({ ...payment, amount: event.target.value })} /></div><div><Label>Date</Label><Input type="date" required value={payment.paid_at} onChange={(event) => setPayment({ ...payment, paid_at: event.target.value })} /></div><div><Label>Méthode</Label><Select value={payment.payment_method} onValueChange={(value) => setPayment({ ...payment, payment_method: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bank_transfer">Virement</SelectItem><SelectItem value="cash">Espèces</SelectItem><SelectItem value="card">Carte</SelectItem><SelectItem value="mobile">Mobile</SelectItem><SelectItem value="other">Autre</SelectItem></SelectContent></Select></div><div><Label>Référence</Label><Input value={payment.reference} onChange={(event) => setPayment({ ...payment, reference: event.target.value })} /></div><div><Label>Note</Label><Textarea value={payment.notes} onChange={(event) => setPayment({ ...payment, notes: event.target.value })} /></div><Button className="w-full" disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</Button></form></DialogContent></Dialog>
+      <Dialog open={deleteCustomerOpen} onOpenChange={(open) => { if (deletingCustomer) return; setDeleteCustomerOpen(open); if (!open) { setDeleteConfirmationName(""); setDeleteCustomerError("") } }}>
+        <DialogContent className="w-[95vw] max-w-lg">
+          <DialogHeader><DialogTitle>Supprimer définitivement ce client</DialogTitle><DialogDescription>Cette action est irréversible. Saisissez exactement le nom du client pour confirmer sa suppression.</DialogDescription></DialogHeader>
+          <form className="space-y-4" onSubmit={deleteCustomer}>
+            {deleteCustomerError && <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{deleteCustomerError}</p>}
+            <div className="space-y-2"><Label htmlFor="delete-customer-confirmation">Tapez « {customer.name} » pour confirmer</Label><Input id="delete-customer-confirmation" autoComplete="off" value={deleteConfirmationName} onChange={(event) => setDeleteConfirmationName(event.target.value)} disabled={deletingCustomer} /></div>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDeleteCustomerOpen(false)} disabled={deletingCustomer}>Annuler</Button><Button type="submit" variant="destructive" disabled={deletingCustomer || deleteConfirmationName.trim() !== customer.name}>{deletingCustomer ? "Suppression en cours..." : "Supprimer définitivement"}</Button></DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(orderPendingDeletion)} onOpenChange={(open) => { if (deletingOrder) return; if (!open) { setOrderPendingDeletion(null); setDeleteOrderError("") } }}>
+        <DialogContent className="w-[95vw] max-w-lg">
+          <DialogHeader><DialogTitle>Supprimer cette commande</DialogTitle><DialogDescription>Cette action est irréversible. La commande {orderPendingDeletion?.order_number || "sélectionnée"} sera supprimée.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            {deleteOrderError && <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{deleteOrderError}</p>}
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setOrderPendingDeletion(null)} disabled={deletingOrder}>Annuler</Button><Button type="button" variant="destructive" onClick={deleteOrder} disabled={deletingOrder}>{deletingOrder ? "Suppression en cours..." : "Supprimer définitivement"}</Button></DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={orderOpen} onOpenChange={(open) => { setOrderOpen(open); if (!open) setEditingOrder(null) }}>
         <DialogContent className="overflow-x-hidden sm:max-w-xl">
           <DialogHeader><DialogTitle>{editingOrder ? "Modifier la commande" : "Nouvelle commande"}</DialogTitle><DialogDescription>Renseignez les informations d’expédition et du destinataire.</DialogDescription></DialogHeader>

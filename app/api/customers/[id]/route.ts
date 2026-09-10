@@ -132,6 +132,31 @@ export async function DELETE(
     if (accessError) return accessError
 
     const { id } = await context.params
+    const body = await request.json().catch(() => ({}))
+    const confirmationName = typeof body?.confirmationName === 'string' ? body.confirmationName.trim() : ''
+    const { data: customer, error: customerError } = await (supabaseAdmin as any)
+      .from('customers')
+      .select('id, name, orders (id)')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (customerError) throw customerError
+    if (!customer) {
+      return NextResponse.json({ success: false, error: 'Customer not found' }, { status: 404 })
+    }
+    if (confirmationName !== customer.name) {
+      return NextResponse.json(
+        { success: false, error: 'Le nom complet du client doit confirmer la suppression.' },
+        { status: 400 }
+      )
+    }
+    if (customer.orders?.length) {
+      return NextResponse.json(
+        { success: false, error: 'Ce client possède des commandes et ne peut pas être supprimé.' },
+        { status: 409 }
+      )
+    }
+
     await customersApi.delete(id)
 
     await recordBusinessAudit(request, {
