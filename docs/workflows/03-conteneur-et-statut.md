@@ -2,7 +2,7 @@
 
 ## Objectif
 
-Créer un transport conteneur, l'associer aux commandes et articles d'inventaire, puis communiquer les évolutions de statut aux destinataires des commandes associées.
+Créer un transport conteneur, l'associer aux commandes et articles d'inventaire, inscrire ses évolutions dans l'historique des commandes liées, puis les communiquer à leurs destinataires.
 
 ## Acteurs et autorisations
 
@@ -22,8 +22,9 @@ Créer un transport conteneur, l'associer aux commandes et articles d'inventaire
 1. L'équipe crée un conteneur : seul le code est vérifié par le handler; navire, ports, ETD, ETA, statut et client sont facultatifs.
 2. Elle affecte des commandes et articles via leurs flux respectifs. Dans la fiche client, la commande de fret maritime propose uniquement les conteneurs existants ; sans conteneur disponible, l’opérateur doit d’abord en créer un.
 3. Une mise à jour accepte les champs connus, dont `status`. Le conteneur est d'abord écrit puis audité.
-4. Si le statut diffère de l'ancien, le serveur recherche les commandes du conteneur et tente un e-mail par commande à l'adresse destinataire, sinon client.
-5. La réponse API est renvoyée sans attendre l'envoi e-mail.
+4. Si le statut diffère de l'ancien, un déclencheur SQL ajoute un événement de suivi à chaque commande associée. Il reprend le statut du conteneur, une localisation pertinente et l'évolution précédente → nouvelle ; le statut propre de la commande n'est pas modifié.
+5. Le serveur recherche ensuite les commandes du conteneur et tente un e-mail par commande à l'adresse destinataire, sinon client.
+6. La réponse API est renvoyée sans attendre l'envoi e-mail.
 
 ## Diagramme principal
 
@@ -35,6 +36,7 @@ sequenceDiagram
   participant N as Notification e-mail
   S->>API: PUT statut
   API->>DB: mettre à jour le conteneur
+  DB->>DB: ajouter un événement à chaque commande liée
   API->>DB: écrire audit métier
   alt statut modifié
     API-->>N: lancer notification asynchrone
@@ -48,12 +50,14 @@ sequenceDiagram
 
 - Valeurs de statut stockées : `planned`, `departed`, `in_transit`, `arrived`, `delivered`, `delayed`.
 - Le code conteneur est unique en base; le handler exige seulement qu'il ne soit pas vide.
+- Chaque changement de statut non vide est inscrit dans `tracking_events` pour toutes les commandes dont `container_id` correspond au conteneur. Cet événement est identifié par `Système — conteneur` et ne change jamais `orders.status`.
 - Les commandes liées reçoivent la préférence `recipient_email`, puis `client_email`; sans e-mail, elles sont ignorées.
 - La liste publique retire les données définies par `toPublicContainer`; les utilisateurs internes reçoivent l'objet complet.
 
 ## Effets de bord
 
 - Écriture dans `business_audit_log` pour création, mise à jour et suppression.
+- Écriture atomique d'un événement de suivi par commande liée quand le statut du conteneur change.
 - E-mail de changement de statut, avec lien de suivi et message personnalisé facultatif.
 - Les erreurs d'e-mail sont journalisées côté serveur, sans faire échouer la réponse de mise à jour.
 
@@ -66,12 +70,13 @@ sequenceDiagram
 ## Tests de recette
 
 1. Créer un conteneur sans code puis avec un code dupliqué : contrôler les erreurs.
-2. Associer une commande ayant un e-mail de destinataire, modifier le statut et vérifier l'écriture avant la tentative d'e-mail.
+2. Associer une commande ayant un e-mail de destinataire, modifier le statut et vérifier l'événement de suivi du conteneur dans son historique avant la tentative d'e-mail, sans changement de statut de la commande.
 3. Modifier le navire sans statut : vérifier qu'aucune notification de statut n'est demandée.
 4. Appeler la lecture sans session et avec session : comparer les champs retournés.
+5. À 320 px de large, vérifier que la liste des conteneurs et les commandes liées s’affichent en cartes sans défilement horizontal ; contrôler que le statut, le suivi et les exports restent accessibles.
 
 ## Références code
 
 - `app/api/containers/route.ts`, `app/api/containers/[id]/route.ts`
 - `lib/container-notifications.ts`, `lib/public-container.ts`, `lib/notification-templates.ts`, `lib/business-audit.ts`
-- `supabase/migrations/0001_initial_schema.sql`
+- `supabase/migrations/20260911000000_record_container_status_tracking_events.sql`

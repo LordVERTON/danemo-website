@@ -282,6 +282,12 @@ export default function TrackingPage() {
       in_progress: { label: "En cours", variant: "default" as const, icon: Truck, color: "text-orange-600" },
       completed: { label: "Terminée", variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
       cancelled: { label: "Annulée", variant: "destructive" as const, icon: AlertCircle, color: "text-red-600" },
+      planned: { label: "Conteneur planifié", variant: "outline" as const, icon: Clock, color: "text-slate-600" },
+      departed: { label: "Conteneur parti", variant: "secondary" as const, icon: Truck, color: "text-blue-600" },
+      in_transit: { label: "Conteneur en transit", variant: "default" as const, icon: Truck, color: "text-orange-600" },
+      arrived: { label: "Conteneur arrivé", variant: "secondary" as const, icon: CheckCircle, color: "text-green-600" },
+      delivered: { label: "Conteneur livré", variant: "default" as const, icon: CheckCircle, color: "text-green-600" },
+      delayed: { label: "Conteneur retardé", variant: "destructive" as const, icon: AlertCircle, color: "text-red-600" },
     }
 
     // Configuration par défaut pour les statuts non reconnus

@@ -368,6 +368,16 @@ async function main() {
   })
 
   await run('le suivi, le QR et les données de conteneur sont cohérents', 'suivi et QR', async () => {
+    const containerStatusTracking = await expectSuccess(operator, `/api/orders/${resources.orderId}/tracking`)
+    assert(
+      containerStatusTracking.data?.some((event) =>
+        event.status === 'departed'
+        && event.description?.includes('Statut du conteneur')
+        && event.operator === 'Système — conteneur'
+      ),
+      'Le changement de statut du conteneur est absent de l’historique de la commande.'
+    )
+
     const tracking = await expectSuccess(operator, `/api/orders/${resources.orderId}/tracking`, 'POST', {
       status: 'confirmed',
       location: 'Anvers',
