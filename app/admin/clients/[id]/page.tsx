@@ -15,12 +15,21 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { calculateCustomerPaymentProgress, type CustomerPaymentRecord } from "@/lib/customer-payment-progress"
-import { downloadInvoicePdf, downloadProformaDocx, downloadProformaPdf, downloadQrLabel } from "@/lib/client-documents"
+import { defaultCompanyData, generateInvoice, type InvoiceData } from "@/lib/invoice-utils"
+import { downloadProformaDocx, downloadProformaPdf, downloadQrLabel } from "@/lib/client-documents"
 
 type Order = { id: string; order_number: string; service_type: string; description?: string | null; origin: string; destination: string; status: string; value?: number | null; weight?: number | null; estimated_delivery?: string | null; recipient_name?: string | null; recipient_email?: string | null; recipient_phone?: string | null; recipient_address?: string | null; recipient_city?: string | null; recipient_postal_code?: string | null; recipient_country?: string | null; qr_code?: string | null; created_at: string }
 type Customer = { id: string; name: string; email?: string | null; phone?: string | null; company?: string | null; address?: string | null; city?: string | null; postal_code?: string | null; country?: string | null; status?: string; orders: Order[]; payments: CustomerPaymentRecord[]; invoices: Array<{ id: string; invoice_number?: string; status?: string; total_amount?: number }> }
 
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
+
+const serviceLabels: Record<string, string> = {
+  fret_maritime: "Fret maritime",
+  fret_aerien: "Fret aérien",
+  demenagement: "Déménagement",
+  dedouanement: "Dédouanement",
+  negoce: "Négoce",
+}
 
 export default function ClientDetailsPage() {
   const params = useParams<{ id: string }>()
@@ -32,6 +41,7 @@ export default function ClientDetailsPage() {
   const [orderOpen, setOrderOpen] = useState(false)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [saving, setSaving] = useState(false)
+  const [generatingSummaryInvoice, setGeneratingSummaryInvoice] = useState(false)
   const [payment, setPayment] = useState({ amount: "", paid_at: new Date().toISOString().slice(0, 10), payment_method: "bank_transfer", reference: "", notes: "" })
   const [order, setOrder] = useState({ service_type: "fret_maritime", description: "", origin: "Bruxelles", destination: "", weight: "", value: "", estimated_delivery: "", recipient_name: "", recipient_email: "", recipient_phone: "", recipient_address: "", recipient_city: "", recipient_postal_code: "", recipient_country: "" })
 
@@ -108,14 +118,184 @@ export default function ClientDetailsPage() {
       const response = await fetch(`/api/customers/${customer.id}/invoices`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order_id: order.id }) })
       const result = await response.json()
       if (!result.success) throw new Error(result.error || "Création de facture impossible")
-      downloadInvoicePdf({ invoiceNumber: result.data.invoice_number, order: { ...order, client_name: customer.name, client_email: customer.email, client_phone: customer.phone }, taxRate: result.data.tax_rate, dueDate: result.data.due_date, notes: result.data.notes })
+
+      const amount = Math.max(Number(order.value) || 0, 0)
+      const payment = summary.orderProgress[order.id]
+      const invoiceOrder: InvoiceData["order"] = {
+        id: order.id,
+        order_number: order.order_number,
+        client_name: customer.name,
+        client_email: customer.email || "",
+        client_phone: customer.phone || undefined,
+        client_address: customer.address || undefined,
+        client_city: customer.city || undefined,
+        client_postal_code: customer.postal_code || undefined,
+        client_country: customer.country || undefined,
+        recipient_name: order.recipient_name,
+        recipient_email: order.recipient_email,
+        recipient_phone: order.recipient_phone,
+        recipient_address: order.recipient_address,
+        recipient_city: order.recipient_city,
+        recipient_postal_code: order.recipient_postal_code,
+        recipient_country: order.recipient_country,
+        service_type: order.service_type,
+        description: order.description,
+        origin: order.origin,
+        destination: order.destination,
+        weight: typeof order.weight === "number" && Number.isFinite(order.weight) ? order.weight : undefined,
+        value: amount,
+        status: order.status,
+        created_at: order.created_at,
+      }
+      const invoiceData: InvoiceData = {
+        invoiceNumber: result.data.invoice_number,
+        issueDate: result.data.created_at || new Date().toISOString(),
+        order: invoiceOrder,
+        company: defaultCompanyData,
+        taxRate: result.data.tax_rate,
+        billingAddress: {
+          name: customer.name,
+          address: customer.address || undefined,
+          postal_code: customer.postal_code || undefined,
+          city: customer.city || undefined,
+          country: customer.country || undefined,
+        },
+        shippingAddress: {
+          name: order.recipient_name || customer.name,
+          address: order.recipient_address || order.destination || undefined,
+          postal_code: order.recipient_postal_code || undefined,
+          city: order.recipient_city || undefined,
+          country: order.recipient_country || undefined,
+        },
+        items: [{
+          description: order.description || serviceLabels[order.service_type] || order.service_type,
+          quantity: 1,
+          unitPrice: amount,
+          total: amount,
+          paidAmount: payment?.paidAmount,
+          remainingAmount: payment?.remainingAmount,
+          paymentStatus: payment?.paymentStatus,
+        }],
+        paymentSummary: {
+          paidAmount: payment?.paidAmount ?? 0,
+          remainingAmount: payment?.remainingAmount ?? amount,
+          paymentStatus: payment?.paymentStatus ?? "unpaid",
+          payments: customer.payments.map((entry) => ({
+            amount: Math.max(Number(entry.amount) || 0, 0),
+            paidAt: entry.paid_at,
+            paymentMethod: entry.payment_method,
+            reference: entry.reference,
+          })),
+          allocationNote: "Les règlements sont enregistrés au niveau du client. La répartition par commande est indicative et suit l’ancienneté des commandes.",
+        },
+      }
+
+      await generateInvoice(invoiceData)
       await loadCustomer()
     } catch (cause: any) { setError(cause?.message || "Impossible de créer la facture") } finally { setSaving(false) }
   }
 
+  async function generateSummaryInvoice() {
+    if (!customer) return
+    const ordersForInvoice = [...customer.orders].sort((left, right) => left.created_at.localeCompare(right.created_at))
+    if (ordersForInvoice.length === 0) {
+      setError("Ce client n’a pas encore de commande à facturer")
+      return
+    }
+
+    setGeneratingSummaryInvoice(true)
+    setError("")
+    try {
+      const referenceOrder = ordersForInvoice[0]
+      const hasMultipleOrders = ordersForInvoice.length > 1
+      const totalValue = ordersForInvoice.reduce((total, item) => total + Math.max(Number(item.value) || 0, 0), 0)
+      const totalWeight = ordersForInvoice.reduce((total, item) => total + Math.max(Number(item.weight) || 0, 0), 0)
+      const invoiceNumber = `INV-${customer.id}-${Date.now()}`
+      const invoiceOrder: InvoiceData["order"] = {
+        id: `summary-${customer.id}`,
+        order_number: invoiceNumber,
+        client_name: customer.name,
+        client_email: customer.email || "",
+        client_phone: customer.phone || undefined,
+        client_address: customer.address || undefined,
+        client_city: customer.city || undefined,
+        client_postal_code: customer.postal_code || undefined,
+        client_country: customer.country || undefined,
+        recipient_name: hasMultipleOrders ? customer.name : referenceOrder.recipient_name || customer.name,
+        recipient_email: hasMultipleOrders ? customer.email : referenceOrder.recipient_email,
+        recipient_phone: hasMultipleOrders ? customer.phone : referenceOrder.recipient_phone,
+        recipient_address: hasMultipleOrders ? customer.address : referenceOrder.recipient_address,
+        recipient_city: hasMultipleOrders ? customer.city : referenceOrder.recipient_city,
+        recipient_postal_code: hasMultipleOrders ? customer.postal_code : referenceOrder.recipient_postal_code,
+        recipient_country: hasMultipleOrders ? customer.country : referenceOrder.recipient_country,
+        service_type: hasMultipleOrders ? "Services multiples" : referenceOrder.service_type,
+        description: hasMultipleOrders ? "Commandes multiples" : referenceOrder.description,
+        origin: hasMultipleOrders ? "Multiples" : referenceOrder.origin,
+        destination: hasMultipleOrders ? "Multiples" : referenceOrder.destination,
+        weight: totalWeight || referenceOrder.weight || undefined,
+        value: totalValue,
+        status: referenceOrder.status,
+        created_at: referenceOrder.created_at,
+      }
+
+      await generateInvoice({
+        invoiceNumber,
+        issueDate: new Date().toISOString(),
+        order: invoiceOrder,
+        company: defaultCompanyData,
+        billingAddress: {
+          name: customer.name,
+          address: customer.address || undefined,
+          postal_code: customer.postal_code || undefined,
+          city: customer.city || undefined,
+          country: customer.country || undefined,
+        },
+        shippingAddress: {
+          name: invoiceOrder.recipient_name || customer.name,
+          address: invoiceOrder.recipient_address || undefined,
+          postal_code: invoiceOrder.recipient_postal_code || undefined,
+          city: invoiceOrder.recipient_city || undefined,
+          country: invoiceOrder.recipient_country || undefined,
+        },
+        paymentMethod: "Paiement groupé - voir référence facture",
+        consolidatedInvoice: hasMultipleOrders,
+        items: ordersForInvoice.map((item) => {
+          const payment = summary.orderProgress[item.id]
+          const amount = Math.max(Number(item.value) || 0, 0)
+          return {
+            description: item.description || serviceLabels[item.service_type] || item.service_type,
+            quantity: 1,
+            unitPrice: amount,
+            total: amount,
+            paidAmount: payment?.paidAmount,
+            remainingAmount: payment?.remainingAmount,
+            paymentStatus: payment?.paymentStatus,
+          }
+        }),
+        paymentSummary: {
+          paidAmount: summary.paidAmount,
+          remainingAmount: summary.remainingAmount,
+          creditAmount: summary.creditAmount,
+          paymentStatus: summary.paymentStatus,
+          payments: customer.payments.map((entry) => ({
+            amount: Math.max(Number(entry.amount) || 0, 0),
+            paidAt: entry.paid_at,
+            paymentMethod: entry.payment_method,
+            reference: entry.reference,
+          })),
+          allocationNote: "Les règlements sont enregistrés au niveau du client. La répartition par commande est indicative et suit l’ancienneté des commandes.",
+        },
+      })
+    } catch (cause: any) {
+      setError(cause?.message || "Impossible de générer la facture récapitulative")
+    } finally {
+      setGeneratingSummaryInvoice(false)
+    }
+  }
+
   function documentOrder(order: Order) {
     if (!customer) throw new Error("Client absent")
-    return { ...order, client_name: customer.name, client_email: customer.email, client_phone: customer.phone }
+    return { ...order, client_name: customer.name, client_company: customer.company, client_email: customer.email, client_phone: customer.phone }
   }
 
   function exportSummary() {
@@ -136,7 +316,7 @@ export default function ClientDetailsPage() {
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button asChild variant="outline"><Link href="/admin/clients"><ArrowLeft className="mr-2 size-4" />Clients</Link></Button>
-          <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={exportSummary}><FileDown className="mr-2 size-4" />Exporter CSV</Button><Button onClick={() => window.print()} variant="outline">Imprimer / PDF</Button></div>
+          <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={exportSummary}><FileDown className="mr-2 size-4" />Exporter CSV</Button><Button type="button" onClick={generateSummaryInvoice} disabled={generatingSummaryInvoice || saving || customer.orders.length === 0}>{generatingSummaryInvoice ? <Loader2 className="mr-2 size-4 animate-spin" /> : <FileText className="mr-2 size-4" />}Générer la facture</Button></div>
         </div>
 
         {error && <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
