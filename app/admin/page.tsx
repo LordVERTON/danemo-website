@@ -15,12 +15,12 @@ import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 const adminSections = [
-  { href: "/admin/clients", label: "Clients", description: "Gérez les clients et leurs commandes.", icon: Users },
-  { href: "/admin/containers", label: "Conteneurs", description: "Organisez les départs et les arrivées.", icon: Package },
-  { href: "/admin/tracking", label: "Suivi", description: "Consultez le suivi des expéditions.", icon: Truck },
+  { href: "/admin/clients", label: "Clients", description: "Gérez les clients et leurs commandes.", icon: Users, mobileNavigationRedundant: true },
+  { href: "/admin/containers", label: "Conteneurs", description: "Organisez les départs et les arrivées.", icon: Package, mobileNavigationRedundant: true },
+  { href: "/admin/tracking", label: "Suivi", description: "Consultez le suivi des expéditions.", icon: Truck, mobileNavigationRedundant: true },
   { href: "/admin/analytics", label: "Analyses", description: "Suivez les indicateurs de l'activité.", icon: BarChart3, roles: ["admin"] },
   { href: "/admin/messages", label: "Messages", description: "Préparez les communications clients.", icon: MessageSquare, roles: ["admin"] },
-  { href: "/admin/blogs", label: "Blogs", description: "Créez et publiez les articles du site.", icon: BookOpen },
+  { href: "/admin/blogs", label: "Blogs", description: "Créez et publiez les articles du site.", icon: BookOpen, mobileNavigationRedundant: true },
   { href: "/admin/employees", label: "Collaborateurs", description: "Gérez les membres de l'équipe.", icon: Users, roles: ["admin"] },
 ]
 
@@ -64,8 +64,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {adminSections.filter((section) => !section.roles || section.roles.includes(role)).map(({ href, label, description, icon: Icon }) => (
-          <Link key={href} href={href} className="group">
+        {adminSections.filter((section) => !section.roles || section.roles.includes(role)).map(({ href, label, description, icon: Icon, mobileNavigationRedundant }) => (
+          <Link key={href} href={href} className={`group${mobileNavigationRedundant ? " hidden md:block" : ""}`}>
             <Card className="h-full transition-shadow group-hover:shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

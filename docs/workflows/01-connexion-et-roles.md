@@ -8,7 +8,7 @@ Donner accès au back-office aux seuls collaborateurs actifs. Les deux rôles ap
 
 | Acteur | Droit constaté |
 | --- | --- |
-| Opérateur actif | Accès à `/admin` et aux API métier autorisées. |
+| Opérateur actif | Accès à `/admin`, aux API métier autorisées et aux volumes agrégés de commandes via `GET /api/stats`. |
 | Administrateur actif | Même accès, plus `/admin/analytics`, `/admin/employees` et API administratives. |
 | Compte Auth sans fiche active ou rôle incohérent | Connexion refusée. |
 
@@ -17,15 +17,16 @@ Donner accès au back-office aux seuls collaborateurs actifs. Les deux rôles ap
 - Page `GET /admin/login` et callback `POST /api/auth/callback/credentials`.
 - Page publique `GET /admin/reset-password`, utilisable seulement avec une session de récupération Supabase valide.
 - Proxy `proxy.ts` pour la redirection et le rate limit ; contrôles serveur dans `lib/staff-api-auth.ts`.
+- Navigation opérateur : le logo ramène à `/admin`. Les accès fréquents sont, de gauche à droite, **Clients**, **Suivi**, **Scanner** et **Conteneurs**. Le menu **Plus** contient les Blogs, les sections réservées aux administrateurs et la déconnexion en rouge.
 
 ## Déroulé
 
 1. Le collaborateur soumet son e-mail et son mot de passe à NextAuth.
 2. Le provider vérifie le mot de passe auprès de Supabase Auth.
 3. Le serveur lit ensuite `app_metadata.role` et la fiche `employees`. Le rôle doit être `admin` ou `operator`, la fiche doit être active et porter le même rôle.
-4. Une session JWT de sept jours est créée ; le rôle est porté dans le jeton.
+4. Une session JWT de sept jours est créée ; le rôle est porté dans le jeton. Le collaborateur retrouve le tableau de bord via le logo, sans entrée dédiée dans la navigation.
 5. Le proxy redirige un visiteur non connecté vers `/admin/login?returnTo=…`. Il bloque l'accès opérateur aux pages Analytics et Collaborateurs.
-6. Chaque handler sensible recalcule l'acteur actif : un compte désactivé après connexion n'est donc plus admis par ces handlers.
+6. Chaque handler sensible recalcule l'acteur actif : un compte désactivé après connexion n'est donc plus admis par ces handlers. `GET /api/stats` est ouvert aux collaborateurs actifs, mais ne renvoie que des compteurs agrégés de commandes, sans détail client ou commande.
 
 ## Diagramme principal
 
@@ -71,9 +72,10 @@ sequenceDiagram
 ## Tests de recette
 
 1. Connecter un administrateur actif : vérifier l'accès à Analytics et Collaborateurs.
-2. Connecter un opérateur actif : vérifier la redirection de ces deux pages vers `/admin` et l'accès aux commandes.
+2. Connecter un opérateur actif : vérifier la redirection de ces deux pages vers `/admin`, l'accès aux commandes et la lecture de `GET /api/stats`.
 3. Désactiver une fiche collaborateur dans un environnement de test : vérifier qu'une requête API métier est refusée avec la session existante.
 4. Ouvrir un lien de récupération valide, saisir deux mots de passe de moins de 12 puis au moins 12 caractères : vérifier les refus puis la déconnexion après succès.
+5. Sur mobile, vérifier l'ordre **Clients**, **Suivi**, **Scanner**, **Conteneurs**, **Plus**, puis ouvrir **Plus** et contrôler la présence des Blogs et de la déconnexion rouge.
 
 ## Références code
 

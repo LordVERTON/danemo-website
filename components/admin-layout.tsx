@@ -5,8 +5,8 @@ import type React from "react"
 
 import { signOut, useSession } from "next-auth/react"
 import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { BarChart3, BookOpen, Home, LogOut, Menu, MessageSquare, Package, QrCode, Truck, Users, X } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { BarChart3, BookOpen, LogOut, Menu, MessageSquare, Package, QrCode, Truck, Users, X } from "lucide-react"
 import Link from "next/link"
 
 interface AdminLayoutProps {
@@ -22,24 +22,22 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
   const role = session?.user?.role === "admin" ? "admin" : "operator"
 
   const navigation = [
-    { href: "/admin", label: "Tableau de bord", icon: Home },
     { href: "/admin/clients", label: "Clients", icon: Users },
-    { href: "/admin/containers", label: "Conteneurs", icon: Package },
     { href: "/admin/tracking", label: "Suivi", icon: Truck },
+    { href: "/admin/qr", label: "Scanner", icon: QrCode },
+    { href: "/admin/containers", label: "Conteneurs", icon: Package },
     { href: "/admin/analytics", label: "Analyses", icon: BarChart3, roles: ["admin"] },
     { href: "/admin/messages", label: "Messages", icon: MessageSquare, roles: ["admin"] },
     { href: "/admin/blogs", label: "Blogs", icon: BookOpen },
     { href: "/admin/employees", label: "Collaborateurs", icon: Users, roles: ["admin"] },
-    { href: "/admin/qr", label: "Scanner", icon: QrCode },
   ]
   const visibleNavigation = navigation.filter((item) => !item.roles || item.roles.includes(role))
-  const desktopNavigation = visibleNavigation.filter((item) => item.href !== "/admin/qr")
-  const mobilePrimaryHrefs = ["/admin", "/admin/clients", "/admin/qr", "/admin/tracking"]
-  const mobilePrimaryNavigation = mobilePrimaryHrefs.flatMap((href) =>
+  const primaryHrefs = ["/admin/clients", "/admin/tracking", "/admin/qr", "/admin/containers"]
+  const primaryNavigation = primaryHrefs.flatMap((href) =>
     visibleNavigation.filter((item) => item.href === href),
   )
-  const mobileSecondaryNavigation = visibleNavigation.filter((item) => !mobilePrimaryHrefs.includes(item.href))
-  const isMoreMenuActive = mobileSecondaryNavigation.some((item) => pathname.startsWith(item.href))
+  const secondaryNavigation = visibleNavigation.filter((item) => !primaryHrefs.includes(item.href))
+  const isMoreMenuActive = secondaryNavigation.some((item) => pathname.startsWith(item.href))
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/admin/login" })
@@ -78,9 +76,9 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
                 <span className="sm:hidden">Danemo</span>
                 <span className="hidden sm:inline">Administration Danemo</span>
               </Link>
-              <nav className="hidden items-center gap-4 lg:flex">
-                {desktopNavigation.map(({ href, label, icon: Icon }) => {
-                  const isActive = href === "/admin" ? pathname === href : pathname.startsWith(href)
+              <nav className="hidden items-center gap-4 lg:flex" aria-label="Navigation administration">
+                {primaryNavigation.map(({ href, label, icon: Icon }) => {
+                  const isActive = pathname.startsWith(href)
                   return (
                     <Link
                       key={href}
@@ -94,12 +92,36 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
                     </Link>
                   )
                 })}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={`flex items-center gap-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 ${
+                        isMoreMenuActive ? "font-semibold text-orange-600" : "text-gray-600 hover:text-orange-600"
+                      }`}
+                    >
+                      <Menu className="h-4 w-4" />
+                      Plus
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {secondaryNavigation.map(({ href, label, icon: Icon }) => (
+                      <DropdownMenuItem key={href} asChild>
+                        <Link href={href} className="flex items-center gap-2">
+                          <Icon className="size-4" />
+                          {label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={handleLogout} className="text-red-600 focus:bg-red-50 focus:text-red-700">
+                      <LogOut className="mr-2 size-4" />
+                      Déconnexion
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </nav>
             </div>
-            <Button variant="outline" onClick={handleLogout} className="h-11 shrink-0 bg-transparent">
-              <LogOut className="h-4 w-4" />
-              Déconnexion
-            </Button>
           </div>
         </div>
       </header>
@@ -131,7 +153,7 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
             </button>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {mobileSecondaryNavigation.map(({ href, label, icon: Icon }) => {
+            {secondaryNavigation.map(({ href, label, icon: Icon }) => {
               const isActive = pathname.startsWith(href)
               return (
                 <Link
@@ -149,13 +171,23 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
               )
             })}
           </div>
+          <div className="mt-2 border-t border-slate-200 pt-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+            >
+              <LogOut className="size-[18px] shrink-0" strokeWidth={1.8} />
+              Déconnexion
+            </button>
+          </div>
         </nav>
       )}
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden" aria-label="Navigation administration mobile">
         <div className="mx-auto grid max-w-7xl grid-cols-5 px-1 py-1.5">
-          {mobilePrimaryNavigation.map(({ href, label, icon: Icon }) => {
-            const isActive = href === "/admin" ? pathname === href : pathname.startsWith(href)
+          {primaryNavigation.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname.startsWith(href)
             return (
               <Link
                 key={href}
