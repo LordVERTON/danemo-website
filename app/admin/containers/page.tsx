@@ -383,12 +383,12 @@ export default function ContainersPage() {
         </div>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <PackageSearch className="h-5 w-5 text-orange-600" />
               Liste des conteneurs
             </CardTitle>
-            <div className="w-64">
+            <div className="w-full sm:w-64">
               <Input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
           </CardHeader>
@@ -398,7 +398,45 @@ export default function ContainersPage() {
                 <AlertDescription>{statusUpdateFeedback}</AlertDescription>
               </Alert>
             )}
-            <div className="overflow-x-auto">
+            <div className="space-y-3 lg:hidden">
+              {loading ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Chargement...</p>
+              ) : filtered.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Aucun conteneur</p>
+              ) : (
+                filtered.map((c) => (
+                  <article key={c.id} className="min-w-0 rounded-xl border p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-mono font-semibold text-slate-900">{c.code}</p>
+                        <p className="mt-1 truncate text-sm text-muted-foreground">{c.vessel || "Navire non renseigné"}</p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0">{formatContainerStatus(c.status)}</Badge>
+                    </div>
+                    <p className="mt-3 truncate text-sm text-slate-700">{c.departure_port || "Départ à confirmer"} → {c.arrival_port || "Arrivée à confirmer"}</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <p><span className="text-muted-foreground">ETD : </span>{c.etd || "—"}</p>
+                      <p><span className="text-muted-foreground">ETA : </span>{c.eta || "—"}</p>
+                    </div>
+                    <div className="mt-4 grid gap-2">
+                      <Select value={statusDrafts[c.id] || c.status} onValueChange={(value: Container["status"]) => setStatusDrafts((prev) => ({ ...prev, [c.id]: value }))}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent>{containerStatusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Button variant="secondary" className="w-full" disabled={statusUpdateLoading === c.id || (statusDrafts[c.id] || c.status) === c.status} onClick={() => updateContainerStatus(c)}>
+                        {statusUpdateLoading === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer le statut"}
+                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="outline" className="col-span-2 w-full" onClick={() => { setSelected(c); setManualMessage(''); setNotifyError(null); setNotifySuccess(null); setTrackingOpen(true); fetchContainerEvents(c.id); fetchLinkedInventory(c) }}><MapPin className="h-4 w-4" />Suivi</Button>
+                        <Button variant="outline" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "xlsx")}>{exportLoading === `${c.id}:xlsx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}XLSX</Button>
+                        <Button variant="outline" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "docx")}>{exportLoading === `${c.id}:docx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}DOCX</Button>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+            <div className="hidden lg:block">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -657,7 +695,18 @@ export default function ContainersPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="space-y-2 lg:hidden">
+                          {orders.map((order) => (
+                            <article key={order.id} className="rounded-md border bg-white p-3 text-sm">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0"><p className="truncate font-mono text-xs font-medium">{order.order_number}</p><p className="mt-1 capitalize text-muted-foreground">{order.service_type.replace("_", " ")}</p></div>
+                                <Badge variant="outline" className="shrink-0 capitalize">{order.status.replace("_", " ")}</Badge>
+                              </div>
+                              <p className="mt-2 truncate text-xs text-muted-foreground">{order.origin} → {order.destination}</p>
+                            </article>
+                          ))}
+                        </div>
+                        <div className="hidden lg:block">
                           <Table className="w-full text-sm">
                             <TableHeader>
                               <TableRow>
