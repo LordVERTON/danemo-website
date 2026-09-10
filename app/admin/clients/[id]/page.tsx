@@ -16,10 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { calculateCustomerPaymentProgress, type CustomerPaymentRecord } from "@/lib/customer-payment-progress"
 import { defaultCompanyData, generateInvoice, type InvoiceData } from "@/lib/invoice-utils"
-import { downloadProformaDocx, downloadProformaPdf, downloadQrLabel } from "@/lib/client-documents"
+import { downloadQrLabel } from "@/lib/client-documents"
 
 type Order = { id: string; order_number: string; service_type: string; description?: string | null; origin: string; destination: string; status: string; value?: number | null; weight?: number | null; estimated_delivery?: string | null; recipient_name?: string | null; recipient_email?: string | null; recipient_phone?: string | null; recipient_address?: string | null; recipient_city?: string | null; recipient_postal_code?: string | null; recipient_country?: string | null; qr_code?: string | null; created_at: string }
-type Customer = { id: string; name: string; email?: string | null; phone?: string | null; company?: string | null; address?: string | null; city?: string | null; postal_code?: string | null; country?: string | null; status?: string; orders: Order[]; payments: CustomerPaymentRecord[]; invoices: Array<{ id: string; invoice_number?: string; status?: string; total_amount?: number }> }
+type Customer = { id: string; name: string; email?: string | null; phone?: string | null; company?: string | null; address?: string | null; city?: string | null; postal_code?: string | null; country?: string | null; status?: string; orders: Order[]; payments: CustomerPaymentRecord[]; invoices: Array<{ id: string; order_id?: string | null; invoice_number?: string; tax_rate?: number | null; created_at?: string | null; status?: string; total_amount?: number }> }
 
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
 
@@ -111,13 +111,21 @@ export default function ClientDetailsPage() {
     } finally { setSaving(false) }
   }
 
-  async function createInvoice(order: Order) {
+  async function downloadInvoice(order: Order) {
     if (!customer) return
     setSaving(true); setError("")
     try {
-      const response = await fetch(`/api/customers/${customer.id}/invoices`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order_id: order.id }) })
-      const result = await response.json()
-      if (!result.success) throw new Error(result.error || "Création de facture impossible")
+      const existingInvoice = customer.invoices.find((invoice) => invoice.order_id === order.id)
+      let invoice = existingInvoice
+      let created = false
+      if (!invoice) {
+        const response = await fetch(`/api/customers/${customer.id}/invoices`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order_id: order.id }) })
+        const result = await response.json()
+        if (!result.success) throw new Error(result.error || "Création de facture impossible")
+        invoice = result.data
+        created = true
+      }
+      if (!invoice) throw new Error("Facture introuvable")
 
       const amount = Math.max(Number(order.value) || 0, 0)
       const payment = summary.orderProgress[order.id]
@@ -148,11 +156,11 @@ export default function ClientDetailsPage() {
         created_at: order.created_at,
       }
       const invoiceData: InvoiceData = {
-        invoiceNumber: result.data.invoice_number,
-        issueDate: result.data.created_at || new Date().toISOString(),
+        invoiceNumber: invoice.invoice_number || order.order_number,
+        issueDate: invoice.created_at || new Date().toISOString(),
         order: invoiceOrder,
         company: defaultCompanyData,
-        taxRate: result.data.tax_rate,
+        taxRate: invoice.tax_rate ?? 0,
         billingAddress: {
           name: customer.name,
           address: customer.address || undefined,
@@ -191,8 +199,8 @@ export default function ClientDetailsPage() {
       }
 
       await generateInvoice(invoiceData)
-      await loadCustomer()
-    } catch (cause: any) { setError(cause?.message || "Impossible de créer la facture") } finally { setSaving(false) }
+      if (created) await loadCustomer()
+    } catch (cause: any) { setError(cause?.message || "Impossible de générer la facture PDF") } finally { setSaving(false) }
   }
 
   async function generateSummaryInvoice() {
@@ -325,7 +333,7 @@ export default function ClientDetailsPage() {
           <Card><CardHeader><CardTitle className="text-base">Règlements</CardTitle><CardDescription>{summary.paymentStatus === "paid" ? "Soldé" : summary.paymentStatus === "partial" ? "Partiellement réglé" : "À régler"}</CardDescription></CardHeader><CardContent><p className="text-2xl font-bold">{euro.format(summary.remainingAmount)}</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-orange-600" style={{ width: `${summary.progressPercent}%` }} /></div><p className="mt-2 text-xs text-muted-foreground">{euro.format(summary.paidAmount)} réglés sur {euro.format(summary.totalAmount)}</p><Button className="mt-4 w-full" onClick={() => setPaymentOpen(true)}><CreditCard className="mr-2 size-4" />Ajouter un règlement</Button></CardContent></Card>
         </div>
 
-        <Card><CardHeader className="flex-row items-center justify-between gap-3"><div><CardTitle>Commandes</CardTitle><CardDescription>{customer.orders.length} commande(s) associée(s)</CardDescription></div><Button className="hidden sm:inline-flex" onClick={() => openOrder()}><PackagePlus className="mr-2 size-4" />Nouvelle commande</Button></CardHeader><CardContent><div className="space-y-3">{customer.orders.length ? customer.orders.map((item) => <article key={item.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{item.order_number}</p><p className="mt-1 text-sm text-muted-foreground">{item.origin} → {item.destination} · {item.service_type}</p></div><Badge variant="outline" className="shrink-0">{item.status}</Badge></div><div className="mt-4 flex items-center gap-2"><span className="mr-auto font-medium">{euro.format(Number(item.value || 0))}</span><Button type="button" variant="outline" onClick={() => openOrder(item)}><Pencil className="mr-2 size-4" />Modifier</Button><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="outline" size="icon" aria-label={`Plus d’actions pour ${item.order_number}`}><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-52"><DropdownMenuLabel>Documents</DropdownMenuLabel><DropdownMenuItem disabled={saving} onSelect={() => createInvoice(item)}><FileText className="mr-2 size-4" />Créer la facture</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadProformaPdf(documentOrder(item))}>Proforma PDF</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadProformaDocx(documentOrder(item))}>Proforma DOCX</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadQrLabel(documentOrder(item))}><QrCode className="mr-2 size-4" />Étiquette QR</DropdownMenuItem>{item.qr_code && <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href={`/admin/qr?code=${encodeURIComponent(item.qr_code)}`}><QrCode className="mr-2 size-4" />Ouvrir le scanner</Link></DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu></div></article>) : <p className="py-6 text-center text-sm text-muted-foreground">Aucune commande pour ce client.</p>}</div></CardContent></Card>
+        <Card><CardHeader className="flex-row items-center justify-between gap-3"><div><CardTitle>Commandes</CardTitle><CardDescription>{customer.orders.length} commande(s) associée(s)</CardDescription></div><Button className="hidden sm:inline-flex" onClick={() => openOrder()}><PackagePlus className="mr-2 size-4" />Nouvelle commande</Button></CardHeader><CardContent><div className="space-y-3">{customer.orders.length ? customer.orders.map((item) => <article key={item.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{item.order_number}</p><p className="mt-1 text-sm text-muted-foreground">{item.origin} → {item.destination} · {item.service_type}</p></div><Badge variant="outline" className="shrink-0">{item.status}</Badge></div><div className="mt-4 flex items-center gap-2"><span className="mr-auto font-medium">{euro.format(Number(item.value || 0))}</span><Button type="button" variant="outline" onClick={() => openOrder(item)}><Pencil className="mr-2 size-4" />Modifier</Button><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="outline" size="icon" aria-label={`Plus d’actions pour ${item.order_number}`}><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-52"><DropdownMenuLabel>Documents</DropdownMenuLabel><DropdownMenuItem disabled={saving} onSelect={() => downloadInvoice(item)}><FileText className="mr-2 size-4" />Facture PDF</DropdownMenuItem><DropdownMenuItem onSelect={() => downloadQrLabel(documentOrder(item))}><QrCode className="mr-2 size-4" />Étiquette QR</DropdownMenuItem>{item.qr_code && <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href={`/admin/qr?code=${encodeURIComponent(item.qr_code)}`}><QrCode className="mr-2 size-4" />Ouvrir le scanner</Link></DropdownMenuItem></>}</DropdownMenuContent></DropdownMenu></div></article>) : <p className="py-6 text-center text-sm text-muted-foreground">Aucune commande pour ce client.</p>}</div></CardContent></Card>
 
         <Card><CardHeader><CardTitle>Historique des règlements</CardTitle></CardHeader><CardContent><div className="space-y-2">{customer.payments.length ? customer.payments.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg border p-3 text-sm"><div><p className="font-medium">{euro.format(Number(item.amount))}</p><p className="text-muted-foreground">{item.paid_at} · {item.payment_method || "—"}{item.reference ? ` · ${item.reference}` : ""}</p></div><Badge variant="secondary">Enregistré</Badge></div>) : <p className="py-4 text-sm text-muted-foreground">Aucun règlement enregistré.</p>}</div></CardContent></Card>
       </div>
