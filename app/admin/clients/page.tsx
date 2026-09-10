@@ -6,16 +6,11 @@ import AdminLayout from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import {
   Search,
   Filter,
   User,
-  ChevronRight,
-  Building2,
-  Mail,
-  Phone,
   Plus,
   Edit,
   Loader2,
@@ -255,16 +250,6 @@ export default function ClientsPage() {
   // Le délai de recherche est volontairement réinitialisé uniquement lors d'un changement de filtre.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filterStatus])
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { label: 'Actif', variant: 'default' as const },
-      inactive: { label: 'Inactif', variant: 'secondary' as const },
-      archived: { label: 'Archivé', variant: 'outline' as const },
-    }
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active
-    return <Badge variant={config.variant}>{config.label}</Badge>
-  }
 
   const getOrderStatusBadge = (status: string) => {
     const statusConfig = {
@@ -566,7 +551,7 @@ export default function ClientsPage() {
           </CardContent>
         </Card>
 
-        {/* Table des clients */}
+        {/* Liste des clients */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -580,125 +565,33 @@ export default function ClientsPage() {
             ) : customers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">Aucun client trouvé</div>
             ) : (
-            <>
-            <div className="space-y-3 lg:hidden">
-              {customers.map((customer) => {
-                const ordersCount = customer.orders?.length || 0
-                return (
-                  <article key={customer.id} className="rounded-xl border border-slate-200 p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-slate-900">{customer.name}</p>
-                        <p className="mt-1 truncate text-sm text-muted-foreground">{customer.email || customer.phone || "Aucun contact renseigné"}</p>
-                      </div>
-                      {getStatusBadge(customer.status)}
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                      <p className="truncate">{customer.company || "Particulier"}</p>
-                      <p className="text-right">{ordersCount} {ordersCount > 1 ? "commandes" : "commande"}</p>
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                      <Button type="button" variant="outline" className="flex-1" onClick={() => handleCustomerClick(customer.id)}>Voir la fiche</Button>
-                      {canEdit && <Button type="button" variant="outline" size="icon" onClick={(event) => handleOpenEdit(event, customer)} aria-label={`Modifier ${customer.name}`}><Edit className="size-4" /></Button>}
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-            <div className="hidden lg:block">
-            <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Entreprise</TableHead>
-                    <TableHead>Commandes</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {customers.map((customer) => {
-                    const ordersCount = customer.orders?.length || 0
-                    
-                    return (
-                      <TableRow 
-                        key={customer.id}
-                        className="cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() => handleCustomerClick(customer.id)}
+              <div className="divide-y overflow-hidden rounded-lg border">
+                {customers.map((customer) => (
+                  <article key={customer.id} className="flex min-w-0 items-center gap-3 p-3 transition-colors hover:bg-muted/50 sm:p-4">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => handleCustomerClick(customer.id)}
+                      aria-label={`Ouvrir la fiche de ${customer.name}`}
+                    >
+                      <p className="truncate font-medium text-foreground">{customer.name}</p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">{customer.email || "Aucune adresse e-mail renseignée"}</p>
+                    </button>
+                    {canEdit && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={(event) => handleOpenEdit(event, customer)}
                       >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{customer.name}</div>
-                              {customer.email && (
-                                <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {customer.email}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {customer.phone ? (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Phone className="h-3 w-3 text-muted-foreground" />
-                              {customer.phone}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {customer.company ? (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Building2 className="h-3 w-3 text-muted-foreground" />
-                              {customer.company}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-mono">
-                              {ordersCount}
-                            </Badge>
-                            {ordersCount > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                {ordersCount === 1 ? 'commande' : 'commandes'}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(customer.status)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            {canEdit && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={(e) => handleOpenEdit(e, customer)}
-                                title="Modifier le client"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-            </Table>
-            </div>
-            </>
+                        <Edit className="mr-2 size-4" />
+                        Modifier
+                      </Button>
+                    )}
+                  </article>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
