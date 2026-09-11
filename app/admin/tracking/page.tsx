@@ -5,7 +5,7 @@ import AdminLayout from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, ExternalLink, PackageSearch, QrCode } from "lucide-react"
+import { Search, MapPin, Clock, Truck, Package, Ship, CheckCircle, AlertCircle, Plus, Eye, ExternalLink, PackageSearch, QrCode } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
 
 interface Order {
@@ -52,6 +52,45 @@ interface TrackingEvent {
   event_date: string
 }
 
+interface Customer {
+  id: string
+  name: string
+  email?: string | null
+  phone?: string | null
+  address?: string | null
+  city?: string | null
+  postal_code?: string | null
+  country?: string | null
+}
+
+const emptyOrderForm = {
+  service_type: "fret_maritime",
+  container_id: "",
+  description: "",
+  origin: "",
+  destination: "",
+  weight: "",
+  value: "",
+  estimated_delivery: "",
+  recipient_name: "",
+  recipient_email: "",
+  recipient_phone: "",
+  recipient_address: "",
+  recipient_city: "",
+  recipient_postal_code: "",
+  recipient_country: "",
+}
+
+const emptyCustomerForm = {
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  postal_code: "",
+  country: "",
+}
+
 export default function TrackingPage() {
   const { user: currentUser } = useCurrentUser()
   const [orders, setOrders] = useState<Order[]>([])
@@ -60,8 +99,8 @@ export default function TrackingPage() {
   const [filterContainer, setFilterContainer] = useState<string>("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([])
-  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false)
   const [isTrackingDialogOpen, setIsTrackingDialogOpen] = useState(false)
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isLoadingTrackingEvents, setIsLoadingTrackingEvents] = useState(false)
@@ -69,6 +108,14 @@ export default function TrackingPage() {
   const [successMessage, setSuccessMessage] = useState("")
   const [containers, setContainers] = useState<Array<{ id: string; code: string; status?: string | null }>>([])
   const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false)
+  const [customersLoading, setCustomersLoading] = useState(false)
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [customerId, setCustomerId] = useState("")
+  const [customerSearch, setCustomerSearch] = useState("")
+  const [isCustomerSuggestionsOpen, setIsCustomerSuggestionsOpen] = useState(false)
+  const [createOrder, setCreateOrder] = useState(emptyOrderForm)
+  const [createCustomer, setCreateCustomer] = useState(emptyCustomerForm)
   /** Ignore les réponses obsolètes si l’utilisateur change de ligne rapidement */
   const trackingLoadSeq = useRef(0)
 
@@ -114,6 +161,108 @@ export default function TrackingPage() {
       setErrorMessage('Erreur de connexion')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchCustomers = async () => {
+    try {
+      setCustomersLoading(true)
+      const response = await fetch('/api/customers')
+      const result = await response.json()
+
+      if (result.success && Array.isArray(result.data)) {
+        setCustomers(result.data)
+      } else {
+        setErrorMessage('Impossible de charger la liste des clients')
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error)
+      setErrorMessage('Erreur de connexion lors du chargement des clients')
+    } finally {
+      setCustomersLoading(false)
+    }
+  }
+
+  const openCreateOrder = () => {
+    setErrorMessage("")
+    setCustomerId("")
+    setCustomerSearch("")
+    setIsCustomerSuggestionsOpen(false)
+    setCreateCustomer(emptyCustomerForm)
+    setCreateOrder(emptyOrderForm)
+    setIsCreateOrderOpen(true)
+    void fetchCustomers()
+  }
+
+  const handleCreateOrder = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!customerId) {
+      setErrorMessage('Recherchez et sélectionnez un client, ou créez-en un nouveau.')
+      return
+    }
+    setIsCreatingOrder(true)
+    setErrorMessage("")
+
+    try {
+      let customer: Customer | undefined
+
+      if (customerId === "new") {
+        const customerResponse = await fetch('/api/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(createCustomer),
+        })
+        const customerResult = await customerResponse.json()
+
+        if (!customerResponse.ok || !customerResult.success) {
+          setErrorMessage(customerResult.error || 'Impossible de créer le client')
+          return
+        }
+
+        customer = customerResult.data as Customer
+      } else {
+        customer = customers.find((item) => item.id === customerId)
+        if (!customer) {
+          setErrorMessage('Le client sélectionné est introuvable. Réessayez.')
+          return
+        }
+      }
+
+      const orderResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...createOrder,
+          container_id: createOrder.service_type === 'fret_maritime' && createOrder.container_id ? createOrder.container_id : null,
+          customer_id: customer.id,
+          client_name: customer.name,
+          client_email: customer.email || '',
+          client_phone: customer.phone || '',
+          client_address: customer.address || '',
+          client_city: customer.city || '',
+          client_postal_code: customer.postal_code || '',
+          client_country: customer.country || '',
+          weight: createOrder.weight || null,
+          value: createOrder.value || null,
+          estimated_delivery: createOrder.estimated_delivery || null,
+        }),
+      })
+      const orderResult = await orderResponse.json()
+
+      if (!orderResponse.ok || !orderResult.success) {
+        setErrorMessage(orderResult.error || 'Impossible de créer la commande')
+        return
+      }
+
+      setOrders((current) => [orderResult.data as Order, ...current])
+      setSuccessMessage('Commande créée avec succès')
+      setIsCreateOrderOpen(false)
+      setTimeout(() => setSuccessMessage(""), 3000)
+    } catch (error) {
+      console.error('Error creating order:', error)
+      setErrorMessage('Erreur de connexion lors de la création de la commande')
+    } finally {
+      setIsCreatingOrder(false)
     }
   }
 
@@ -342,6 +491,16 @@ export default function TrackingPage() {
     return matchesSearch && matchesStatus && matchesContainer
   })
 
+  const customerSuggestions = customers
+    .filter((customer) => {
+      const query = customerSearch.trim().toLowerCase()
+      if (!query) return false
+      return [customer.name, customer.email, customer.phone]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(query))
+    })
+    .slice(0, 8)
+
   if (isLoading) {
     return (
       <AdminLayout title="Suivi des commandes">
@@ -356,13 +515,9 @@ export default function TrackingPage() {
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Suivi des commandes</h1>
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">Consultez l’avancement et ajoutez un événement de suivi.</p>
-        </div>
-
+    <AdminLayout title="Suivi des commandes">
+      <div className="space-y-6">
+        <p className="text-muted-foreground">Suivez les expéditions et mettez à jour les statuts.</p>
         {/* Messages */}
         {errorMessage && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -378,6 +533,10 @@ export default function TrackingPage() {
         {/* Filtres */}
         <Card className="overflow-hidden">
           <CardContent className="pt-6">
+            <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <Eye className="size-4 shrink-0" />
+              <span>Cliquez sur une ligne pour voir le suivi de la commande.</span>
+            </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 min-w-0">
               <div className="flex-1 min-w-0">
                 <div className="relative">
@@ -417,49 +576,51 @@ export default function TrackingPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button type="button" className="hidden sm:inline-flex" onClick={openCreateOrder}>
+                  <Plus className="mr-2 size-4" />
+                  Nouvelle commande
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Table des commandes */}
-        <Card className="border-0 bg-transparent py-0 shadow-none lg:border lg:bg-card lg:py-6 lg:shadow-sm">
-          <CardHeader className="hidden lg:grid">
+        <Card className="overflow-hidden">
+          <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5" />
               Commandes ({filteredOrders.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-0 lg:px-6">
-            <div className="space-y-3 lg:hidden">
+          <CardContent>
+            {filteredOrders.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">Aucune commande ne correspond aux filtres.</div>
+            ) : (
+            <div className="divide-y overflow-hidden rounded-lg border">
               {filteredOrders.map((order) => {
-                const containerForOrder = containers.find(
-                  (container) => container.id === order.container_id || container.code === order.container_code,
-                )
-
                 return (
-                  <article key={order.id} className="rounded-xl border p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-mono font-medium text-slate-900">{order.order_number}</p>
-                        <p className="mt-1 truncate text-sm text-muted-foreground">{order.client_name}</p>
-                      </div>
-                      {getStatusBadge(order.status)}
-                    </div>
-                    <p className="mt-3 text-sm text-slate-700">{order.origin} <span className="text-muted-foreground">→</span> {order.destination}</p>
-                    <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                      <span className="truncate">{containerForOrder ? `Conteneur ${containerForOrder.code}` : "Sans conteneur"}</span>
-                      <span className="shrink-0">{order.estimated_delivery ? `Prévu le ${new Date(order.estimated_delivery).toLocaleDateString('fr-FR')}` : "Date non définie"}</span>
-                    </div>
-                    <Button type="button" variant="outline" className="mt-4 w-full" onClick={() => handleRowClick(order)}>
+                  <article key={order.id} className="flex min-w-0 items-center gap-3 p-3 transition-colors hover:bg-muted/50 sm:p-4">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => handleRowClick(order)}
+                      aria-label={`Ouvrir le suivi de la commande ${order.order_number}`}
+                    >
+                      <p className="truncate font-mono font-medium text-foreground">{order.order_number}</p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">
+                        {order.client_name} · {order.origin} → {order.destination}
+                      </p>
+                    </button>
+                    <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => handleRowClick(order)}>
                       <MapPin className="mr-2 size-4" />
-                      Ouvrir le suivi
+                      Suivi
                     </Button>
                   </article>
                 )
               })}
             </div>
-            <div className="hidden lg:block">
+            )}
+            <div className="hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -485,10 +646,14 @@ export default function TrackingPage() {
                   return (
                     <TableRow
                       key={order.id}
-                      className="transition-colors hover:bg-gray-50"
+                      className="cursor-pointer transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-gray-50 hover:shadow-sm group"
+                      onClick={() => handleRowClick(order)}
                     >
                       <TableCell className="font-mono font-medium">
-                        {order.order_number}
+                        <div className="flex items-center gap-2">
+                          {order.order_number}
+                          <Eye className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div>
@@ -542,13 +707,14 @@ export default function TrackingPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
+                              onClick={(event) => {
+                                event.stopPropagation()
                                 setSelectedOrder(order)
                                 fetchTrackingEvents(order.id)
                               }}
                             >
                               <MapPin className="h-4 w-4" />
-                              Suivi
+                              Ouvrir le suivi
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-4xl">
@@ -717,6 +883,126 @@ export default function TrackingPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Button
+          type="button"
+          size="icon"
+          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 rounded-full shadow-lg sm:hidden"
+          onClick={openCreateOrder}
+          aria-label="Créer une commande"
+        >
+          <Plus className="size-6" />
+        </Button>
+
+        <Dialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen}>
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl overflow-x-hidden">
+            <DialogHeader>
+              <DialogTitle>Nouvelle commande</DialogTitle>
+              <DialogDescription>Choisissez un client existant ou créez sa fiche avant d&apos;enregistrer la commande.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateOrder} className="max-h-[calc(100vh-10rem)] space-y-5 overflow-y-auto px-1 pb-1">
+              <section className="space-y-3 rounded-xl border p-4">
+                {customerId === "new" ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-medium">Nouveau client</h3>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setCustomerId(""); setCustomerSearch("") }}>Rechercher un client</Button>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div><Label htmlFor="new-customer-name">Nom complet</Label><Input id="new-customer-name" required autoComplete="name" value={createCustomer.name} onChange={(e) => setCreateCustomer({ ...createCustomer, name: e.target.value })} /></div>
+                      <div><Label htmlFor="new-customer-email">E-mail</Label><Input id="new-customer-email" type="email" autoComplete="email" value={createCustomer.email} onChange={(e) => setCreateCustomer({ ...createCustomer, email: e.target.value })} /></div>
+                      <div><Label htmlFor="new-customer-phone">Téléphone</Label><Input id="new-customer-phone" required type="tel" autoComplete="tel" value={createCustomer.phone} onChange={(e) => setCreateCustomer({ ...createCustomer, phone: e.target.value })} /></div>
+                      <div><Label htmlFor="new-customer-address">Adresse</Label><Input id="new-customer-address" required autoComplete="street-address" value={createCustomer.address} onChange={(e) => setCreateCustomer({ ...createCustomer, address: e.target.value })} /></div>
+                      <div><Label htmlFor="new-customer-city">Ville</Label><Input id="new-customer-city" required autoComplete="address-level2" value={createCustomer.city} onChange={(e) => setCreateCustomer({ ...createCustomer, city: e.target.value })} /></div>
+                      <div><Label htmlFor="new-customer-postal">Code postal</Label><Input id="new-customer-postal" required autoComplete="postal-code" value={createCustomer.postal_code} onChange={(e) => setCreateCustomer({ ...createCustomer, postal_code: e.target.value })} /></div>
+                      <div className="sm:col-span-2"><Label htmlFor="new-customer-country">Pays</Label><Input id="new-customer-country" required autoComplete="country-name" value={createCustomer.country} onChange={(e) => setCreateCustomer({ ...createCustomer, country: e.target.value })} /></div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="relative">
+                    <Label htmlFor="tracking-customer">Client</Label>
+                    <div className="relative mt-1">
+                      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="tracking-customer"
+                        type="search"
+                        autoComplete="off"
+                        disabled={customersLoading || isCreatingOrder}
+                        placeholder={customersLoading ? "Chargement des clients…" : "Rechercher un client par nom, e-mail ou téléphone"}
+                        className="pl-9"
+                        value={customerSearch}
+                        onFocus={() => setIsCustomerSuggestionsOpen(true)}
+                        onChange={(event) => {
+                          setCustomerSearch(event.target.value)
+                          setCustomerId("")
+                          setIsCustomerSuggestionsOpen(true)
+                        }}
+                      />
+                    </div>
+                    {isCustomerSuggestionsOpen && customerSearch.trim() && (
+                      <div className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+                        {customerSuggestions.length ? customerSuggestions.map((customer) => (
+                          <button
+                            key={customer.id}
+                            type="button"
+                            className="w-full rounded-sm px-3 py-2 text-left text-sm hover:bg-muted focus:bg-muted focus:outline-none"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              setCustomerId(customer.id)
+                              setCustomerSearch(customer.name)
+                              setIsCustomerSuggestionsOpen(false)
+                            }}
+                          >
+                            <span className="block font-medium">{customer.name}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{customer.email || customer.phone || "Coordonnées non renseignées"}</span>
+                          </button>
+                        )) : (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">Aucun client trouvé.</p>
+                        )}
+                      </div>
+                    )}
+                    {customerId ? (
+                      <p className="mt-2 text-sm text-muted-foreground">Les coordonnées du client sélectionné seront utilisées comme expéditeur.</p>
+                    ) : (
+                      <Button type="button" variant="link" className="mt-1 h-auto px-0" onClick={() => { setCustomerId("new"); setIsCustomerSuggestionsOpen(false) }}>
+                        Créer un nouveau client
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              <section className="grid gap-4 sm:grid-cols-2">
+                <div><Label htmlFor="new-order-service">Service</Label><Select value={createOrder.service_type} onValueChange={(value) => setCreateOrder({ ...createOrder, service_type: value, container_id: value === "fret_maritime" ? createOrder.container_id : "" })}><SelectTrigger id="new-order-service" className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fret_maritime">Fret maritime</SelectItem><SelectItem value="fret_aerien">Fret aérien</SelectItem><SelectItem value="demenagement">Déménagement</SelectItem><SelectItem value="dedouanement">Dédouanement</SelectItem><SelectItem value="negoce">Négoce</SelectItem><SelectItem value="colis">Colis</SelectItem></SelectContent></Select></div>
+                <div><Label htmlFor="new-order-delivery">Livraison estimée</Label><Input id="new-order-delivery" className="mt-1" type="date" value={createOrder.estimated_delivery} onChange={(e) => setCreateOrder({ ...createOrder, estimated_delivery: e.target.value })} /></div>
+                {createOrder.service_type === "fret_maritime" && <div className="min-w-0 sm:col-span-2"><Label htmlFor="new-order-container">Conteneur associé</Label><Select value={createOrder.container_id || "unassigned"} onValueChange={(value) => setCreateOrder({ ...createOrder, container_id: value === "unassigned" ? "" : value })}><SelectTrigger id="new-order-container" className="mt-1 w-full min-w-0"><SelectValue placeholder="Aucun conteneur" /></SelectTrigger><SelectContent><SelectItem value="unassigned">Aucun conteneur pour le moment</SelectItem>{containers.map((container) => <SelectItem key={container.id} value={container.id}>{container.code}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Seuls les conteneurs existants peuvent être associés.</p></div>}
+                <div><Label htmlFor="new-order-origin">Origine</Label><Input id="new-order-origin" required autoComplete="address-level2" className="mt-1" value={createOrder.origin} onChange={(e) => setCreateOrder({ ...createOrder, origin: e.target.value })} /></div>
+                <div><Label htmlFor="new-order-destination">Destination</Label><Input id="new-order-destination" required autoComplete="address-level2" className="mt-1" value={createOrder.destination} onChange={(e) => setCreateOrder({ ...createOrder, destination: e.target.value })} /></div>
+                <div><Label htmlFor="new-order-weight">Poids (kg)</Label><Input id="new-order-weight" type="number" min="0" step="0.01" inputMode="decimal" className="mt-1" value={createOrder.weight} onChange={(e) => setCreateOrder({ ...createOrder, weight: e.target.value })} /></div>
+                <div><Label htmlFor="new-order-value">Valeur (€)</Label><Input id="new-order-value" type="number" min="0" step="0.01" inputMode="decimal" className="mt-1" value={createOrder.value} onChange={(e) => setCreateOrder({ ...createOrder, value: e.target.value })} /></div>
+                <div className="sm:col-span-2"><Label htmlFor="new-order-description">Description</Label><Textarea id="new-order-description" className="mt-1" rows={2} value={createOrder.description} onChange={(e) => setCreateOrder({ ...createOrder, description: e.target.value })} /></div>
+              </section>
+
+              <section className="space-y-3 rounded-xl border p-4">
+                <h3 className="font-medium">Destinataire</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div><Label htmlFor="recipient-name">Nom complet</Label><Input id="recipient-name" required autoComplete="name" value={createOrder.recipient_name} onChange={(e) => setCreateOrder({ ...createOrder, recipient_name: e.target.value })} /></div>
+                  <div><Label htmlFor="recipient-email">E-mail</Label><Input id="recipient-email" type="email" autoComplete="email" value={createOrder.recipient_email} onChange={(e) => setCreateOrder({ ...createOrder, recipient_email: e.target.value })} /></div>
+                  <div><Label htmlFor="recipient-phone">Téléphone</Label><Input id="recipient-phone" required type="tel" autoComplete="tel" value={createOrder.recipient_phone} onChange={(e) => setCreateOrder({ ...createOrder, recipient_phone: e.target.value })} /></div>
+                  <div><Label htmlFor="recipient-address">Adresse</Label><Input id="recipient-address" required autoComplete="street-address" value={createOrder.recipient_address} onChange={(e) => setCreateOrder({ ...createOrder, recipient_address: e.target.value })} /></div>
+                  <div><Label htmlFor="recipient-city">Ville</Label><Input id="recipient-city" required autoComplete="address-level2" value={createOrder.recipient_city} onChange={(e) => setCreateOrder({ ...createOrder, recipient_city: e.target.value })} /></div>
+                  <div><Label htmlFor="recipient-postal">Code postal</Label><Input id="recipient-postal" required autoComplete="postal-code" value={createOrder.recipient_postal_code} onChange={(e) => setCreateOrder({ ...createOrder, recipient_postal_code: e.target.value })} /></div>
+                  <div className="sm:col-span-2"><Label htmlFor="recipient-country">Pays</Label><Input id="recipient-country" required autoComplete="country-name" value={createOrder.recipient_country} onChange={(e) => setCreateOrder({ ...createOrder, recipient_country: e.target.value })} /></div>
+                </div>
+              </section>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" disabled={isCreatingOrder} onClick={() => setIsCreateOrderOpen(false)}>Annuler</Button>
+                <Button type="submit" disabled={isCreatingOrder}>{isCreatingOrder ? "Création…" : "Créer la commande"}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Modal de suivi avec historique des événements */}
         <Dialog open={isTrackingDialogOpen} onOpenChange={setIsTrackingDialogOpen}>

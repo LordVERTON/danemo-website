@@ -19,7 +19,7 @@ Gérer le client, sa commande logistique, ses règlements et les documents opér
 
 ## Déroulé
 
-1. L'équipe crée ou retrouve un client. Nom, téléphone, adresse, ville, code postal et pays sont requis; l'e-mail est facultatif et normalisé.
+1. L'équipe crée ou retrouve un client. Depuis **Suivi**, le bouton « + » ouvre la création de commande : l'opérateur recherche un client existant par nom, e-mail ou téléphone et le choisit parmi les suggestions, ou crée sa fiche dans le même formulaire. Nom, téléphone, adresse, ville, code postal et pays sont requis; l'e-mail est facultatif et normalisé.
 2. À la création manuelle d'une commande, les coordonnées expéditeur et destinataire, le service, l'origine et la destination sont requis. Pour le fret maritime, l’opérateur peut sélectionner un conteneur existant ou laisser la commande non associée ; s’il n’existe aucun conteneur, il doit en créer un avant de pouvoir l’associer. Le serveur génère un numéro unique, avec jusqu'à cinq tentatives en cas de collision.
 3. Une commande sans `customer_id` cherche d'abord le client par e-mail, puis crée une fiche active si nécessaire.
 4. La commande commence à `pending`. Elle peut être affectée à un conteneur et recevoir des événements de suivi.
@@ -86,6 +86,7 @@ flowchart LR
 8. Vérifier dans `business_audit_log` les événements créés en environnement de test.
 9. Depuis la fiche d'un client sans commande, saisir un nom erroné puis son nom exact : contrôler le refus puis la suppression et le retour à la liste. Avec une commande associée, contrôler que le bouton et l'API refusent la suppression.
 10. Depuis le menu « Plus d’actions » d'une commande, choisir sa suppression puis annuler : contrôler que la commande reste présente. Refaire l'action et confirmer : contrôler sa disparition de la fiche.
+11. Depuis **Suivi**, vérifier que la liste affiche sans tableau dense la référence, le client, le trajet et le statut, puis ouvrir le suivi avec son action principale. Créer une commande avec un client existant, puis avec un nouveau client, et contrôler leurs rattachements.
 
 ## Références code
 
