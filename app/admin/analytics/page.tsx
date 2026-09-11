@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,25 +20,12 @@ import {
   Line
 } from "recharts"
 import { 
-  TrendingUp, 
-  TrendingDown, 
   Package, 
   Truck, 
   Euro, 
   Users,
-  Calendar,
-  Download
 } from "lucide-react"
 import { useCurrentUser } from "@/lib/use-current-user"
-
-interface Stats {
-  total: number
-  pending: number
-  confirmed: number
-  in_progress: number
-  completed: number
-  cancelled: number
-}
 
 interface Order {
   id: string
@@ -52,7 +39,6 @@ interface Order {
 
 export default function AnalyticsPage() {
   const { user: currentUser } = useCurrentUser()
-  const [stats, setStats] = useState<Stats | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("30")
@@ -66,20 +52,13 @@ export default function AnalyticsPage() {
     try {
       setIsLoading(true)
       
-      // Récupérer les statistiques
-      const statsResponse = await fetch('/api/stats')
-      const statsResult = await statsResponse.json()
-      
-      if (statsResult.success) {
-        setStats(statsResult.data)
-      }
-
-      // Récupérer les commandes pour les graphiques
       const ordersResponse = await fetch('/api/orders')
       const ordersResult = await ordersResponse.json()
       
-      if (ordersResult.success) {
+      if (ordersResponse.ok && ordersResult.success && Array.isArray(ordersResult.data)) {
         setOrders(ordersResult.data)
+      } else {
+        setError(ordersResult.error || 'Impossible de charger les commandes')
       }
     } catch (error) {
       setError('Erreur lors du chargement des données')
@@ -88,20 +67,48 @@ export default function AnalyticsPage() {
     }
   }
 
-  // Données pour les graphiques
+  const ordersForRange = useMemo(() => {
+    const days = Number(timeRange)
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+
+    return orders.filter((order) => {
+      const createdAt = new Date(order.created_at)
+      return Number.isFinite(createdAt.getTime()) && createdAt >= start
+    })
+  }, [orders, timeRange])
+
+  const stats = useMemo(() => ({
+    total: ordersForRange.length,
+    pending: ordersForRange.filter((order) => order.status === 'pending').length,
+    confirmed: ordersForRange.filter((order) => order.status === 'confirmed').length,
+    in_progress: ordersForRange.filter((order) => order.status === 'in_progress').length,
+    completed: ordersForRange.filter((order) => order.status === 'completed').length,
+    cancelled: ordersForRange.filter((order) => order.status === 'cancelled').length,
+  }), [ordersForRange])
+
+  const pricedOrders = useMemo(() => ordersForRange.flatMap((order) => {
+    const amount = Number(order.value)
+    return Number.isFinite(amount) && amount >= 0 ? [{ ...order, amount }] : []
+  }), [ordersForRange])
+
+  const totalOrderValue = pricedOrders.reduce((sum, order) => sum + order.amount, 0)
+  const averageOrderValue = pricedOrders.length > 0 ? totalOrderValue / pricedOrders.length : null
+  const euro = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })
+
+  // Données pour les graphiques, calculées uniquement à partir des commandes de la période.
   const getStatusData = () => {
-    if (!stats) return []
     return [
       { name: 'En attente', value: stats.pending, color: '#f59e0b' },
       { name: 'Confirmées', value: stats.confirmed, color: '#3b82f6' },
       { name: 'En cours', value: stats.in_progress, color: '#f97316' },
       { name: 'Terminées', value: stats.completed, color: '#10b981' },
       { name: 'Annulées', value: stats.cancelled, color: '#ef4444' }
-    ]
+    ].filter((entry) => entry.value > 0)
   }
 
   const getServiceTypeData = () => {
-    const serviceTypes = orders.reduce((acc, order) => {
+    const serviceTypes = ordersForRange.reduce((acc, order) => {
       acc[order.service_type] = (acc[order.service_type] || 0) + 1
       return acc
     }, {} as Record<string, number>)
@@ -113,29 +120,30 @@ export default function AnalyticsPage() {
   }
 
   const getMonthlyData = () => {
-    const monthlyData = orders.reduce((acc, order) => {
-      const month = new Date(order.created_at).toLocaleDateString('fr-FR', { month: 'short' })
-      acc[month] = (acc[month] || 0) + 1
+    const monthlyData = ordersForRange.reduce((acc, order) => {
+      const date = new Date(order.created_at)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      acc[key] = (acc[key] || 0) + 1
       return acc
     }, {} as Record<string, number>)
 
-    return Object.entries(monthlyData).map(([month, count]) => ({
-      month,
+    return Object.entries(monthlyData).sort(([first], [second]) => first.localeCompare(second)).map(([month, count]) => ({
+      month: new Date(`${month}-01T00:00:00`).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
       commandes: count
     }))
   }
 
   const getRevenueData = () => {
-    const monthlyRevenue = orders.reduce((acc, order) => {
-      const month = new Date(order.created_at).toLocaleDateString('fr-FR', { month: 'short' })
-      const value = order.value || 0
-      acc[month] = (acc[month] || 0) + value
+    const monthlyRevenue = pricedOrders.reduce((acc, order) => {
+      const date = new Date(order.created_at)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      acc[key] = (acc[key] || 0) + order.amount
       return acc
     }, {} as Record<string, number>)
 
-    return Object.entries(monthlyRevenue).map(([month, revenue]) => ({
-      month,
-      revenue: revenue / 1000 // Convertir en milliers d'euros
+    return Object.entries(monthlyRevenue).sort(([first], [second]) => first.localeCompare(second)).map(([month, revenue]) => ({
+      month: new Date(`${month}-01T00:00:00`).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
+      revenue
     }))
   }
 
@@ -149,9 +157,6 @@ export default function AnalyticsPage() {
     }
     return types[type as keyof typeof types] || type
   }
-
-  const totalRevenue = orders.reduce((sum, order) => sum + (order.value || 0), 0)
-  const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0
 
   if (isLoading) {
     return (
@@ -174,10 +179,10 @@ export default function AnalyticsPage() {
           <div>
             <h1 className="text-3xl font-bold">Analyses et rapports</h1>
             <p className="text-muted-foreground">
-              Consultez les statistiques et générez des rapports
+              Statistiques calculées à partir des commandes enregistrées
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div>
             <Select value={timeRange} onValueChange={setTimeRange}>
               <SelectTrigger className="w-40">
                 <SelectValue />
@@ -189,10 +194,6 @@ export default function AnalyticsPage() {
                 <SelectItem value="365">12 derniers mois</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Exporter
-            </Button>
           </div>
         </div>
 
@@ -204,10 +205,9 @@ export default function AnalyticsPage() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total || 0}</div>
+              <div className="text-2xl font-bold">{stats.total}</div>
               <p className="text-xs text-muted-foreground">
-                <TrendingUp className="inline h-3 w-3 mr-1" />
-                +12% par rapport au mois dernier
+                Sur la période sélectionnée
               </p>
             </CardContent>
           </Card>
@@ -218,36 +218,35 @@ export default function AnalyticsPage() {
               <Truck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.in_progress || 0}</div>
+              <div className="text-2xl font-bold">{stats.in_progress}</div>
               <p className="text-xs text-muted-foreground">
-                {stats?.total ? Math.round(((stats.in_progress || 0) / stats.total) * 100) : 0}% du total
+                {stats.total ? Math.round((stats.in_progress / stats.total) * 100) : 0}% des commandes de la période
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revenus totaux</CardTitle>
+              <CardTitle className="text-sm font-medium">Montant des commandes</CardTitle>
               <Euro className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{euro.format(totalOrderValue)}</div>
               <p className="text-xs text-muted-foreground">
-                <TrendingUp className="inline h-3 w-3 mr-1" />
-                +8% par rapport au mois dernier
+                {pricedOrders.length} commande{pricedOrders.length > 1 ? 's' : ''} avec un montant renseigné
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valeur moyenne</CardTitle>
+              <CardTitle className="text-sm font-medium">Montant moyen</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{Math.round(averageOrderValue).toLocaleString()}</div>
+              <div className="text-2xl font-bold">{averageOrderValue === null ? '—' : euro.format(averageOrderValue)}</div>
               <p className="text-xs text-muted-foreground">
-                Par commande
+                Sur les commandes dont le montant est renseigné
               </p>
             </CardContent>
           </Card>
@@ -262,15 +261,9 @@ export default function AnalyticsPage() {
               <CardDescription>Nombre de commandes par service</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={getServiceTypeData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#f97316" />
-                </BarChart>
-              </ResponsiveContainer>
+              {getServiceTypeData().length ? <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={getServiceTypeData()}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Bar dataKey="value" fill="#f97316" /></BarChart>
+              </ResponsiveContainer> : <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">Aucune commande sur cette période.</p>}
             </CardContent>
           </Card>
 
@@ -281,7 +274,7 @@ export default function AnalyticsPage() {
               <CardDescription>Distribution des commandes par statut</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              {getStatusData().length ? <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={getStatusData()}
@@ -299,7 +292,7 @@ export default function AnalyticsPage() {
                   </Pie>
                   <Tooltip />
                 </PieChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer> : <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">Aucune commande sur cette période.</p>}
             </CardContent>
           </Card>
         </div>
@@ -313,7 +306,7 @@ export default function AnalyticsPage() {
               <CardDescription>Nombre de commandes par mois</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              {getMonthlyData().length ? <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={getMonthlyData()}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
@@ -321,26 +314,26 @@ export default function AnalyticsPage() {
                   <Tooltip />
                   <Line type="monotone" dataKey="commandes" stroke="#f97316" strokeWidth={2} />
                 </LineChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer> : <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">Aucune commande sur cette période.</p>}
             </CardContent>
           </Card>
 
-          {/* Évolution des revenus */}
+          {/* Évolution des montants renseignés */}
           <Card>
             <CardHeader>
-              <CardTitle>Évolution des revenus</CardTitle>
-              <CardDescription>Revenus par mois (en milliers d’euros)</CardDescription>
+              <CardTitle>Évolution des montants</CardTitle>
+              <CardDescription>Montants renseignés sur les commandes, par mois</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              {getRevenueData().length ? <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={getRevenueData()}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip formatter={(value) => [`€${value}k`, 'Revenus']} />
+                  <Tooltip formatter={(value) => [euro.format(Number(value)), 'Montant']} />
                   <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
                 </LineChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer> : <p className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">Aucun montant renseigné sur cette période.</p>}
             </CardContent>
           </Card>
         </div>
@@ -349,11 +342,11 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Commandes récentes</CardTitle>
-            <CardDescription>Les dernières commandes ajoutées</CardDescription>
+            <CardDescription>Les dernières commandes de la période sélectionnée</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {orders.slice(0, 5).map((order) => (
+              {ordersForRange.slice(0, 5).map((order) => (
                 <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
@@ -371,11 +364,12 @@ export default function AnalyticsPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">€{order.value?.toLocaleString() || '0'}</p>
+                    <p className="font-medium">{order.value === null || order.value === undefined || !Number.isFinite(Number(order.value)) ? '—' : euro.format(Number(order.value))}</p>
                     <p className="text-sm text-muted-foreground capitalize">{order.status}</p>
                   </div>
                 </div>
               ))}
+              {ordersForRange.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Aucune commande sur cette période.</p>}
             </div>
           </CardContent>
         </Card>
