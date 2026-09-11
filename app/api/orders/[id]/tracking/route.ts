@@ -98,7 +98,7 @@ export async function POST(
 
     // Si un nouveau statut est fourni, mettre à jour la commande
     if (body.status && body.status !== order.status) {
-      await ordersApi.update(orderId, { status: body.status })
+      await ordersApi.update(orderId, { status: body.status }, { notificationLocation: body.location || null })
     }
 
     await recordBusinessAudit(request, {

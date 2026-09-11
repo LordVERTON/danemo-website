@@ -45,7 +45,7 @@ export default function ClientDetailsPage() {
   const [saving, setSaving] = useState(false)
   const [generatingSummaryInvoice, setGeneratingSummaryInvoice] = useState(false)
   const [payment, setPayment] = useState({ amount: "", paid_at: new Date().toISOString().slice(0, 10), payment_method: "bank_transfer", reference: "", notes: "" })
-  const [order, setOrder] = useState({ service_type: "fret_maritime", container_id: "", description: "", origin: "Bruxelles", destination: "", weight: "", value: "", estimated_delivery: "", recipient_name: "", recipient_email: "", recipient_phone: "", recipient_address: "", recipient_city: "", recipient_postal_code: "", recipient_country: "" })
+  const [order, setOrder] = useState({ service_type: "fret_maritime", container_id: "", description: "", origin: "Bruxelles", destination: "", weight: "", value: "", recipient_name: "", recipient_email: "", recipient_phone: "", recipient_address: "", recipient_city: "", recipient_postal_code: "", recipient_country: "" })
   const [containers, setContainers] = useState<Container[]>([])
   const [containersLoading, setContainersLoading] = useState(false)
   const [containersError, setContainersError] = useState("")
@@ -111,7 +111,7 @@ export default function ClientDetailsPage() {
     if (!customer) return
     setEditingOrder(orderToEdit || null)
     setOrder({
-      service_type: orderToEdit?.service_type || "fret_maritime", container_id: orderToEdit?.container_id || "", description: orderToEdit?.description || "", origin: orderToEdit?.origin || "Bruxelles", destination: orderToEdit?.destination || "", weight: orderToEdit?.weight ? String(orderToEdit.weight) : "", value: orderToEdit?.value ? String(orderToEdit.value) : "", estimated_delivery: orderToEdit?.estimated_delivery?.slice(0, 10) || "",
+      service_type: orderToEdit?.service_type || "fret_maritime", container_id: orderToEdit?.container_id || "", description: orderToEdit?.description || "", origin: orderToEdit?.origin || "Bruxelles", destination: orderToEdit?.destination || "", weight: orderToEdit?.weight ? String(orderToEdit.weight) : "", value: orderToEdit?.value ? String(orderToEdit.value) : "",
       recipient_name: orderToEdit?.recipient_name || customer.name, recipient_email: orderToEdit?.recipient_email || customer.email || "", recipient_phone: orderToEdit?.recipient_phone || customer.phone || "", recipient_address: orderToEdit?.recipient_address || customer.address || "", recipient_city: orderToEdit?.recipient_city || customer.city || "", recipient_postal_code: orderToEdit?.recipient_postal_code || customer.postal_code || "", recipient_country: orderToEdit?.recipient_country || customer.country || "",
     })
     void loadContainers()
@@ -125,7 +125,7 @@ export default function ClientDetailsPage() {
     setError("")
     try {
       const payload = {
-        ...order, container_id: order.service_type === "fret_maritime" && order.container_id ? order.container_id : null, weight: order.weight || null, value: order.value || null, estimated_delivery: order.estimated_delivery || null,
+        ...order, container_id: order.service_type === "fret_maritime" && order.container_id ? order.container_id : null, weight: order.weight || null, value: order.value || null,
         customer_id: customer.id, client_name: customer.name, client_email: customer.email || "", client_phone: customer.phone || "", client_address: customer.address || "", client_city: customer.city || "", client_postal_code: customer.postal_code || "", client_country: customer.country || "",
       }
       const response = await fetch(editingOrder ? `/api/orders/${editingOrder.id}` : "/api/orders", { method: editingOrder ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
@@ -461,7 +461,6 @@ export default function ClientDetailsPage() {
           <form onSubmit={addOrder} className="min-w-0 space-y-5">
             <div className="grid min-w-0 gap-4 sm:grid-cols-2">
               <div className="min-w-0"><Label>Service</Label><Select value={order.service_type} onValueChange={(value) => setOrder({ ...order, service_type: value, container_id: value === "fret_maritime" ? order.container_id : "" })}><SelectTrigger className="w-full min-w-0"><SelectValue className="min-w-0 truncate" /></SelectTrigger><SelectContent><SelectItem value="fret_maritime">Fret maritime</SelectItem><SelectItem value="fret_aerien">Fret aérien</SelectItem><SelectItem value="demenagement">Déménagement</SelectItem><SelectItem value="dedouanement">Dédouanement</SelectItem><SelectItem value="negoce">Négoce</SelectItem></SelectContent></Select></div>
-              <div><Label>Livraison estimée</Label><Input type="date" value={order.estimated_delivery} onChange={(event) => setOrder({ ...order, estimated_delivery: event.target.value })} /></div>
               {order.service_type === "fret_maritime" && <div className="min-w-0 sm:col-span-2"><Label>Conteneur associé</Label><Select value={order.container_id || "unassigned"} onValueChange={(value) => setOrder({ ...order, container_id: value === "unassigned" ? "" : value })} disabled={containersLoading || containers.length === 0}><SelectTrigger className="w-full min-w-0"><SelectValue className="min-w-0 truncate" placeholder={containersLoading ? "Chargement des conteneurs..." : "Aucun conteneur sélectionné"} /></SelectTrigger><SelectContent className="max-w-[calc(100vw-2rem)]"><SelectItem value="unassigned">Aucun conteneur pour le moment</SelectItem>{containers.map((container) => <SelectItem key={container.id} value={container.id} className="min-w-0 whitespace-normal break-words">{container.code}{container.departure_port && container.arrival_port ? ` · ${container.departure_port} → ${container.arrival_port}` : ""}</SelectItem>)}</SelectContent></Select>{containersLoading ? <p className="mt-1 text-xs text-muted-foreground">Chargement des conteneurs...</p> : containers.length === 0 ? <p className="mt-1 text-xs text-muted-foreground">{containersError || "Aucun conteneur disponible."} <Link href="/admin/containers" className="font-medium text-orange-600 hover:underline">Créez d’abord un conteneur</Link> pour l’associer à cette commande.</p> : <p className="mt-1 text-xs text-muted-foreground">Sélectionnez un conteneur existant ou laissez la commande non associée.</p>}</div>}
               <div><Label>Origine</Label><Input required autoComplete="address-level2" value={order.origin} onChange={(event) => setOrder({ ...order, origin: event.target.value })} /></div>
               <div><Label>Destination</Label><Input required autoComplete="address-level2" value={order.destination} onChange={(event) => setOrder({ ...order, destination: event.target.value })} /></div>

@@ -20,6 +20,28 @@ type Invoice = Database['public']['Tables']['invoices']['Row']
 type InvoiceInsert = Database['public']['Tables']['invoices']['Insert']
 type InvoiceUpdate = Database['public']['Tables']['invoices']['Update']
 
+/** L'ETA affichée sur une commande est toujours celle de son conteneur associé. */
+async function withContainerEta(orders: Order[]): Promise<Order[]> {
+  const containerIds = [...new Set(orders.map((order) => order.container_id).filter((id): id is string => Boolean(id)))]
+  if (containerIds.length === 0) {
+    return orders.map((order) => ({ ...order, estimated_delivery: null }))
+  }
+
+  const { data: containers, error } = await (supabaseAdmin as any)
+    .from('containers')
+    .select('id, eta')
+    .in('id', containerIds)
+  if (error) throw error
+
+  const etaByContainerId = new Map<string, string | null>(
+    (containers || []).map((container: { id: string; eta: string | null }) => [container.id, container.eta] as const),
+  )
+  return orders.map((order) => ({
+    ...order,
+    estimated_delivery: order.container_id ? etaByContainerId.get(order.container_id) || null : null,
+  }))
+}
+
 // Fonctions pour les commandes
 export const ordersApi = {
   // Récupérer toutes les commandes
@@ -31,8 +53,7 @@ export const ordersApi = {
     
     if (error) throw error
     
-    // container_code est maintenant directement dans la table orders, pas besoin de jointure
-    return (data || [])
+    return withContainerEta(data || [])
   },
 
   // Récupérer une commande par ID
@@ -45,8 +66,8 @@ export const ordersApi = {
     
     if (error) throw error
     
-    // container_code est maintenant directement dans la table orders, pas besoin de jointure
-    return data
+    const [order] = await withContainerEta(data ? [data] : [])
+    return order || null
   },
 
   // Récupérer une commande par numéro
@@ -58,7 +79,8 @@ export const ordersApi = {
       .maybeSingle()
 
     if (error) throw error
-    return data
+    const [order] = await withContainerEta(data ? [data] : [])
+    return order || null
   },
 
   /** Première commande liée à ce code conteneur (suivi public / liens ?code=). */
@@ -73,7 +95,8 @@ export const ordersApi = {
       .limit(1)
 
     if (error) throw error
-    return data?.[0] ?? null
+    const [order] = await withContainerEta(data?.[0] ? [data[0]] : [])
+    return order || null
   },
 
   // Récupérer une commande par QR code
@@ -88,7 +111,8 @@ export const ordersApi = {
     if (error) {
       throw error
     }
-    return data
+    const [order] = await withContainerEta(data ? [data] : [])
+    return order || null
   },
 
   // Créer une nouvelle commande
@@ -101,12 +125,12 @@ export const ordersApi = {
     
     if (error) throw error
     
-    // container_code est maintenant directement dans la table orders (mis à jour par le trigger)
-    return data
+    const [createdOrder] = await withContainerEta([data])
+    return createdOrder
   },
 
   // Mettre à jour une commande
-  async update(id: string, updates: OrderUpdate): Promise<Order> {
+  async update(id: string, updates: OrderUpdate, options: { notificationLocation?: string | null } = {}): Promise<Order> {
     let previousStatus: Order['status'] | null | undefined
     if (updates.status !== undefined) {
       const { data: row } = await (supabaseAdmin as any)
@@ -127,12 +151,13 @@ export const ordersApi = {
     if (error) throw error
 
     if (updates.status !== undefined && data.status !== previousStatus) {
-      notifyOrderStatusChange(id, data.status as Order['status']).catch((err) => {
+      notifyOrderStatusChange(id, data.status as Order['status'], { location: options.notificationLocation }).catch((err) => {
         console.error('[notifications] notifyOrderStatusChange (ordersApi.update):', err)
       })
     }
 
-    return data
+    const [updatedOrder] = await withContainerEta([data])
+    return updatedOrder
   },
 
   // Supprimer une commande
@@ -163,8 +188,7 @@ export const ordersApi = {
     
     if (error) throw error
     
-    // container_code est maintenant directement dans la table orders, pas besoin de jointure
-    return (data || [])
+    return withContainerEta(data || [])
   },
 
   // Filtrer par statut
@@ -177,8 +201,7 @@ export const ordersApi = {
     
     if (error) throw error
     
-    // container_code est maintenant directement dans la table orders, pas besoin de jointure
-    return (data || [])
+    return withContainerEta(data || [])
   }
 }
 
@@ -258,7 +281,7 @@ export const trackingApi = {
 
   // Mettre à jour le statut d'une commande et ajouter un événement (email via ordersApi.update)
   async updateOrderStatus(orderId: string, status: string, eventData: Partial<TrackingEventInsert>): Promise<void> {
-    await ordersApi.update(orderId, { status: status as Order['status'] })
+    await ordersApi.update(orderId, { status: status as Order['status'] }, { notificationLocation: eventData.location || null })
 
     await (supabaseAdmin as any).from('tracking_events').insert({
       order_id: orderId,
@@ -379,8 +402,8 @@ export const customersApi = {
     
     if (!data) return null
     
-    // container_code est maintenant directement dans la table orders, pas besoin de jointure
-    return data as any
+    const orders = await withContainerEta((data.orders || []) as Order[])
+    return { ...data, orders } as Customer & { orders: Order[] }
   },
 
   async getWithOrdersAndInvoices(id: string): Promise<Customer & { orders: Order[], invoices: Invoice[] } | null> {
@@ -397,8 +420,8 @@ export const customersApi = {
     
     if (!data) return null
     
-    // container_code est maintenant directement dans la table orders, pas besoin de jointure
-    return data as any
+    const orders = await withContainerEta((data.orders || []) as Order[])
+    return { ...data, orders } as Customer & { orders: Order[], invoices: Invoice[] }
   },
 
   async create(payload: CustomerInsert): Promise<Customer> {

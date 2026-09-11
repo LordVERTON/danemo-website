@@ -27,6 +27,7 @@ export interface OrderStatusEmailParams {
   recipientName?: string | null
   orderNumber?: string | null
   trackingUrl?: string | null
+  location?: string | null
 }
 
 export interface ContainerStatusEmailParams {
@@ -157,6 +158,7 @@ export function buildOrderStatusEmail(
   const ref = params.orderNumber || 'votre commande'
   const refSafe = escapeHtml(ref)
   const trackingUrl = params.trackingUrl
+  const location = params.location?.trim()
 
   const variants: Record<
     NotificationOrderStatus,
@@ -211,7 +213,9 @@ export function buildOrderStatusEmail(
     html: layoutEmail({
       preview: v.preview,
       greetingName,
-      blocks: v.blocks,
+      blocks: location
+        ? [...v.blocks, `Votre colis avance : il vient d’arriver à <strong>${escapeHtml(location)}</strong>.`]
+        : v.blocks,
       trackingUrl: trackingUrl ?? '',
     }),
   }

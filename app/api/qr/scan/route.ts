@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const nextStatus = status || order.status
     const updatedOrder = nextStatus === order.status
       ? order
-      : await ordersApi.update(order.id, { status: nextStatus })
+      : await ordersApi.update(order.id, { status: nextStatus }, { notificationLocation: location })
     const event = await trackingApi.addEvent({
       order_id: order.id,
       status: nextStatus,

@@ -9,7 +9,8 @@ import {
 
 export async function notifyOrderStatusChange(
   orderId: string,
-  status: NotificationOrderStatus
+  status: NotificationOrderStatus,
+  options: { location?: string | null } = {},
 ) {
   try {
     const { data: order, error } = await (supabaseAdmin as any)
@@ -43,6 +44,7 @@ export async function notifyOrderStatusChange(
         containerCode: order.container_code || undefined,
         qrCode: order.qr_code || undefined,
       }),
+      location: options.location,
     })
 
     await sendEmail(targetEmail, subject, html)

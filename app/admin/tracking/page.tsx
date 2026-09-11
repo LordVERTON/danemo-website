@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import AdminLayout from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -71,7 +72,6 @@ const emptyOrderForm = {
   destination: "",
   weight: "",
   value: "",
-  estimated_delivery: "",
   recipient_name: "",
   recipient_email: "",
   recipient_phone: "",
@@ -92,6 +92,7 @@ const emptyCustomerForm = {
 }
 
 export default function TrackingPage() {
+  const router = useRouter()
   const { user: currentUser } = useCurrentUser()
   const [orders, setOrders] = useState<Order[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -244,7 +245,6 @@ export default function TrackingPage() {
           client_country: customer.country || '',
           weight: createOrder.weight || null,
           value: createOrder.value || null,
-          estimated_delivery: createOrder.estimated_delivery || null,
         }),
       })
       const orderResult = await orderResponse.json()
@@ -630,7 +630,7 @@ export default function TrackingPage() {
                   <TableHead>Trajet</TableHead>
                   <TableHead>Conteneur</TableHead>
                   <TableHead>Statut</TableHead>
-                  <TableHead>Livraison estimée</TableHead>
+                  <TableHead>Arrivée prévue (ETA conteneur)</TableHead>
                   <TableHead>Dernière mise à jour</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -974,7 +974,6 @@ export default function TrackingPage() {
 
               <section className="grid gap-4 sm:grid-cols-2">
                 <div><Label htmlFor="new-order-service">Service</Label><Select value={createOrder.service_type} onValueChange={(value) => setCreateOrder({ ...createOrder, service_type: value, container_id: value === "fret_maritime" ? createOrder.container_id : "" })}><SelectTrigger id="new-order-service" className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fret_maritime">Fret maritime</SelectItem><SelectItem value="fret_aerien">Fret aérien</SelectItem><SelectItem value="demenagement">Déménagement</SelectItem><SelectItem value="dedouanement">Dédouanement</SelectItem><SelectItem value="negoce">Négoce</SelectItem><SelectItem value="colis">Colis</SelectItem></SelectContent></Select></div>
-                <div><Label htmlFor="new-order-delivery">Livraison estimée</Label><Input id="new-order-delivery" className="mt-1" type="date" value={createOrder.estimated_delivery} onChange={(e) => setCreateOrder({ ...createOrder, estimated_delivery: e.target.value })} /></div>
                 {createOrder.service_type === "fret_maritime" && <div className="min-w-0 sm:col-span-2"><Label htmlFor="new-order-container">Conteneur associé</Label><Select value={createOrder.container_id || "unassigned"} onValueChange={(value) => setCreateOrder({ ...createOrder, container_id: value === "unassigned" ? "" : value })}><SelectTrigger id="new-order-container" className="mt-1 w-full min-w-0"><SelectValue placeholder="Aucun conteneur" /></SelectTrigger><SelectContent><SelectItem value="unassigned">Aucun conteneur pour le moment</SelectItem>{containers.map((container) => <SelectItem key={container.id} value={container.id}>{container.code}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Seuls les conteneurs existants peuvent être associés.</p></div>}
                 <div><Label htmlFor="new-order-origin">Origine</Label><Input id="new-order-origin" required autoComplete="address-level2" className="mt-1" value={createOrder.origin} onChange={(e) => setCreateOrder({ ...createOrder, origin: e.target.value })} /></div>
                 <div><Label htmlFor="new-order-destination">Destination</Label><Input id="new-order-destination" required autoComplete="address-level2" className="mt-1" value={createOrder.destination} onChange={(e) => setCreateOrder({ ...createOrder, destination: e.target.value })} /></div>
@@ -1091,7 +1090,7 @@ export default function TrackingPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => window.open(`/admin/qr?code=${encodeURIComponent(selectedOrder.qr_code || '')}`, '_blank')}
+                    onClick={() => router.push(`/admin/qr?code=${encodeURIComponent(selectedOrder.qr_code || '')}`)}
                     className="w-full justify-center gap-2 sm:w-auto"
                   >
                     <QrCode className="size-4" />

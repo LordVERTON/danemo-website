@@ -216,7 +216,8 @@ export async function POST(request: NextRequest) {
       destination: body.destination?.trim().substring(0, 100),
       weight: body.weight ? (typeof body.weight === 'string' ? body.weight.trim().substring(0, 20) : String(body.weight).substring(0, 20)) : null,
       value: body.value ? (typeof body.value === 'string' ? body.value.trim().substring(0, 20) : String(body.value).substring(0, 20)) : null,
-      estimated_delivery: body.estimated_delivery,
+      // L'ETA appartient au conteneur associé ; une commande ne porte jamais de date autonome.
+      estimated_delivery: null,
       container_id: containerId,
       customer_id: resolvedCustomerId,
       parcels_count: (() => {

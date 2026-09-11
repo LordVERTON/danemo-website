@@ -206,6 +206,8 @@ export async function PUT(
     // The database trigger mirrors the container code from container_id.
     // Never accept a manually supplied code from the client.
     delete sanitizedOrderData.container_code
+    // L'ETA affichée est toujours l'ETA du conteneur associé.
+    sanitizedOrderData.estimated_delivery = null
 
     const requiredValues = {
       client_name: orderData.client_name ?? oldOrder.client_name,

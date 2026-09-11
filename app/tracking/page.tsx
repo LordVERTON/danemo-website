@@ -226,7 +226,7 @@ export default function TrackingPage() {
                       <h3 className="font-semibold text-gray-900 mb-2">Détails de l&apos;expédition</h3>
                       <p className="text-sm text-gray-600"><strong>Référence:</strong> {order.order_number}</p>
                       <p className="text-sm text-gray-600">
-                        <strong>Livraison estimée:</strong> {order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString('fr-FR') : 'Non spécifiée'}
+                        <strong>Arrivée prévue:</strong> {order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString('fr-FR') : 'Non spécifiée'}
                       </p>
                     </div>
                     <div>

@@ -157,7 +157,6 @@ export default function ClientsPage() {
     destination: string
     weight: string
     value: string
-    estimated_delivery: string
     container_id: string
   }>>([])
 
@@ -364,7 +363,6 @@ export default function ClientsPage() {
               destination: order.destination,
               weight: order.weight ? parseFloat(order.weight) : null,
               value: order.value ? parseFloat(order.value) : null,
-              estimated_delivery: order.estimated_delivery || null,
               container_id: order.container_id || null,
               container_code: containers.find(c => c.id === order.container_id)?.code || null,
               customer_id: createdCustomer.id,
@@ -406,7 +404,6 @@ export default function ClientsPage() {
       destination: "",
       weight: "",
       value: "",
-      estimated_delivery: "",
       container_id: "",
     }])
   }
@@ -940,15 +937,6 @@ export default function ClientsPage() {
                           step="0.01"
                           value={order.value}
                           onChange={(e) => updateOrderForm(index, 'value', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`order_delivery_${index}`}>Livraison estimée</Label>
-                        <Input
-                          id={`order_delivery_${index}`}
-                          type="date"
-                          value={order.estimated_delivery}
-                          onChange={(e) => updateOrderForm(index, 'estimated_delivery', e.target.value)}
                         />
                       </div>
                     </div>
