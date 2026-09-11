@@ -1,5 +1,7 @@
 # Référentiel opérationnel DANEMO
 
+Le document de référence est [Workflows unifiés](../WORKFLOWS.md). Ce dossier contient les schémas détaillés, références code, cas limites et scénarios de recette par domaine.
+
 Cette documentation décrit le comportement actuellement livré par l'application. Elle s'appuie sur les routes, services et migrations versionnés ; elle ne remplace pas une décision métier. Les rubriques **À confirmer** signalent donc un comportement absent, ambigu ou risqué dans le code.
 
 ## Carte globale

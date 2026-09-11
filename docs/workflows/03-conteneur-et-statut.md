@@ -73,7 +73,7 @@ sequenceDiagram
 2. Associer une commande ayant un e-mail de destinataire, modifier le statut et vérifier l'événement de suivi du conteneur dans son historique avant la tentative d'e-mail, sans changement de statut de la commande.
 3. Modifier le navire sans statut : vérifier qu'aucune notification de statut n'est demandée.
 4. Appeler la lecture sans session et avec session : comparer les champs retournés.
-5. À 320 px de large, vérifier que la liste des conteneurs et les commandes liées s’affichent en cartes sans défilement horizontal ; contrôler que le statut et le suivi restent accessibles. Les exports XLSX et DOCX restent disponibles dans la vue bureau uniquement.
+5. À 320 px de large, vérifier que la liste des conteneurs et les commandes liées s’affichent en cartes sans défilement horizontal ; contrôler que le statut, le suivi et les exports XLSX/DOCX restent accessibles depuis chaque carte de conteneur.
 6. Vérifier que la liste principale n’affiche que le code, le trajet, le statut et l’action **Modifier** ; cliquer sur une ligne doit ouvrir les informations essentielles, puis permettre d’accéder au suivi complet si nécessaire.
 
 ## Références code
