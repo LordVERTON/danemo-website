@@ -5,7 +5,7 @@ import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -77,6 +77,7 @@ export default function ContainersPage() {
   const [search, setSearch] = useState("")
   const [form, setForm] = useState<Partial<Container>>({ status: 'planned' })
   const [trackingOpen, setTrackingOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [selected, setSelected] = useState<Container | null>(null)
   const [events, setEvents] = useState<any[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
@@ -204,6 +205,29 @@ export default function ContainersPage() {
     }
   }
 
+  const openContainerDetails = (container: Container) => {
+    setSelected(container)
+    setDetailsOpen(true)
+  }
+
+  const openContainerTracking = (container: Container) => {
+    setSelected(container)
+    setManualMessage('')
+    setNotifyError(null)
+    setNotifySuccess(null)
+    setDetailsOpen(false)
+    setTrackingOpen(true)
+    fetchContainerEvents(container.id)
+    fetchLinkedInventory(container)
+  }
+
+  const openContainerEditor = (container: Container) => {
+    setForm(container)
+    setDetailsOpen(false)
+    setTrackingOpen(false)
+    setOpen(true)
+  }
+
   const exportContainerClients = async (container: Container, format: "xlsx" | "docx") => {
     setExportLoading(`${container.id}:${format}`)
     try {
@@ -329,29 +353,15 @@ export default function ContainersPage() {
   }
 
   return (
-    <AdminLayout title="Gestion des conteneurs">
+    <AdminLayout title="Conteneurs">
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Conteneurs</h1>
-            <p className="text-muted-foreground mt-1">
-              Liste, suivi et notifications pour chaque conteneur
-            </p>
-          </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button
-                className="flex items-center gap-2 shrink-0"
-                onClick={() => setForm({ status: 'planned' })}
-              >
-                <Plus className="h-4 w-4" /> Nouveau conteneur
-              </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="max-w-lg w-[95vw]">
               <DialogHeader>
                 <DialogTitle>{form.id ? "Modifier le conteneur" : "Ajouter un conteneur"}</DialogTitle>
+                <DialogDescription>Renseignez seulement les informations utiles au suivi du transport.</DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Code (ex: MSKU1234567)</Label>
                   <Input value={form.code || ''} onChange={e => setForm({ ...form, code: e.target.value })} />
@@ -376,11 +386,20 @@ export default function ContainersPage() {
                   <Label>ETA</Label>
                   <Input type="date" value={form.eta || ''} onChange={e => setForm({ ...form, eta: e.target.value })} />
                 </div>
-                <Button onClick={submit}>{form.id ? "Enregistrer les modifications" : "Enregistrer"}</Button>
+                <div className="grid gap-2 sm:col-span-2">
+                  <Label>Statut</Label>
+                  <Select value={form.status || 'planned'} onValueChange={(value: Container['status']) => setForm({ ...form, status: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{containerStatusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter className="sm:col-span-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+                  <Button type="button" onClick={submit}>{form.id ? "Enregistrer" : "Créer le conteneur"}</Button>
+                </DialogFooter>
               </div>
             </DialogContent>
-          </Dialog>
-        </div>
+        </Dialog>
 
         <Card>
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -388,8 +407,9 @@ export default function ContainersPage() {
               <PackageSearch className="h-5 w-5 text-orange-600" />
               Liste des conteneurs
             </CardTitle>
-            <div className="w-full sm:w-64">
-              <Input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />
+            <div className="flex w-full gap-2 sm:w-auto">
+              <Input className="flex-1 sm:w-64" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />
+              <Button type="button" className="hidden sm:inline-flex" onClick={() => { setForm({ status: 'planned' }); setOpen(true) }}><Plus className="mr-2 size-4" />Nouveau conteneur</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -398,45 +418,24 @@ export default function ContainersPage() {
                 <AlertDescription>{statusUpdateFeedback}</AlertDescription>
               </Alert>
             )}
-            <div className="space-y-3 lg:hidden">
+            <div className="divide-y overflow-hidden rounded-lg border">
               {loading ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">Chargement...</p>
               ) : filtered.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">Aucun conteneur</p>
               ) : (
                 filtered.map((c) => (
-                  <article key={c.id} className="min-w-0 rounded-xl border p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-mono font-semibold text-slate-900">{c.code}</p>
-                        <p className="mt-1 truncate text-sm text-muted-foreground">{c.vessel || "Navire non renseigné"}</p>
-                      </div>
-                      <Badge variant="outline" className="shrink-0">{formatContainerStatus(c.status)}</Badge>
-                    </div>
-                    <p className="mt-3 truncate text-sm text-slate-700">{c.departure_port || "Départ à confirmer"} → {c.arrival_port || "Arrivée à confirmer"}</p>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                      <p><span className="text-muted-foreground">ETD : </span>{c.etd || "—"}</p>
-                      <p><span className="text-muted-foreground">ETA : </span>{c.eta || "—"}</p>
-                    </div>
-                    <div className="mt-4 grid gap-2">
-                      <Select value={statusDrafts[c.id] || c.status} onValueChange={(value: Container["status"]) => setStatusDrafts((prev) => ({ ...prev, [c.id]: value }))}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>{containerStatusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Button variant="secondary" className="w-full" disabled={statusUpdateLoading === c.id || (statusDrafts[c.id] || c.status) === c.status} onClick={() => updateContainerStatus(c)}>
-                        {statusUpdateLoading === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer le statut"}
-                      </Button>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" className="col-span-2 w-full" onClick={() => { setSelected(c); setManualMessage(''); setNotifyError(null); setNotifySuccess(null); setTrackingOpen(true); fetchContainerEvents(c.id); fetchLinkedInventory(c) }}><MapPin className="h-4 w-4" />Suivi</Button>
-                        <Button variant="outline" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "xlsx")}>{exportLoading === `${c.id}:xlsx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}XLSX</Button>
-                        <Button variant="outline" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "docx")}>{exportLoading === `${c.id}:docx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}DOCX</Button>
-                      </div>
-                    </div>
+                  <article key={c.id} className="flex min-w-0 items-center gap-3 p-3 transition-colors hover:bg-muted/50 sm:p-4">
+                    <button type="button" className="min-w-0 flex-1 text-left" onClick={() => openContainerDetails(c)} aria-label={`Ouvrir le conteneur ${c.code}`}>
+                      <div className="flex min-w-0 items-center gap-2"><p className="truncate font-mono font-medium text-foreground">{c.code}</p><Badge variant="outline" className="shrink-0 text-xs">{formatContainerStatus(c.status)}</Badge></div>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">{c.departure_port || "Départ à confirmer"} → {c.arrival_port || "Arrivée à confirmer"}{c.vessel ? ` · ${c.vessel}` : ""}</p>
+                    </button>
+                    <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => openContainerEditor(c)}><Pencil className="mr-2 size-4" />Modifier</Button>
                   </article>
                 ))
               )}
             </div>
-            <div className="hidden lg:block">
+            <div className="hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -530,6 +529,49 @@ export default function ContainersPage() {
           </CardContent>
         </Card>
 
+        <Button
+          type="button"
+          size="icon"
+          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 rounded-full shadow-lg sm:hidden"
+          onClick={() => { setForm({ status: 'planned' }); setOpen(true) }}
+          aria-label="Créer un conteneur"
+        >
+          <Plus className="size-6" />
+        </Button>
+
+        <Dialog open={detailsOpen} onOpenChange={(isOpen) => { setDetailsOpen(isOpen); if (!isOpen && !trackingOpen) setSelected(null) }}>
+          <DialogContent className="w-[95vw] max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Conteneur {selected?.code}</DialogTitle>
+              <DialogDescription>Consultez les informations essentielles ou accédez au suivi détaillé.</DialogDescription>
+            </DialogHeader>
+            {selected && (
+              <div className="space-y-5">
+                <div className="grid gap-4 rounded-lg border p-4 text-sm sm:grid-cols-2">
+                  <div><p className="text-xs text-muted-foreground">Trajet</p><p className="mt-1 font-medium">{selected.departure_port || "Départ à confirmer"} → {selected.arrival_port || "Arrivée à confirmer"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Navire</p><p className="mt-1 font-medium">{selected.vessel || "Non renseigné"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Départ estimé</p><p className="mt-1 font-medium">{selected.etd || "Non renseigné"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Arrivée estimée</p><p className="mt-1 font-medium">{selected.eta || "Non renseignée"}</p></div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Statut</Label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Select value={statusDrafts[selected.id] || selected.status} onValueChange={(value: Container["status"]) => setStatusDrafts((prev) => ({ ...prev, [selected.id]: value }))}>
+                      <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>{containerStatusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Button type="button" variant="secondary" disabled={statusUpdateLoading === selected.id || (statusDrafts[selected.id] || selected.status) === selected.status} onClick={() => updateContainerStatus(selected)}>{statusUpdateLoading === selected.id ? <Loader2 className="size-4 animate-spin" /> : "Enregistrer"}</Button>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => openContainerEditor(selected)}><Pencil className="mr-2 size-4" />Modifier</Button>
+                  <Button type="button" onClick={() => openContainerTracking(selected)}><MapPin className="mr-2 size-4" />Suivi complet</Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={trackingOpen} onOpenChange={handleTrackingDialogChange}>
           <DialogContent className="max-w-4xl w-full sm:w-[92vw] lg:w-[80vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
@@ -546,15 +588,15 @@ export default function ContainersPage() {
               )}
               {selected && (
                 <div className="space-y-4">
-                  <div className="flex justify-end">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <div className="hidden gap-2 lg:flex">
+                      <Button variant="outline" disabled={exportLoading !== null} onClick={() => exportContainerClients(selected, "xlsx")}>{exportLoading === `${selected.id}:xlsx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} XLSX</Button>
+                      <Button variant="outline" disabled={exportLoading !== null} onClick={() => exportContainerClients(selected, "docx")}>{exportLoading === `${selected.id}:docx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} DOCX</Button>
+                    </div>
                     <Button
                       variant="outline"
                       className="gap-2"
-                      onClick={() => {
-                        setForm(selected)
-                        setTrackingOpen(false)
-                        setOpen(true)
-                      }}
+                      onClick={() => openContainerEditor(selected)}
                     >
                       <Pencil className="h-4 w-4" /> Modifier les informations
                     </Button>
