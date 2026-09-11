@@ -425,12 +425,20 @@ export default function ContainersPage() {
                 <p className="py-6 text-center text-sm text-muted-foreground">Aucun conteneur</p>
               ) : (
                 filtered.map((c) => (
-                  <article key={c.id} className="flex min-w-0 items-center gap-3 p-3 transition-colors hover:bg-muted/50 sm:p-4">
-                    <button type="button" className="min-w-0 flex-1 text-left" onClick={() => openContainerDetails(c)} aria-label={`Ouvrir le conteneur ${c.code}`}>
+                  <article key={c.id} className="min-w-0 p-3 transition-colors hover:bg-muted/50 sm:p-4">
+                    <button type="button" className="min-w-0 w-full text-left" onClick={() => openContainerDetails(c)} aria-label={`Ouvrir le conteneur ${c.code}`}>
                       <div className="flex min-w-0 items-center gap-2"><p className="truncate font-mono font-medium text-foreground">{c.code}</p><Badge variant="outline" className="shrink-0 text-xs">{formatContainerStatus(c.status)}</Badge></div>
                       <p className="mt-1 truncate text-sm text-muted-foreground">{c.departure_port || "Départ à confirmer"} → {c.arrival_port || "Arrivée à confirmer"}{c.vessel ? ` · ${c.vessel}` : ""}</p>
                     </button>
-                    <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => openContainerEditor(c)}><Pencil className="mr-2 size-4" />Modifier</Button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => openContainerEditor(c)}><Pencil className="mr-2 size-4" />Modifier</Button>
+                      <Button type="button" variant="outline" size="sm" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "xlsx")}>
+                        {exportLoading === `${c.id}:xlsx` ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />} Excel
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "docx")}>
+                        {exportLoading === `${c.id}:docx` ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />} Word
+                      </Button>
+                    </div>
                   </article>
                 ))
               )}
@@ -573,14 +581,14 @@ export default function ContainersPage() {
         </Dialog>
 
         <Dialog open={trackingOpen} onOpenChange={handleTrackingDialogChange}>
-          <DialogContent className="max-w-4xl w-full sm:w-[92vw] lg:w-[80vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-            <DialogHeader>
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-3xl max-h-[90dvh] overflow-x-hidden overflow-y-auto p-4 sm:w-[92vw] sm:p-6">
+            <DialogHeader className="min-w-0 pr-8">
               <DialogTitle className="text-lg sm:text-xl">Suivi du conteneur {selected?.code}</DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground">
                 Consulte l’avancement, notifie les clients et visualise les commandes liées.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 sm:space-y-6">
+            <div className="min-w-0 space-y-4 sm:space-y-6">
               {autoNotifyStatusMessage && (
                 <Alert className="border-green-200 bg-green-50 text-green-800">
                   <AlertDescription>{autoNotifyStatusMessage}</AlertDescription>
@@ -595,45 +603,47 @@ export default function ContainersPage() {
                     </div>
                     <Button
                       variant="outline"
-                      className="gap-2"
+                      className="w-full gap-2 sm:w-auto"
                       onClick={() => openContainerEditor(selected)}
                     >
-                      <Pencil className="h-4 w-4" /> Modifier les informations
+                      <Pencil className="h-4 w-4" />
+                      <span className="sm:hidden">Modifier</span>
+                      <span className="hidden sm:inline">Modifier les informations</span>
                     </Button>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-gray-100 bg-white/80 p-4 space-y-2">
+                  <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+                    <div className="min-w-0 space-y-2 rounded-lg border border-gray-100 bg-white/80 p-4">
                       <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Informations conteneur</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
+                      <div className="grid gap-3 text-sm min-[420px]:grid-cols-2">
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Code</p>
-                          <p className="font-semibold text-base">{selected.code}</p>
+                          <p className="truncate font-semibold text-base" title={selected.code}>{selected.code}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Statut</p>
-                          <p className="font-semibold capitalize">{selected.status.replace("_", " ")}</p>
+                          <p className="truncate font-semibold capitalize" title={selected.status.replace("_", " ")}>{selected.status.replace("_", " ")}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Navire</p>
-                          <p className="font-medium">{selected.vessel || "—"}</p>
+                          <p className="truncate font-medium" title={selected.vessel || "—"}>{selected.vessel || "—"}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Client assigné</p>
                           <p className="font-medium">{selected.client_id ? "Client associé" : "Non défini"}</p>
                         </div>
                       </div>
                     </div>
-                    <div className="rounded-lg border border-gray-100 bg-white/80 p-4 space-y-2">
+                    <div className="min-w-0 space-y-2 rounded-lg border border-gray-100 bg-white/80 p-4">
                       <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Trajet & planning</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
+                      <div className="grid gap-3 text-sm min-[420px]:grid-cols-2">
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Départ</p>
-                          <p className="font-medium">{selected.departure_port || "—"}</p>
+                          <p className="truncate font-medium" title={selected.departure_port || "—"}>{selected.departure_port || "—"}</p>
                           <p className="text-xs text-muted-foreground">{selected.etd || "Date inconnue"}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Arrivée</p>
-                          <p className="font-medium">{selected.arrival_port || "—"}</p>
+                          <p className="truncate font-medium" title={selected.arrival_port || "—"}>{selected.arrival_port || "—"}</p>
                           <p className="text-xs text-muted-foreground">{selected.eta || "Date inconnue"}</p>
                         </div>
                       </div>
@@ -679,7 +689,7 @@ export default function ContainersPage() {
                           </Alert>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="min-w-0 break-words text-xs text-muted-foreground">
                         {containerAlreadyNotified && containerNotificationInfo
                           ? `Clients notifiés du statut "${formatContainerStatus(selected.status)}" le ${formatDateTime(containerNotificationInfo.timestamp)}.`
                           : containerNotificationInfo
@@ -696,24 +706,24 @@ export default function ContainersPage() {
               ) : events.length === 0 ? (
                 <div className="text-sm text-muted-foreground">Aucun événement</div>
               ) : (
-                <div className="space-y-2 rounded-lg border border-gray-100 bg-white/70 p-3 max-h-[320px] overflow-y-auto">
+                <div className="max-h-[320px] min-w-0 space-y-2 overflow-x-hidden overflow-y-auto rounded-lg border border-gray-100 bg-white/70 p-3">
                   {events.map((ev, idx) => (
-                    <div key={ev.id || idx} className="p-3 border rounded-md">
-                      <div className="flex items-center gap-2 text-sm">
+                    <div key={ev.id || idx} className="min-w-0 rounded-md border p-3">
+                      <div className="flex min-w-0 flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
                         <BadgeCheck className="h-4 w-4 text-orange-600" />
-                        <span className="font-medium">{ev.status}</span>
-                        <span className="text-muted-foreground flex items-center gap-1">
+                        <span className="font-medium break-words">{ev.status}</span>
+                        <span className="flex items-center gap-1 break-words text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
                           {new Date(ev.event_date).toLocaleString('fr-FR')}
                         </span>
                       </div>
                       {ev.location && (
-                        <div className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
+                        <div className="mt-1 flex min-w-0 items-start gap-1 break-words text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           {ev.location}
                         </div>
                       )}
-                      {ev.description && <div className="mt-1 text-sm">{ev.description}</div>}
+                      {ev.description && <div className="mt-1 break-words text-sm">{ev.description}</div>}
                     </div>
                   ))}
                 </div>
@@ -737,45 +747,16 @@ export default function ContainersPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="space-y-2 lg:hidden">
+                        <div className="space-y-2">
                           {orders.map((order) => (
-                            <article key={order.id} className="rounded-md border bg-white p-3 text-sm">
+                            <article key={order.id} className="min-w-0 rounded-md border bg-white p-3 text-sm">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0"><p className="truncate font-mono text-xs font-medium">{order.order_number}</p><p className="mt-1 capitalize text-muted-foreground">{order.service_type.replace("_", " ")}</p></div>
                                 <Badge variant="outline" className="shrink-0 capitalize">{order.status.replace("_", " ")}</Badge>
                               </div>
-                              <p className="mt-2 truncate text-xs text-muted-foreground">{order.origin} → {order.destination}</p>
+                              <p className="mt-2 break-words text-xs text-muted-foreground">{order.origin} → {order.destination}</p>
                             </article>
                           ))}
-                        </div>
-                        <div className="hidden lg:block">
-                          <Table className="w-full text-sm">
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Numéro</TableHead>
-                                <TableHead>Service</TableHead>
-                                <TableHead>Trajet</TableHead>
-                                <TableHead>Statut</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {orders.map((order) => (
-                                <TableRow key={order.id}>
-                                  <TableCell className="font-mono text-xs">{order.order_number}</TableCell>
-                                  <TableCell className="capitalize">{order.service_type.replace("_", " ")}</TableCell>
-                                  <TableCell className="text-xs">
-                                    <div>{order.origin}</div>
-                                    <div className="text-muted-foreground">→ {order.destination}</div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline" className="capitalize">
-                                      {order.status.replace("_", " ")}
-                                    </Badge>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
                         </div>
                       </div>
                     ))}
