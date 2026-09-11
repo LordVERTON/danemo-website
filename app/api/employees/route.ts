@@ -1,33 +1,307 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
-import { requireAdminApiAccess } from "@/lib/staff-api-auth"
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
+import { isStaffRole } from '@/lib/staff-authorization'
 
-export async function GET() {
-  const accessError = await requireAdminApiAccess()
-  if (accessError) return accessError
-  try {
-    const { data, error } = await (supabaseAdmin as any).from("employees").select("*").order("created_at", { ascending: false })
+type EmployeeRole = 'admin' | 'operator'
+
+function normalizeEmail(email: string | null | undefined) {
+  return String(email || '').trim().toLowerCase()
+}
+
+function parseEmployeeRole(role: unknown): EmployeeRole | null {
+  return isStaffRole(role) ? role : null
+}
+
+function nameFromAuthUser(user: any) {
+  const metadata = user.user_metadata || {}
+  const metadataName = metadata.name || metadata.full_name || metadata.display_name
+  if (typeof metadataName === 'string' && metadataName.trim()) {
+    return metadataName.trim()
+  }
+
+  const emailName = String(user.email || '').split('@')[0]
+  return emailName
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ') || 'Collaborateur'
+}
+
+async function listAllAuthUsers() {
+  const users: any[] = []
+  let page = 1
+  const perPage = 1000
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
     if (error) throw error
-    return NextResponse.json({ success: true, data: data || [] })
-  } catch (error) {
-    console.error("[employees.get]", error)
-    return NextResponse.json({ success: false, error: "Impossible de récupérer les collaborateurs" }, { status: 500 })
+
+    users.push(...(data.users || []))
+    if (!data.users || data.users.length < perPage) break
+    page += 1
+  }
+
+  return users
+}
+
+async function syncAuthUsersToEmployees() {
+  let authUsers: any[]
+  try {
+    authUsers = await listAllAuthUsers()
+  } catch (error: any) {
+    console.warn('Could not sync auth users to employees:', error?.message || error)
+    return
+  }
+
+  const existingEmployeesResult = await supabaseAdmin.from('employees').select('id,user_id,email')
+
+  if (existingEmployeesResult.error) throw existingEmployeesResult.error
+
+  const existingEmployees = existingEmployeesResult.data || []
+  const byUserId = new Map(existingEmployees.map((employee: any) => [employee.user_id, employee]))
+  const byEmail = new Map(
+    existingEmployees
+      .filter((employee: any) => employee.email)
+      .map((employee: any) => [normalizeEmail(employee.email), employee]),
+  )
+  const now = new Date().toISOString()
+  const today = now.split('T')[0]
+
+  for (const authUser of authUsers) {
+    const email = normalizeEmail(authUser.email)
+    const role = parseEmployeeRole(authUser.app_metadata?.role)
+    // Only server-provisioned staff may be imported into the employee table.
+    // Auth users may freely change user_metadata, so it is not an authority.
+    if (!email || !role || byUserId.has(authUser.id)) continue
+
+    const existingByEmail = byEmail.get(email)
+    if (existingByEmail) {
+      const { error } = await (supabaseAdmin as any)
+        .from('employees')
+        .update({
+          user_id: authUser.id,
+          email,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', (existingByEmail as any).id)
+
+      if (error) throw error
+      byUserId.set(authUser.id, { ...existingByEmail, user_id: authUser.id, email })
+      continue
+    }
+
+    const { data: insertedEmployee, error } = await (supabaseAdmin as any)
+      .from('employees')
+      .insert({
+        user_id: authUser.id,
+        name: nameFromAuthUser(authUser),
+        email,
+        role,
+        salary: 0,
+        position: 'Collaborateur',
+        hire_date: today,
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+      } as any)
+      .select('id,user_id,email')
+      .single()
+
+    if (error) throw error
+    byUserId.set(authUser.id, insertedEmployee)
+    byEmail.set(email, insertedEmployee)
   }
 }
 
+// GET /api/employees - Récupérer tous les employés
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
+  try {
+    await syncAuthUsersToEmployees()
+
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')
+    const role = searchParams.get('role')
+    const isActive = searchParams.get('is_active')
+
+    // Récupérer les employés depuis la table employees
+    let query = supabaseAdmin
+      .from('employees')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,position.ilike.%${search}%`)
+    }
+
+    if (role && role !== 'all') {
+      query = query.eq('role', role)
+    }
+
+    if (isActive !== null && isActive !== undefined) {
+      query = query.eq('is_active', isActive === 'true')
+    }
+
+    const { data: employees, error: employeesError } = await query
+
+    if (employeesError) throw employeesError
+
+    // Récupérer les informations des utilisateurs auth pour chaque employé
+    const employeesWithAuthData = await Promise.all(
+      (employees || []).map(async (employee: any) => {
+        try {
+          // Récupérer les données de l'utilisateur auth
+          const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(employee.user_id)
+          
+          if (authError) {
+            console.warn(`Could not fetch auth data for user ${employee.user_id}:`, authError.message)
+            return {
+              ...employee,
+              auth_user: null,
+              last_sign_in_at: null,
+              email_confirmed_at: null,
+              created_at_auth: null
+            }
+          }
+
+          return {
+            ...employee,
+            auth_user: {
+              id: authUser.user.id,
+              email: authUser.user.email,
+              email_confirmed_at: authUser.user.email_confirmed_at,
+              last_sign_in_at: authUser.user.last_sign_in_at,
+              created_at: authUser.user.created_at,
+              user_metadata: authUser.user.user_metadata
+            },
+            last_sign_in_at: authUser.user.last_sign_in_at,
+            email_confirmed_at: authUser.user.email_confirmed_at,
+            created_at_auth: authUser.user.created_at
+          }
+        } catch (error) {
+          console.warn(`Error fetching auth data for employee ${employee.id}:`, error)
+          return {
+            ...employee,
+            auth_user: null,
+            last_sign_in_at: null,
+            email_confirmed_at: null,
+            created_at_auth: null
+          }
+        }
+      })
+    )
+
+    return NextResponse.json({ success: true, data: employeesWithAuthData })
+  } catch (error) {
+    console.error('Error fetching employees:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch employees' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/employees - Créer un nouvel employé
 export async function POST(request: NextRequest) {
-  const accessError = await requireAdminApiAccess()
-  if (accessError) return accessError
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
     const body = await request.json()
-    if (!body.name || !body.email || !body.password) return NextResponse.json({ success: false, error: "Nom, email et mot de passe requis" }, { status: 400 })
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({ email: body.email, password: body.password, email_confirm: true, user_metadata: { role: body.role === "admin" ? "admin" : "operator", name: body.name } })
-    if (authError) return NextResponse.json({ success: false, error: "Impossible de créer le compte" }, { status: 400 })
-    const { data, error } = await (supabaseAdmin as any).from("employees").insert({ user_id: authData.user.id, name: body.name, email: body.email, role: body.role === "admin" ? "admin" : "operator", salary: Number(body.salary || 0), position: body.position || "Collaborateur", hire_date: body.hire_date || new Date().toISOString().slice(0, 10), is_active: body.is_active !== false }).select().single()
-    if (error) throw error
+    
+    // Vérifier que tous les champs requis sont présents
+    const requiredFields = ['name', 'email', 'role', 'salary', 'position', 'hire_date']
+    for (const field of requiredFields) {
+      if (!body[field]) {
+        return NextResponse.json(
+          { success: false, error: `Le champ ${field} est requis` },
+          { status: 400 }
+        )
+      }
+    }
+
+    const password = typeof body.password === 'string' ? body.password : ''
+    if (!password.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Un mot de passe initial est requis pour créer le compte.' },
+        { status: 400 },
+      )
+    }
+
+    const role = parseEmployeeRole(body.role)
+    if (!role) {
+      return NextResponse.json(
+        { success: false, error: 'Le rôle doit être administrateur ou opérateur.' },
+        { status: 400 },
+      )
+    }
+
+    const email = normalizeEmail(body.email)
+
+    // Créer l'utilisateur dans auth.users d'abord
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name: String(body.name).trim() },
+      app_metadata: { role },
+    })
+
+    if (authError) {
+      console.error('Unable to create collaborator auth account')
+      return NextResponse.json(
+        { success: false, error: 'Impossible de créer le compte d’accès. Vérifiez les informations saisies.' },
+        { status: 400 }
+      )
+    }
+
+    // Créer l'employé dans la table employees
+    const employeeData = {
+      user_id: authData.user.id,
+      name: body.name,
+      email,
+      role,
+      salary: parseFloat(body.salary),
+      position: body.position,
+      hire_date: body.hire_date,
+      is_active: body.is_active !== undefined ? body.is_active : true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('employees')
+      .insert(employeeData as any)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Database error:', error)
+      // Si l'insertion échoue, supprimer l'utilisateur auth créé
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      throw error
+    }
+
+    // Ajouter une activité de création
+    await supabaseAdmin
+      .from('employee_activities')
+      .insert({
+        employee_id: (data as any).id,
+        activity_type: 'login',
+        description: `Employé créé: ${(data as any).name}`,
+        metadata: { action: 'employee_created' },
+        created_at: new Date().toISOString()
+      } as any)
+    
     return NextResponse.json({ success: true, data }, { status: 201 })
-  } catch (error) {
-    console.error("[employees.post]", error)
-    return NextResponse.json({ success: false, error: "Impossible de créer le collaborateur" }, { status: 500 })
+  } catch {
+    console.error('Error creating employee')
+    return NextResponse.json(
+      { success: false, error: 'Failed to create employee' },
+      { status: 500 }
+    )
   }
 }

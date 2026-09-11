@@ -6,17 +6,11 @@ import AdminLayout from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import {
   Search,
   Filter,
   User,
-  Package,
-  ChevronRight,
-  Building2,
-  Mail,
-  Phone,
   Plus,
   Edit,
   Loader2,
@@ -156,20 +150,21 @@ export default function ClientsPage() {
   })
   
   // Formulaire de création de commande(s)
-  const [newOrders, setNewOrders] = useState([{
-    service_type: "",
-    description: "",
-    origin: "",
-    destination: "",
-    weight: "",
-    value: "",
-    estimated_delivery: "",
-    container_id: "",
-  }])
+  const [newOrders, setNewOrders] = useState<Array<{
+    service_type: string
+    description: string
+    origin: string
+    destination: string
+    weight: string
+    value: string
+    container_id: string
+  }>>([])
 
   useEffect(() => {
     fetchCustomers()
     fetchContainers()
+  // Les données de référence sont chargées une seule fois à l'ouverture de l'écran.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -251,17 +246,9 @@ export default function ClientsPage() {
       fetchCustomers()
     }, 300)
     return () => clearTimeout(timeoutId)
+  // Le délai de recherche est volontairement réinitialisé uniquement lors d'un changement de filtre.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filterStatus])
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { label: 'Actif', variant: 'default' as const },
-      inactive: { label: 'Inactif', variant: 'secondary' as const },
-      archived: { label: 'Archivé', variant: 'outline' as const },
-    }
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active
-    return <Badge variant={config.variant}>{config.label}</Badge>
-  }
 
   const getOrderStatusBadge = (status: string) => {
     const statusConfig = {
@@ -376,7 +363,6 @@ export default function ClientsPage() {
               destination: order.destination,
               weight: order.weight ? parseFloat(order.weight) : null,
               value: order.value ? parseFloat(order.value) : null,
-              estimated_delivery: order.estimated_delivery || null,
               container_id: order.container_id || null,
               container_code: containers.find(c => c.id === order.container_id)?.code || null,
               customer_id: createdCustomer.id,
@@ -401,18 +387,9 @@ export default function ClientsPage() {
         opted_in_whatsapp: false,
         status: "active"
       })
-      setNewOrders([{
-        service_type: "",
-        description: "",
-        origin: "",
-        destination: "",
-        weight: "",
-        value: "",
-        estimated_delivery: "",
-        container_id: "",
-      }])
+      setNewOrders([])
       setIsCreateDialogOpen(false)
-      fetchCustomers()
+      router.push(`/admin/clients/${createdCustomer.id}`)
     } catch (error) {
       console.error('Error creating customer:', error)
       setError('Erreur de connexion')
@@ -427,7 +404,6 @@ export default function ClientsPage() {
       destination: "",
       weight: "",
       value: "",
-      estimated_delivery: "",
       container_id: "",
     }])
   }
@@ -513,71 +489,17 @@ export default function ClientsPage() {
     }
   }
 
-  const totalOrders = customers.reduce((sum, customer) => sum + (customer.orders?.length || 0), 0)
-  const totalValue = customers.reduce((sum, customer) => {
-    const customerValue = customer.orders?.reduce((orderSum, order) => orderSum + (order.value || 0), 0) || 0
-    return sum + customerValue
-  }, 0)
-
   return (
-    <AdminLayout title="Gestion des clients">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Clients</h1>
-            <p className="text-muted-foreground mt-1">
-              Gérez vos clients et leurs commandes
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsQrDialogOpen(true)}
-              title="Afficher un QR code vers le formulaire client (sans compte admin)"
-            >
-              <QrCode className="h-4 w-4 mr-2" />
-              QR formulaire
-            </Button>
-            <Button
-              onClick={async () => {
-                await fetchContainers()
-                setIsCreateDialogOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Créer un client
-            </Button>
-          </div>
+    <AdminLayout>
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Clients</h1>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">Gérez vos clients et leurs commandes.</p>
         </div>
-
-        {/* Statistiques */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{customers.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Commandes</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalOrders}</div>
-            </CardContent>
-          </Card>
-                  </div>
-
-        {/* Filtres */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="w-full flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
@@ -588,10 +510,10 @@ export default function ClientsPage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Filter className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <Filter className="hidden h-4 w-4 text-muted-foreground sm:block" />
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full min-w-0 sm:w-48">
                     <SelectValue placeholder="Filtrer par statut" />
                   </SelectTrigger>
                   <SelectContent>
@@ -601,12 +523,32 @@ export default function ClientsPage() {
                     <SelectItem value="archived">Archivé</SelectItem>
                   </SelectContent>
                 </Select>
-          </div>
-        </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsQrDialogOpen(true)}
+                  aria-label="Afficher le QR code du formulaire client"
+                  title="Afficher le QR code du formulaire client"
+                >
+                  <QrCode className="size-4" />
+                </Button>
+                <Button
+                  className="hidden sm:inline-flex"
+                  onClick={async () => {
+                    await fetchContainers()
+                    setIsCreateDialogOpen(true)
+                  }}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Nouveau client
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Table des clients */}
+        {/* Liste des clients */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -620,100 +562,49 @@ export default function ClientsPage() {
             ) : customers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">Aucun client trouvé</div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Entreprise</TableHead>
-                    <TableHead>Commandes</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {customers.map((customer) => {
-                    const ordersCount = customer.orders?.length || 0
-                    
-                    return (
-                      <TableRow 
-                        key={customer.id}
-                        className="cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() => handleCustomerClick(customer.id)}
+              <div className="divide-y overflow-hidden rounded-lg border">
+                {customers.map((customer) => (
+                  <article key={customer.id} className="flex min-w-0 items-center gap-3 p-3 transition-colors hover:bg-muted/50 sm:p-4">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => handleCustomerClick(customer.id)}
+                      aria-label={`Ouvrir la fiche de ${customer.name}`}
+                    >
+                      <p className="truncate font-medium text-foreground">{customer.name}</p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">{customer.email || "Aucune adresse e-mail renseignée"}</p>
+                    </button>
+                    {canEdit && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={(event) => handleOpenEdit(event, customer)}
                       >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{customer.name}</div>
-                              {customer.email && (
-                                <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {customer.email}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {customer.phone ? (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Phone className="h-3 w-3 text-muted-foreground" />
-                              {customer.phone}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {customer.company ? (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Building2 className="h-3 w-3 text-muted-foreground" />
-                              {customer.company}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-mono">
-                              {ordersCount}
-                            </Badge>
-                            {ordersCount > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                {ordersCount === 1 ? 'commande' : 'commandes'}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(customer.status)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            {canEdit && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={(e) => handleOpenEdit(e, customer)}
-                                title="Modifier le client"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+                        <Edit className="mr-2 size-4" />
+                        Modifier
+                      </Button>
+                    )}
+                  </article>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
+
+        <Button
+          type="button"
+          size="icon"
+          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 rounded-full shadow-lg sm:hidden"
+          onClick={async () => {
+            await fetchContainers()
+            setIsCreateDialogOpen(true)
+          }}
+          aria-label="Créer un client"
+        >
+          <Plus className="size-6" />
+        </Button>
 
         {/* Dialog de création de client */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -721,7 +612,7 @@ export default function ClientsPage() {
             <DialogHeader>
               <DialogTitle>Créer un nouveau client</DialogTitle>
               <DialogDescription>
-                Créez un nouveau client et ajoutez une ou plusieurs commandes
+                Créez d’abord le client. Vous pourrez ajouter une commande ensuite, depuis sa fiche.
               </DialogDescription>
             </DialogHeader>
             {error && (
@@ -738,6 +629,7 @@ export default function ClientsPage() {
                     <Label htmlFor="customer_name">Nom *</Label>
                     <Input
                       id="customer_name"
+                      autoComplete="name"
                       value={newCustomer.name}
                       onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
                       required
@@ -748,6 +640,7 @@ export default function ClientsPage() {
                     <Input
                       id="customer_email"
                       type="email"
+                      autoComplete="email"
                       value={newCustomer.email}
                       onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
                     />
@@ -756,6 +649,8 @@ export default function ClientsPage() {
                     <Label htmlFor="customer_phone">Téléphone *</Label>
                     <Input
                       id="customer_phone"
+                      type="tel"
+                      autoComplete="tel"
                       value={newCustomer.phone}
                       onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                       required
@@ -765,6 +660,7 @@ export default function ClientsPage() {
                     <Label htmlFor="customer_company">Entreprise</Label>
                     <Input
                       id="customer_company"
+                      autoComplete="organization"
                       value={newCustomer.company}
                       onChange={(e) => setNewCustomer({ ...newCustomer, company: e.target.value })}
                     />
@@ -791,6 +687,7 @@ export default function ClientsPage() {
                     <Label htmlFor="customer_address">Adresse *</Label>
                     <Input
                       id="customer_address"
+                      autoComplete="street-address"
                       value={newCustomer.address}
                       onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
                       required
@@ -800,6 +697,7 @@ export default function ClientsPage() {
                     <Label htmlFor="customer_city">Ville *</Label>
                     <Input
                       id="customer_city"
+                      autoComplete="address-level2"
                       value={newCustomer.city}
                       onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
                       required
@@ -809,6 +707,7 @@ export default function ClientsPage() {
                     <Label htmlFor="customer_postal_code">Code postal *</Label>
                     <Input
                       id="customer_postal_code"
+                      autoComplete="postal-code"
                       value={newCustomer.postal_code}
                       onChange={(e) => setNewCustomer({ ...newCustomer, postal_code: e.target.value })}
                       required
@@ -818,6 +717,7 @@ export default function ClientsPage() {
                     <Label htmlFor="customer_country">Pays *</Label>
                     <Input
                       id="customer_country"
+                      autoComplete="country-name"
                       value={newCustomer.country}
                       onChange={(e) => setNewCustomer({ ...newCustomer, country: e.target.value })}
                       required
@@ -861,13 +761,10 @@ export default function ClientsPage() {
 
               {/* Commandes */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Commandes</h3>
-                  <Button type="button" variant="outline" size="sm" onClick={addOrderForm}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ajouter une commande
-                  </Button>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold">Prochaine étape</h3>
                 </div>
+                {newOrders.length === 0 && <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">Enregistrez d’abord la fiche client. La création de commande se fera ensuite depuis cette fiche, avec les coordonnées déjà préremplies.</p>}
                 {newOrders.map((order, index) => (
                   <Card key={index} className="p-4">
                     <div className="flex items-center justify-between mb-4">
@@ -1042,15 +939,6 @@ export default function ClientsPage() {
                           onChange={(e) => updateOrderForm(index, 'value', e.target.value)}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor={`order_delivery_${index}`}>Livraison estimée</Label>
-                        <Input
-                          id={`order_delivery_${index}`}
-                          type="date"
-                          value={order.estimated_delivery}
-                          onChange={(e) => updateOrderForm(index, 'estimated_delivery', e.target.value)}
-                        />
-                      </div>
                     </div>
                   </Card>
                 ))}
@@ -1093,6 +981,7 @@ export default function ClientsPage() {
                   <Label htmlFor="edit_name">Nom *</Label>
                   <Input
                     id="edit_name"
+                    autoComplete="name"
                     value={editCustomer.name}
                     onChange={(e) => setEditCustomer({ ...editCustomer, name: e.target.value })}
                     required
@@ -1103,6 +992,7 @@ export default function ClientsPage() {
                   <Input
                     id="edit_email"
                     type="email"
+                    autoComplete="email"
                     value={editCustomer.email}
                     onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })}
                   />
@@ -1111,6 +1001,8 @@ export default function ClientsPage() {
                   <Label htmlFor="edit_phone">Téléphone *</Label>
                   <Input
                     id="edit_phone"
+                    type="tel"
+                    autoComplete="tel"
                     value={editCustomer.phone}
                     onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
                     required
@@ -1120,6 +1012,7 @@ export default function ClientsPage() {
                   <Label htmlFor="edit_company">Entreprise</Label>
                   <Input
                     id="edit_company"
+                    autoComplete="organization"
                     value={editCustomer.company}
                     onChange={(e) => setEditCustomer({ ...editCustomer, company: e.target.value })}
                   />
@@ -1146,6 +1039,7 @@ export default function ClientsPage() {
                   <Label htmlFor="edit_address">Adresse *</Label>
                   <Input
                     id="edit_address"
+                    autoComplete="street-address"
                     value={editCustomer.address}
                     onChange={(e) => setEditCustomer({ ...editCustomer, address: e.target.value })}
                     required
@@ -1155,6 +1049,7 @@ export default function ClientsPage() {
                   <Label htmlFor="edit_city">Ville *</Label>
                   <Input
                     id="edit_city"
+                    autoComplete="address-level2"
                     value={editCustomer.city}
                     onChange={(e) => setEditCustomer({ ...editCustomer, city: e.target.value })}
                     required
@@ -1164,6 +1059,7 @@ export default function ClientsPage() {
                   <Label htmlFor="edit_postal_code">Code postal *</Label>
                   <Input
                     id="edit_postal_code"
+                    autoComplete="postal-code"
                     value={editCustomer.postal_code}
                     onChange={(e) => setEditCustomer({ ...editCustomer, postal_code: e.target.value })}
                     required
@@ -1173,6 +1069,7 @@ export default function ClientsPage() {
                   <Label htmlFor="edit_country">Pays *</Label>
                   <Input
                     id="edit_country"
+                    autoComplete="country-name"
                     value={editCustomer.country}
                     onChange={(e) => setEditCustomer({ ...editCustomer, country: e.target.value })}
                     required
@@ -1241,7 +1138,7 @@ export default function ClientsPage() {
             <DialogHeader>
               <DialogTitle>Créer un nouveau conteneur</DialogTitle>
               <DialogDescription>
-                Créez un nouveau conteneur pour l'assigner à cette commande
+                Créez un nouveau conteneur pour l’assigner à cette commande
               </DialogDescription>
             </DialogHeader>
             {error && (
@@ -1299,12 +1196,12 @@ export default function ClientsPage() {
                     id="container_departure_port"
                     value={newContainer.departure_port}
                     onChange={(e) => setNewContainer({ ...newContainer, departure_port: e.target.value })}
-                    placeholder="Ex: Port d'Anvers, Belgique"
+                    placeholder="Ex: Port d’Anvers, Belgique"
                     className="text-base sm:text-sm"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="container_arrival_port">Port d'arrivée</Label>
+                  <Label htmlFor="container_arrival_port">Port d’arrivée</Label>
                   <Input
                     id="container_arrival_port"
                     value={newContainer.arrival_port}
@@ -1326,7 +1223,7 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="container_eta">Date d'arrivée estimée (ETA)</Label>
+                  <Label htmlFor="container_eta">Date d’arrivée estimée (ETA)</Label>
                   <Input
                     id="container_eta"
                     type="datetime-local"
@@ -1358,10 +1255,10 @@ export default function ClientsPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>QR code — formulaire client</DialogTitle>
-              <p className="text-sm text-muted-foreground leading-relaxed text-center px-1">
+              <DialogDescription className="text-center leading-relaxed px-1">
                 Afin de simplifier votre expérience chez Danemo, vous pouvez dès à présent remplir le formulaire en
                 scannant le QR code.
-              </p>
+              </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-2">
               {qrDataUrl ? (

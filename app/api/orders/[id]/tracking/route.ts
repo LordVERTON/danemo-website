@@ -1,15 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { trackingApi, ordersApi } from '@/lib/database'
-import { hasStaffSession } from '@/lib/staff-api-auth'
+import { requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
+
+// Helper function to check if a string is a UUID
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
 
 // GET /api/orders/[id]/tracking - Récupérer les événements de suivi d'une commande
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
-    const events = await trackingApi.getByOrderId(id)
+    const { id } = await context.params
+    
+    // Determine if the parameter is a UUID (ID) or a QR code
+    const isId = isUUID(id)
+    
+    if (isId) {
+      const authError = await requireStaffApiAccess(request)
+      if (authError) return authError
+    }
+
+    let orderId = id
+    if (!isId) {
+      // Get order by QR code to find the actual ID
+      const order = await ordersApi.getByQr(id) || await ordersApi.getByOrderNumber(id) || await ordersApi.getFirstByContainerCode(id)
+      if (!order) {
+        return NextResponse.json(
+          { success: false, error: 'Order not found' },
+          { status: 404 }
+        )
+      }
+      orderId = order.id
+    }
+    
+    const events = await trackingApi.getByOrderId(orderId)
     
     return NextResponse.json({ success: true, data: events })
   } catch (error) {
@@ -21,20 +50,35 @@ export async function GET(
   }
 }
 
-// POST /api/orders/[id]/tracking - Ajouter un événement de suivi
+// POST /api/orders/[id]/tracking - Ajouter un événement de suivi (par ID ou QR code)
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireStaffApiAccess(request)
+  if (authError) return authError
+
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
-    const { id } = await params
+    const { id } = await context.params
     const body = await request.json()
     
-    // Vérifier que la commande existe
-    const order = await ordersApi.getById(id)
+    // Determine if the parameter is a UUID (ID) or a QR code
+    const isId = isUUID(id)
+    
+    let order
+    let orderId = id
+    
+    if (isId) {
+      // Get order by ID
+      order = await ordersApi.getById(id)
+    } else {
+      // Get order by QR code
+      order = await ordersApi.getByQr(id)
+      if (order) {
+        orderId = order.id
+      }
+    }
+    
     if (!order) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
@@ -44,14 +88,25 @@ export async function POST(
 
     // Ajouter l'événement
     const event = await trackingApi.addEvent({
-      order_id: id,
-      ...body
+      order_id: orderId,
+      status: body.status || order.status,
+      location: body.location || null,
+      description: body.description || (isId ? null : `Scan QR: ${id}`),
+      operator: body.operator || null,
+      event_date: body.event_date || new Date().toISOString(),
     })
 
     // Si un nouveau statut est fourni, mettre à jour la commande
     if (body.status && body.status !== order.status) {
-      await ordersApi.update(id, { status: body.status })
+      await ordersApi.update(orderId, { status: body.status }, { notificationLocation: body.location || null })
     }
+
+    await recordBusinessAudit(request, {
+      action: 'update',
+      entityType: 'order',
+      entityId: orderId,
+      changedFields: body.status ? ['tracking_event', 'status'] : ['tracking_event'],
+    })
 
     return NextResponse.json({ success: true, data: event }, { status: 201 })
   } catch (error) {

@@ -1,21 +1,24 @@
-"use client"
+import { useSession } from 'next-auth/react'
 
-import { useSession } from "next-auth/react"
+interface CurrentUser {
+  id: string
+  name: string
+  email: string
+  role: 'admin' | 'operator'
+}
 
 export function useCurrentUser() {
   const { data: session, status } = useSession()
+  const sessionUser = session?.user
 
-  if (status !== "authenticated" || !session?.user) {
-    return { user: null, isLoading: status === "loading" }
-  }
+  const user: CurrentUser | null = sessionUser
+    ? {
+        id: sessionUser.id || '',
+        name: sessionUser.name || sessionUser.email?.split('@')[0] || 'Utilisateur',
+        email: sessionUser.email || '',
+        role: sessionUser.role === 'admin' ? 'admin' : 'operator',
+      }
+    : null
 
-  return {
-    user: {
-      id: session.user.id || "",
-      name: session.user.name || "Utilisateur",
-      email: session.user.email || "",
-      role: session.user.role || "operator",
-    },
-    isLoading: false,
-  }
+  return { user, isLoading: status === 'loading' }
 }

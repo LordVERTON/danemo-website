@@ -5,7 +5,7 @@ import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -77,6 +77,7 @@ export default function ContainersPage() {
   const [search, setSearch] = useState("")
   const [form, setForm] = useState<Partial<Container>>({ status: 'planned' })
   const [trackingOpen, setTrackingOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [selected, setSelected] = useState<Container | null>(null)
   const [events, setEvents] = useState<any[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
@@ -204,6 +205,29 @@ export default function ContainersPage() {
     }
   }
 
+  const openContainerDetails = (container: Container) => {
+    setSelected(container)
+    setDetailsOpen(true)
+  }
+
+  const openContainerTracking = (container: Container) => {
+    setSelected(container)
+    setManualMessage('')
+    setNotifyError(null)
+    setNotifySuccess(null)
+    setDetailsOpen(false)
+    setTrackingOpen(true)
+    fetchContainerEvents(container.id)
+    fetchLinkedInventory(container)
+  }
+
+  const openContainerEditor = (container: Container) => {
+    setForm(container)
+    setDetailsOpen(false)
+    setTrackingOpen(false)
+    setOpen(true)
+  }
+
   const exportContainerClients = async (container: Container, format: "xlsx" | "docx") => {
     setExportLoading(`${container.id}:${format}`)
     try {
@@ -329,29 +353,15 @@ export default function ContainersPage() {
   }
 
   return (
-    <AdminLayout title="Gestion des conteneurs">
+    <AdminLayout title="Conteneurs">
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Conteneurs</h1>
-            <p className="text-muted-foreground mt-1">
-              Liste, suivi et notifications pour chaque conteneur
-            </p>
-          </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button
-                className="flex items-center gap-2 shrink-0"
-                onClick={() => setForm({ status: 'planned' })}
-              >
-                <Plus className="h-4 w-4" /> Nouveau conteneur
-              </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="max-w-lg w-[95vw]">
               <DialogHeader>
                 <DialogTitle>{form.id ? "Modifier le conteneur" : "Ajouter un conteneur"}</DialogTitle>
+                <DialogDescription>Renseignez seulement les informations utiles au suivi du transport.</DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Code (ex: MSKU1234567)</Label>
                   <Input value={form.code || ''} onChange={e => setForm({ ...form, code: e.target.value })} />
@@ -365,7 +375,7 @@ export default function ContainersPage() {
                   <Input value={form.departure_port || ''} onChange={e => setForm({ ...form, departure_port: e.target.value })} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Port d'arrivée</Label>
+                  <Label>Port d&apos;arrivée</Label>
                   <Input value={form.arrival_port || ''} onChange={e => setForm({ ...form, arrival_port: e.target.value })} />
                 </div>
                 <div className="grid gap-2">
@@ -376,20 +386,30 @@ export default function ContainersPage() {
                   <Label>ETA</Label>
                   <Input type="date" value={form.eta || ''} onChange={e => setForm({ ...form, eta: e.target.value })} />
                 </div>
-                <Button onClick={submit}>{form.id ? "Enregistrer les modifications" : "Enregistrer"}</Button>
+                <div className="grid gap-2 sm:col-span-2">
+                  <Label>Statut</Label>
+                  <Select value={form.status || 'planned'} onValueChange={(value: Container['status']) => setForm({ ...form, status: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{containerStatusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter className="sm:col-span-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+                  <Button type="button" onClick={submit}>{form.id ? "Enregistrer" : "Créer le conteneur"}</Button>
+                </DialogFooter>
               </div>
             </DialogContent>
-          </Dialog>
-        </div>
+        </Dialog>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <PackageSearch className="h-5 w-5 text-orange-600" />
               Liste des conteneurs
             </CardTitle>
-            <div className="w-64">
-              <Input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />
+            <div className="flex w-full gap-2 sm:w-auto">
+              <Input className="flex-1 sm:w-64" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />
+              <Button type="button" className="hidden sm:inline-flex" onClick={() => { setForm({ status: 'planned' }); setOpen(true) }}><Plus className="mr-2 size-4" />Nouveau conteneur</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -398,7 +418,32 @@ export default function ContainersPage() {
                 <AlertDescription>{statusUpdateFeedback}</AlertDescription>
               </Alert>
             )}
-            <div className="overflow-x-auto">
+            <div className="divide-y overflow-hidden rounded-lg border">
+              {loading ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Chargement...</p>
+              ) : filtered.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Aucun conteneur</p>
+              ) : (
+                filtered.map((c) => (
+                  <article key={c.id} className="min-w-0 p-3 transition-colors hover:bg-muted/50 sm:p-4">
+                    <button type="button" className="min-w-0 w-full text-left" onClick={() => openContainerDetails(c)} aria-label={`Ouvrir le conteneur ${c.code}`}>
+                      <div className="flex min-w-0 items-center gap-2"><p className="truncate font-mono font-medium text-foreground">{c.code}</p><Badge variant="outline" className="shrink-0 text-xs">{formatContainerStatus(c.status)}</Badge></div>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">{c.departure_port || "Départ à confirmer"} → {c.arrival_port || "Arrivée à confirmer"}{c.vessel ? ` · ${c.vessel}` : ""}</p>
+                    </button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => openContainerEditor(c)}><Pencil className="mr-2 size-4" />Modifier</Button>
+                      <Button type="button" variant="outline" size="sm" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "xlsx")}>
+                        {exportLoading === `${c.id}:xlsx` ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />} Excel
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" disabled={exportLoading !== null} onClick={() => exportContainerClients(c, "docx")}>
+                        {exportLoading === `${c.id}:docx` ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />} Word
+                      </Button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+            <div className="hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -492,15 +537,58 @@ export default function ContainersPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={trackingOpen} onOpenChange={handleTrackingDialogChange}>
-          <DialogContent className="max-w-4xl w-full sm:w-[92vw] lg:w-[80vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <Button
+          type="button"
+          size="icon"
+          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-40 rounded-full shadow-lg sm:hidden"
+          onClick={() => { setForm({ status: 'planned' }); setOpen(true) }}
+          aria-label="Créer un conteneur"
+        >
+          <Plus className="size-6" />
+        </Button>
+
+        <Dialog open={detailsOpen} onOpenChange={(isOpen) => { setDetailsOpen(isOpen); if (!isOpen && !trackingOpen) setSelected(null) }}>
+          <DialogContent className="w-[95vw] max-w-lg">
             <DialogHeader>
+              <DialogTitle>Conteneur {selected?.code}</DialogTitle>
+              <DialogDescription>Consultez les informations essentielles ou accédez au suivi détaillé.</DialogDescription>
+            </DialogHeader>
+            {selected && (
+              <div className="space-y-5">
+                <div className="grid gap-4 rounded-lg border p-4 text-sm sm:grid-cols-2">
+                  <div><p className="text-xs text-muted-foreground">Trajet</p><p className="mt-1 font-medium">{selected.departure_port || "Départ à confirmer"} → {selected.arrival_port || "Arrivée à confirmer"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Navire</p><p className="mt-1 font-medium">{selected.vessel || "Non renseigné"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Départ estimé</p><p className="mt-1 font-medium">{selected.etd || "Non renseigné"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Arrivée estimée</p><p className="mt-1 font-medium">{selected.eta || "Non renseignée"}</p></div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Statut</Label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Select value={statusDrafts[selected.id] || selected.status} onValueChange={(value: Container["status"]) => setStatusDrafts((prev) => ({ ...prev, [selected.id]: value }))}>
+                      <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>{containerStatusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Button type="button" variant="secondary" disabled={statusUpdateLoading === selected.id || (statusDrafts[selected.id] || selected.status) === selected.status} onClick={() => updateContainerStatus(selected)}>{statusUpdateLoading === selected.id ? <Loader2 className="size-4 animate-spin" /> : "Enregistrer"}</Button>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => openContainerEditor(selected)}><Pencil className="mr-2 size-4" />Modifier</Button>
+                  <Button type="button" onClick={() => openContainerTracking(selected)}><MapPin className="mr-2 size-4" />Suivi complet</Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={trackingOpen} onOpenChange={handleTrackingDialogChange}>
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-3xl max-h-[90dvh] overflow-x-hidden overflow-y-auto p-4 sm:w-[92vw] sm:p-6">
+            <DialogHeader className="min-w-0 pr-8">
               <DialogTitle className="text-lg sm:text-xl">Suivi du conteneur {selected?.code}</DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground">
                 Consulte l’avancement, notifie les clients et visualise les commandes liées.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 sm:space-y-6">
+            <div className="min-w-0 space-y-4 sm:space-y-6">
               {autoNotifyStatusMessage && (
                 <Alert className="border-green-200 bg-green-50 text-green-800">
                   <AlertDescription>{autoNotifyStatusMessage}</AlertDescription>
@@ -508,52 +596,54 @@ export default function ContainersPage() {
               )}
               {selected && (
                 <div className="space-y-4">
-                  <div className="flex justify-end">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <div className="hidden gap-2 lg:flex">
+                      <Button variant="outline" disabled={exportLoading !== null} onClick={() => exportContainerClients(selected, "xlsx")}>{exportLoading === `${selected.id}:xlsx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} XLSX</Button>
+                      <Button variant="outline" disabled={exportLoading !== null} onClick={() => exportContainerClients(selected, "docx")}>{exportLoading === `${selected.id}:docx` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} DOCX</Button>
+                    </div>
                     <Button
                       variant="outline"
-                      className="gap-2"
-                      onClick={() => {
-                        setForm(selected)
-                        setTrackingOpen(false)
-                        setOpen(true)
-                      }}
+                      className="w-full gap-2 sm:w-auto"
+                      onClick={() => openContainerEditor(selected)}
                     >
-                      <Pencil className="h-4 w-4" /> Modifier les informations
+                      <Pencil className="h-4 w-4" />
+                      <span className="sm:hidden">Modifier</span>
+                      <span className="hidden sm:inline">Modifier les informations</span>
                     </Button>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-gray-100 bg-white/80 p-4 space-y-2">
+                  <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+                    <div className="min-w-0 space-y-2 rounded-lg border border-gray-100 bg-white/80 p-4">
                       <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Informations conteneur</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
+                      <div className="grid gap-3 text-sm min-[420px]:grid-cols-2">
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Code</p>
-                          <p className="font-semibold text-base">{selected.code}</p>
+                          <p className="truncate font-semibold text-base" title={selected.code}>{selected.code}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Statut</p>
-                          <p className="font-semibold capitalize">{selected.status.replace("_", " ")}</p>
+                          <p className="truncate font-semibold capitalize" title={selected.status.replace("_", " ")}>{selected.status.replace("_", " ")}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Navire</p>
-                          <p className="font-medium">{selected.vessel || "—"}</p>
+                          <p className="truncate font-medium" title={selected.vessel || "—"}>{selected.vessel || "—"}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Client assigné</p>
                           <p className="font-medium">{selected.client_id ? "Client associé" : "Non défini"}</p>
                         </div>
                       </div>
                     </div>
-                    <div className="rounded-lg border border-gray-100 bg-white/80 p-4 space-y-2">
+                    <div className="min-w-0 space-y-2 rounded-lg border border-gray-100 bg-white/80 p-4">
                       <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Trajet & planning</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
+                      <div className="grid gap-3 text-sm min-[420px]:grid-cols-2">
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Départ</p>
-                          <p className="font-medium">{selected.departure_port || "—"}</p>
+                          <p className="truncate font-medium" title={selected.departure_port || "—"}>{selected.departure_port || "—"}</p>
                           <p className="text-xs text-muted-foreground">{selected.etd || "Date inconnue"}</p>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-muted-foreground text-xs">Arrivée</p>
-                          <p className="font-medium">{selected.arrival_port || "—"}</p>
+                          <p className="truncate font-medium" title={selected.arrival_port || "—"}>{selected.arrival_port || "—"}</p>
                           <p className="text-xs text-muted-foreground">{selected.eta || "Date inconnue"}</p>
                         </div>
                       </div>
@@ -599,7 +689,7 @@ export default function ContainersPage() {
                           </Alert>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="min-w-0 break-words text-xs text-muted-foreground">
                         {containerAlreadyNotified && containerNotificationInfo
                           ? `Clients notifiés du statut "${formatContainerStatus(selected.status)}" le ${formatDateTime(containerNotificationInfo.timestamp)}.`
                           : containerNotificationInfo
@@ -616,24 +706,24 @@ export default function ContainersPage() {
               ) : events.length === 0 ? (
                 <div className="text-sm text-muted-foreground">Aucun événement</div>
               ) : (
-                <div className="space-y-2 rounded-lg border border-gray-100 bg-white/70 p-3 max-h-[320px] overflow-y-auto">
+                <div className="max-h-[320px] min-w-0 space-y-2 overflow-x-hidden overflow-y-auto rounded-lg border border-gray-100 bg-white/70 p-3">
                   {events.map((ev, idx) => (
-                    <div key={ev.id || idx} className="p-3 border rounded-md">
-                      <div className="flex items-center gap-2 text-sm">
+                    <div key={ev.id || idx} className="min-w-0 rounded-md border p-3">
+                      <div className="flex min-w-0 flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
                         <BadgeCheck className="h-4 w-4 text-orange-600" />
-                        <span className="font-medium">{ev.status}</span>
-                        <span className="text-muted-foreground flex items-center gap-1">
+                        <span className="font-medium break-words">{ev.status}</span>
+                        <span className="flex items-center gap-1 break-words text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
                           {new Date(ev.event_date).toLocaleString('fr-FR')}
                         </span>
                       </div>
                       {ev.location && (
-                        <div className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
+                        <div className="mt-1 flex min-w-0 items-start gap-1 break-words text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           {ev.location}
                         </div>
                       )}
-                      {ev.description && <div className="mt-1 text-sm">{ev.description}</div>}
+                      {ev.description && <div className="mt-1 break-words text-sm">{ev.description}</div>}
                     </div>
                   ))}
                 </div>
@@ -657,34 +747,16 @@ export default function ContainersPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="overflow-x-auto">
-                          <Table className="w-full text-sm">
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Numéro</TableHead>
-                                <TableHead>Service</TableHead>
-                                <TableHead>Trajet</TableHead>
-                                <TableHead>Statut</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {orders.map((order) => (
-                                <TableRow key={order.id}>
-                                  <TableCell className="font-mono text-xs">{order.order_number}</TableCell>
-                                  <TableCell className="capitalize">{order.service_type.replace("_", " ")}</TableCell>
-                                  <TableCell className="text-xs">
-                                    <div>{order.origin}</div>
-                                    <div className="text-muted-foreground">→ {order.destination}</div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline" className="capitalize">
-                                      {order.status.replace("_", " ")}
-                                    </Badge>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                        <div className="space-y-2">
+                          {orders.map((order) => (
+                            <article key={order.id} className="min-w-0 rounded-md border bg-white p-3 text-sm">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0"><p className="truncate font-mono text-xs font-medium">{order.order_number}</p><p className="mt-1 capitalize text-muted-foreground">{order.service_type.replace("_", " ")}</p></div>
+                                <Badge variant="outline" className="shrink-0 capitalize">{order.status.replace("_", " ")}</Badge>
+                              </div>
+                              <p className="mt-2 break-words text-xs text-muted-foreground">{order.origin} → {order.destination}</p>
+                            </article>
+                          ))}
                         </div>
                       </div>
                     ))}

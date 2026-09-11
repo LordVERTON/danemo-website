@@ -24,7 +24,13 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-10 lg:gap-8">
           <div className="col-span-2 md:col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-4">
-              <Image src="/images/logo-clair.webp" alt="Danemo" width={40} height={40} className="object-contain" />
+              <Image
+                src="/images/logo-clair.webp"
+                alt="Danemo"
+                width={450}
+                height={328}
+                className="h-10 w-auto object-contain"
+              />
               <span className="text-lg font-extrabold tracking-tight text-white">DANEMO</span>
             </Link>
             <p className="text-sm leading-relaxed text-gray-400 max-w-xs">

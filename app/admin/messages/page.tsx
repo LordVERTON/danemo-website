@@ -230,7 +230,7 @@ export default function AdminMessagesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les clients opt-in</SelectItem>
-                    <SelectItem value="container">Clients d'un conteneur</SelectItem>
+                    <SelectItem value="container">Clients d’un conteneur</SelectItem>
                     <SelectItem value="city">Clients par ville</SelectItem>
                   </SelectContent>
                 </Select>

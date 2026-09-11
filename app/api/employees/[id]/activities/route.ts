@@ -1,23 +1,76 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
-import { requireAdminApiAccess } from "@/lib/staff-api-auth"
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const accessError = await requireAdminApiAccess()
-  if (accessError) return accessError
-  const { id } = await context.params
-  const { data, error } = await (supabaseAdmin as any).from("employee_activities").select("*").eq("employee_id", id).order("created_at", { ascending: false })
-  if (error) return NextResponse.json({ success: false, error: "Impossible de récupérer l'activité" }, { status: 500 })
-  return NextResponse.json({ success: true, data: data || [] })
+// GET /api/employees/[id]/activities - Récupérer les activités d'un employé
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
+  try {
+    const { id } = await context.params
+    const { searchParams } = new URL(request.url)
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const activityType = searchParams.get('type')
+
+    let query = supabaseAdmin
+      .from('employee_activities')
+      .select('*')
+      .eq('employee_id', id)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (activityType && activityType !== 'all') {
+      query = query.eq('activity_type', activityType)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true, data: data || [] })
+  } catch (error) {
+    console.error('Error fetching employee activities:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch employee activities' },
+      { status: 500 }
+    )
+  }
 }
 
-export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const accessError = await requireAdminApiAccess()
-  if (accessError) return accessError
-  const { id } = await context.params
-  const body = await request.json()
-  if (!body.activity_type || !body.description) return NextResponse.json({ success: false, error: "Type et description requis" }, { status: 400 })
-  const { data, error } = await (supabaseAdmin as any).from("employee_activities").insert({ employee_id: id, activity_type: body.activity_type, description: body.description, metadata: body.metadata || {} }).select().single()
-  if (error) return NextResponse.json({ success: false, error: "Impossible d'ajouter l'activité" }, { status: 500 })
-  return NextResponse.json({ success: true, data }, { status: 201 })
+// POST /api/employees/[id]/activities - Ajouter une activité
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
+  try {
+    const { id } = await context.params
+    const body = await request.json()
+    
+    const { data, error } = await supabaseAdmin
+      .from('employee_activities')
+      .insert({
+        employee_id: id,
+        ...body,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    return NextResponse.json({ success: true, data }, { status: 201 })
+  } catch (error) {
+    console.error('Error adding employee activity:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to add employee activity' },
+      { status: 500 }
+    )
+  }
 }

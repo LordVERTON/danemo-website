@@ -1,16 +1,23 @@
-import { createClient } from "@supabase/supabase-js"
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { createClient } from "@supabase/supabase-js"
+import { getActiveStaffUser, type StaffRole } from "@/lib/staff-authorization"
 
-type StaffRole = "admin" | "operator"
+type AdminRole = StaffRole
 
-function getStaffRole(user: { user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown> }): StaffRole {
-  const role = user.app_metadata?.role || user.user_metadata?.role
-  return role === "admin" ? "admin" : "operator"
+function getSupabaseAuthClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnonKey) return null
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 }
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
   session: {
     strategy: "jwt",
     maxAge: 60 * 60 * 24 * 7,
@@ -28,40 +35,39 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         const email = String(credentials?.email || "").trim().toLowerCase()
         const password = String(credentials?.password || "")
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        if (!email || !password) return null
 
-        if (!email || !password || !supabaseUrl || !supabaseAnonKey) {
-          return null
-        }
+        const supabase = getSupabaseAuthClient()
+        if (!supabase) return null
 
-        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        })
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error || !data.user) return null
 
-        if (error || !data.user) {
-          return null
-        }
+        const staffUser = await getActiveStaffUser(data.user.id)
+        if (!staffUser) return null
+
+        const metadata = data.user.user_metadata as { name?: string } | null
 
         return {
           id: data.user.id,
           email: data.user.email || email,
-          name: data.user.user_metadata.name || data.user.email || "Utilisateur",
-          role: getStaffRole(data.user),
+          name: metadata?.name || data.user.email?.split("@")[0] || "Utilisateur",
+          role: staffUser.role,
         }
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
-      if (user) token.role = user.role || "operator"
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = (user as { role?: AdminRole }).role || "operator"
+      }
       return token
     },
-    session({ session, token }) {
+    async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub
-        session.user.role = token.role || "operator"
+        session.user.id = token.sub || ""
+        session.user.role = token.role === "admin" ? "admin" : "operator"
       }
       return session
     },

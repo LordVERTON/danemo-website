@@ -826,11 +826,11 @@ export default function AdminBlogsPage() {
                   <Input value={form.date} onChange={(event) => updateForm({ date: event.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Lock className="size-4" /> Restreindre l'acces</Label>
+                  <Label className="flex items-center gap-2"><Lock className="size-4" /> Restreindre l’accès</Label>
                   <Input disabled value="Non active" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Parametres SEO de l'article</Label>
+                  <Label>Parametres SEO de l’article</Label>
                   <Input value={form.href} onChange={(event) => updateForm({ href: event.target.value })} placeholder="/blog/slug" />
                   <Textarea value={form.excerpt} onChange={(event) => updateForm({ excerpt: event.target.value })} rows={4} placeholder="Meta description" />
                 </div>
@@ -853,7 +853,7 @@ export default function AdminBlogsPage() {
                 {selectedId && currentUser?.role === "admin" && (
                   <Button type="button" variant="destructive" onClick={onDelete} disabled={isSaving} className="w-full">
                     <Trash2 className="size-4" />
-                    Supprimer l'article
+                    Supprimer l’article
                   </Button>
                 )}
               </CardContent>

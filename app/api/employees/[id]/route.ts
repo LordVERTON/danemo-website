@@ -1,33 +1,172 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
-import { requireAdminApiAccess } from "@/lib/staff-api-auth"
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
+import { isStaffRole } from '@/lib/staff-authorization'
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const accessError = await requireAdminApiAccess()
-  if (accessError) return accessError
-  const { id } = await context.params
-  const { data, error } = await (supabaseAdmin as any).from("employees").select("*").eq("id", id).maybeSingle()
-  if (error) return NextResponse.json({ success: false, error: "Impossible de récupérer le collaborateur" }, { status: 500 })
-  if (!data) return NextResponse.json({ success: false, error: "Collaborateur introuvable" }, { status: 404 })
-  return NextResponse.json({ success: true, data })
+interface Employee {
+  user_id: string
 }
 
-export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const accessError = await requireAdminApiAccess()
-  if (accessError) return accessError
-  const { id } = await context.params
-  const body = await request.json()
-  const { data, error } = await (supabaseAdmin as any).from("employees").update({ name: body.name, email: body.email, role: body.role, salary: Number(body.salary || 0), position: body.position, hire_date: body.hire_date, is_active: body.is_active, updated_at: new Date().toISOString() }).eq("id", id).select().maybeSingle()
-  if (error) return NextResponse.json({ success: false, error: "Impossible de mettre à jour le collaborateur" }, { status: 500 })
-  if (!data) return NextResponse.json({ success: false, error: "Collaborateur introuvable" }, { status: 404 })
-  return NextResponse.json({ success: true, data })
+// GET /api/employees/[id] - Récupérer un employé par ID
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
+  try {
+    const { id } = await context.params
+    const { data, error } = await supabaseAdmin
+      .from('employees')
+      .select('*')
+      .eq('id', id)
+      .single()
+    
+    if (error) throw error
+    
+    return NextResponse.json({ success: true, data })
+  } catch (error) {
+    console.error('Error fetching employee:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch employee' },
+      { status: 500 }
+    )
+  }
 }
 
-export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const accessError = await requireAdminApiAccess()
-  if (accessError) return accessError
-  const { id } = await context.params
-  const { error } = await (supabaseAdmin as any).from("employees").delete().eq("id", id)
-  if (error) return NextResponse.json({ success: false, error: "Impossible de supprimer le collaborateur" }, { status: 500 })
-  return NextResponse.json({ success: true })
+// PUT /api/employees/[id] - Mettre à jour un employé
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
+  try {
+    const { id } = await context.params
+    const body = await request.json()
+    
+    // Validation des données
+    if (!body.name || !body.email) {
+      return NextResponse.json(
+        { success: false, error: 'Nom et email sont requis' },
+        { status: 400 }
+      )
+    }
+
+    if (!isStaffRole(body.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Le rôle doit être administrateur ou opérateur.' },
+        { status: 400 },
+      )
+    }
+    
+    // Récupérer l'employé pour avoir le user_id
+    const { data: employee, error: fetchError } = await supabaseAdmin
+      .from('employees')
+      .select('user_id')
+      .eq('id', id)
+      .single()
+    
+    if (fetchError) throw fetchError
+    if (!employee) throw new Error('Employee not found')
+
+    // Keep the server-controlled app_metadata role aligned with employees.
+    if (body.email || body.role || body.password) {
+      const updateData: any = {}
+      if (body.email) updateData.email = body.email
+      if (body.password && body.password.trim() !== '') {
+        updateData.password = body.password
+      }
+
+      const { data: currentAuthUser, error: currentAuthUserError } = await supabaseAdmin.auth.admin.getUserById(
+        (employee as Employee).user_id,
+      )
+      if (currentAuthUserError || !currentAuthUser.user) {
+        throw new Error('Unable to load collaborator access account')
+      }
+
+      updateData.app_metadata = {
+        ...(currentAuthUser.user.app_metadata || {}),
+        role: body.role,
+      }
+      
+      const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
+        (employee as Employee).user_id,
+        updateData,
+      )
+      if (updateAuthError) throw updateAuthError
+    }
+
+    // Mettre à jour l'employé
+    const updateData: any = {
+      name: body.name,
+      email: body.email,
+      role: body.role,
+      salary: body.salary,
+      position: body.position,
+      hire_date: body.hire_date,
+      is_active: body.is_active,
+      updated_at: new Date().toISOString()
+    }
+    
+    const { data, error } = await (supabaseAdmin as any)
+      .from('employees')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    return NextResponse.json({ success: true, data })
+  } catch (error) {
+    console.error('Error updating employee:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to update employee' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE /api/employees/[id] - Supprimer un employé
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
+  try {
+    const { id } = await context.params
+    // Récupérer l'employé pour avoir le user_id
+    const { data: employee, error: fetchError } = await supabaseAdmin
+      .from('employees')
+      .select('user_id')
+      .eq('id', id)
+      .single()
+    
+    if (fetchError) throw fetchError
+    if (!employee) throw new Error('Employee not found')
+
+    // Supprimer l'employé de la table employees
+    const { error: deleteError } = await supabaseAdmin
+      .from('employees')
+      .delete()
+      .eq('id', id)
+    
+    if (deleteError) throw deleteError
+
+    // Supprimer l'utilisateur auth
+    await supabaseAdmin.auth.admin.deleteUser((employee as Employee).user_id)
+    
+    return NextResponse.json({ success: true, message: 'Employee deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting employee:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete employee' },
+      { status: 500 }
+    )
+  }
 }

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { hasStaffSession } from '@/lib/staff-api-auth'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
 // GET /api/test-connection - Tester la connexion à Supabase
 export async function GET(request: NextRequest) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
-    if (!(await hasStaffSession())) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
-    }
     // Test simple de connexion
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('orders')
       .select('count', { count: 'exact', head: true })
 

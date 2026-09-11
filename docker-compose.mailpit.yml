@@ -1,0 +1,10 @@
+# Mailpit — capture des e-mails en local (SMTP + UI web).
+# Démarrage : npm run mailpit
+# Interface : http://localhost:8025  |  SMTP : localhost:1025
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    restart: unless-stopped

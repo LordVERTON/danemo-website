@@ -1,16 +1,34 @@
-import { NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
-import { requireAdminApiAccess } from "@/lib/staff-api-auth"
+import { NextRequest, NextResponse } from 'next/server'
+import { checkDatabaseHealth } from '@/lib/db-health-check'
+import { requireAdminApiAccess } from '@/lib/staff-api-auth'
 
-export async function GET() {
-  const accessError = await requireAdminApiAccess()
-  if (accessError) return accessError
-  const startedAt = Date.now()
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminApiAccess(request)
+  if (authError) return authError
+
   try {
-    const { error } = await (supabaseAdmin as any).from("containers").select("id", { head: true, count: "exact" })
-    if (error) throw error
-    return NextResponse.json({ success: true, data: { status: "ok", database: "ok", latencyMs: Date.now() - startedAt, timestamp: new Date().toISOString() } })
+    const health = await checkDatabaseHealth()
+
+    const isHealthy = health.isConnected && 
+                     Object.values(health.tables).every(Boolean) && 
+                     health.auth
+
+    return NextResponse.json({
+      success: true,
+      healthy: isHealthy,
+      database: health,
+      timestamp: new Date().toISOString()
+    })
   } catch (error) {
-    return NextResponse.json({ success: false, data: { status: "degraded", database: "unavailable", latencyMs: Date.now() - startedAt, timestamp: new Date().toISOString() } }, { status: 503 })
+    console.error('Health check failed:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        healthy: false,
+        error: 'Health check failed',
+        timestamp: new Date().toISOString()
+      },
+      { status: 500 }
+    )
   }
 }

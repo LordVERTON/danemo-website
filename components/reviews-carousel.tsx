@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState, type KeyboardEvent } from "react"
+import { useCallback, useSyncExternalStore, type KeyboardEvent } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, Star } from "lucide-react"
@@ -67,15 +67,15 @@ function ReviewCard({ review }: { review: GoogleReview }) {
 }
 
 export function ReviewsCarousel({ reviews }: { reviews: GoogleReview[] }) {
-  const [reducedMotion, setReducedMotion] = useState(false)
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
-    setReducedMotion(mq.matches)
-    const onChange = () => setReducedMotion(mq.matches)
-    mq.addEventListener("change", onChange)
-    return () => mq.removeEventListener("change", onChange)
-  }, [])
+  const reducedMotion = useSyncExternalStore(
+    (onStoreChange) => {
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+      mediaQuery.addEventListener("change", onStoreChange)
+      return () => mediaQuery.removeEventListener("change", onStoreChange)
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  )
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
@@ -83,25 +83,29 @@ export function ReviewsCarousel({ reviews }: { reviews: GoogleReview[] }) {
     duration: reducedMotion ? 0 : 20,
   })
 
-  const [canPrev, setCanPrev] = useState(false)
-  const [canNext, setCanNext] = useState(false)
+  const subscribeToEmbla = useCallback(
+    (onStoreChange: () => void) => {
+      if (!emblaApi) return () => undefined
+      emblaApi.on("select", onStoreChange)
+      emblaApi.on("reInit", onStoreChange)
+      return () => {
+        emblaApi.off("select", onStoreChange)
+        emblaApi.off("reInit", onStoreChange)
+      }
+    },
+    [emblaApi],
+  )
 
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return
-    setCanPrev(emblaApi.canScrollPrev())
-    setCanNext(emblaApi.canScrollNext())
-  }, [emblaApi])
-
-  useEffect(() => {
-    if (!emblaApi) return
-    onSelect()
-    emblaApi.on("select", onSelect)
-    emblaApi.on("reInit", onSelect)
-    return () => {
-      emblaApi.off("select", onSelect)
-      emblaApi.off("reInit", onSelect)
-    }
-  }, [emblaApi, onSelect])
+  const canPrev = useSyncExternalStore(
+    subscribeToEmbla,
+    () => emblaApi?.canScrollPrev() ?? false,
+    () => false,
+  )
+  const canNext = useSyncExternalStore(
+    subscribeToEmbla,
+    () => emblaApi?.canScrollNext() ?? false,
+    () => false,
+  )
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])

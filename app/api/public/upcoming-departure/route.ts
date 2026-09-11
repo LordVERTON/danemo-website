@@ -2,11 +2,38 @@ import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 
 export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ success: true, data: null })
+  }
+
   try {
-    const { data, error } = await (supabaseAdmin as any).from("containers").select("code, departure_port, arrival_port, etd, eta, status").in("status", ["planned", "departed", "in_transit"]).order("etd", { ascending: true }).limit(1)
+    const { data, error } = await supabaseAdmin
+      .from("containers")
+      .select("id, code, vessel, departure_port, arrival_port, etd, eta, status")
+      .eq("status", "planned")
+      .not("etd", "is", null)
+      .gte("etd", new Date().toISOString())
+      .order("etd", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
     if (error) throw error
-    return NextResponse.json({ success: true, data: data?.[0] || null })
+
+    return NextResponse.json({ success: true, data: data ?? null })
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Impossible de charger le prochain départ" }, { status: 500 })
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "42501"
+    ) {
+      return NextResponse.json({ success: true, data: null })
+    }
+
+    console.error("[public.upcoming-departure] error", error)
+    return NextResponse.json(
+      { success: false, error: "Failed to load upcoming departure" },
+      { status: 500 },
+    )
   }
 }

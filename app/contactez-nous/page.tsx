@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Clock, Mail, MapPin, Phone, Send } from "lucide-react"
+import { CheckCircle2, Clock, LoaderCircle, Mail, MapPin, Phone, Send } from "lucide-react"
 
 const SERVICE_OPTIONS = [
   { value: "fret", label: "Fret maritime et aérien" },
@@ -28,6 +28,7 @@ const SERVICE_OPTIONS = [
 ]
 
 export default function ContactezNousPage() {
+  const [submissionState, setSubmissionState] = useState<"idle" | "submitting" | "success" | "error">("idle")
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -40,23 +41,35 @@ export default function ContactezNousPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const sujet = params.get("sujet")
-    if (sujet) {
+    if (!sujet) return
+    const timeoutId = window.setTimeout(() => {
       setFormData((prev) => ({ ...prev, sujet }))
-    }
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const serviceLabel = SERVICE_OPTIONS.find((s) => s.value === formData.service)?.label
-    const subject = encodeURIComponent(formData.sujet || `Demande de contact — ${serviceLabel ?? "Danemo"}`)
-    const body = encodeURIComponent(
-      `Nom : ${formData.nom}\nEmail : ${formData.email}\nTéléphone : ${formData.telephone || "—"}\nService concerné : ${serviceLabel ?? "—"}\n\nMessage :\n${formData.message}`,
-    )
-    window.location.href = `mailto:info@danemo.be?subject=${subject}&body=${body}`
+    setSubmissionState("submitting")
+
+    try {
+      const response = await fetch("/api/public/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) throw new Error("Contact request failed")
+
+      setFormData({ nom: "", email: "", telephone: "", service: "", sujet: "", message: "" })
+      setSubmissionState("success")
+    } catch {
+      setSubmissionState("error")
+    }
   }
 
   return (
@@ -155,30 +168,31 @@ export default function ContactezNousPage() {
                 <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8">
                   <h2 className="text-xl font-bold text-[#14171a] mb-1">Envoyez-nous un message</h2>
                   <p className="text-sm text-gray-500 mb-6">
-                    Votre message ouvrira votre messagerie, prêt à être envoyé à info@danemo.be.
+                    Votre demande est transmise directement à notre équipe. Vous recevrez une confirmation par e-mail.
                   </p>
 
                   <div className="grid sm:grid-cols-2 gap-5">
                     <div>
                       <Label htmlFor="nom" className="mb-2 block">Nom et prénom *</Label>
-                      <Input id="nom" name="nom" value={formData.nom} onChange={handleChange} required />
+                      <Input id="nom" name="nom" value={formData.nom} onChange={handleChange} disabled={submissionState === "submitting"} required />
                     </div>
                     <div>
                       <Label htmlFor="email" className="mb-2 block">Adresse e-mail *</Label>
-                      <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
+                      <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} disabled={submissionState === "submitting"} required />
                     </div>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-5 mt-5">
                     <div>
                       <Label htmlFor="telephone" className="mb-2 block">Téléphone</Label>
-                      <Input id="telephone" name="telephone" type="tel" value={formData.telephone} onChange={handleChange} />
+                      <Input id="telephone" name="telephone" type="tel" value={formData.telephone} onChange={handleChange} disabled={submissionState === "submitting"} />
                     </div>
                     <div>
                       <Label htmlFor="service" className="mb-2 block">Service concerné</Label>
                       <Select
                         value={formData.service}
                         onValueChange={(value) => setFormData((prev) => ({ ...prev, service: value }))}
+                        disabled={submissionState === "submitting"}
                       >
                         <SelectTrigger id="service" className="w-full">
                           <SelectValue placeholder="Sélectionnez un service" />
@@ -196,7 +210,7 @@ export default function ContactezNousPage() {
 
                   <div className="mt-5">
                     <Label htmlFor="sujet" className="mb-2 block">Sujet</Label>
-                    <Input id="sujet" name="sujet" value={formData.sujet} onChange={handleChange} placeholder="Ex : Demande de devis" />
+                    <Input id="sujet" name="sujet" value={formData.sujet} onChange={handleChange} disabled={submissionState === "submitting"} placeholder="Ex : Demande de devis" />
                   </div>
 
                   <div className="mt-5">
@@ -207,6 +221,7 @@ export default function ContactezNousPage() {
                       rows={5}
                       value={formData.message}
                       onChange={handleChange}
+                      disabled={submissionState === "submitting"}
                       required
                       placeholder="Décrivez votre projet ou votre demande..."
                     />
@@ -214,11 +229,29 @@ export default function ContactezNousPage() {
 
                   <button
                     type="submit"
-                    className="mt-7 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3.5 rounded-full transition-colors"
+                    disabled={submissionState === "submitting"}
+                    className="mt-7 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-70 text-white font-semibold py-3.5 rounded-full transition-colors"
                   >
-                    <Send className="w-4 h-4" />
-                    Envoyer le message
+                    {submissionState === "submitting" ? (
+                      <LoaderCircle className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    {submissionState === "submitting" ? "Envoi en cours…" : "Envoyer le message"}
                   </button>
+                  <div aria-live="polite" className="mt-4">
+                    {submissionState === "success" && (
+                      <p className="flex items-center gap-2 text-sm font-medium text-green-700">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Votre demande a bien été envoyée. Une confirmation vous a été adressée par e-mail.
+                      </p>
+                    )}
+                    {submissionState === "error" && (
+                      <p className="text-sm font-medium text-red-700">
+                        L’envoi n’a pas abouti. Veuillez réessayer dans quelques instants.
+                      </p>
+                    )}
+                  </div>
                 </form>
               </Reveal>
             </div>

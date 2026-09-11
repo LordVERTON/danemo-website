@@ -15,12 +15,12 @@ import AdminLayout from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 const adminSections = [
-  { href: "/admin/clients", label: "Clients", description: "Gérez les clients et leurs commandes.", icon: Users },
-  { href: "/admin/containers", label: "Conteneurs", description: "Organisez les départs et les arrivées.", icon: Package },
-  { href: "/admin/tracking", label: "Suivi", description: "Consultez le suivi des expéditions.", icon: Truck },
+  { href: "/admin/clients", label: "Clients", description: "Gérez les clients et leurs commandes.", icon: Users, mobileNavigationRedundant: true },
+  { href: "/admin/containers", label: "Conteneurs", description: "Organisez les départs et les arrivées.", icon: Package, mobileNavigationRedundant: true },
+  { href: "/admin/tracking", label: "Suivi", description: "Consultez le suivi des expéditions.", icon: Truck, mobileNavigationRedundant: true },
   { href: "/admin/analytics", label: "Analyses", description: "Suivez les indicateurs de l'activité.", icon: BarChart3, roles: ["admin"] },
   { href: "/admin/messages", label: "Messages", description: "Préparez les communications clients.", icon: MessageSquare, roles: ["admin"] },
-  { href: "/admin/blogs", label: "Blogs", description: "Créez et publiez les articles du site.", icon: BookOpen },
+  { href: "/admin/blogs", label: "Blogs", description: "Créez et publiez les articles du site.", icon: BookOpen, mobileNavigationRedundant: true },
   { href: "/admin/employees", label: "Collaborateurs", description: "Gérez les membres de l'équipe.", icon: Users, roles: ["admin"] },
 ]
 
@@ -28,6 +28,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Record<string, number> | null>(null)
   const { data: session, status } = useSession()
   const role = session?.user?.role === "admin" ? "admin" : "operator"
+  const sessionName = session?.user?.name || session?.user?.email?.split("@")[0] || "Utilisateur"
+  const userName = sessionName.charAt(0).toUpperCase() + sessionName.slice(1)
 
   useEffect(() => {
     if (status !== "authenticated") return
@@ -42,7 +44,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout title="Tableau de bord">
-      <p className="mb-8 text-gray-600">Accédez rapidement aux outils de gestion Danemo.</p>
+      <p className="mb-8 text-gray-600">Bonjour {userName}, accédez rapidement aux outils de gestion Danemo.</p>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -64,8 +66,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {adminSections.filter((section) => !section.roles || section.roles.includes(role)).map(({ href, label, description, icon: Icon }) => (
-          <Link key={href} href={href} className="group">
+        {adminSections.filter((section) => !section.roles || section.roles.includes(role)).map(({ href, label, description, icon: Icon, mobileNavigationRedundant }) => (
+          <Link key={href} href={href} className={`group${mobileNavigationRedundant ? " hidden md:block" : ""}`}>
             <Card className="h-full transition-shadow group-hover:shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

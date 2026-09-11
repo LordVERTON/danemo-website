@@ -1,34 +1,57 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
-import { requireStaffApiAccess } from "@/lib/staff-api-auth"
+import { NextRequest, NextResponse } from 'next/server'
+import { containersApi } from '@/lib/database'
+import { toPublicContainer } from '@/lib/public-container'
+import { isStaffApiRequest, requireStaffApiAccess } from '@/lib/staff-api-auth'
+import { recordBusinessAudit } from '@/lib/business-audit'
 
-const fields = ["code", "vessel", "departure_port", "arrival_port", "etd", "eta", "status", "client_id"]
-
-export async function GET() {
-  const accessError = await requireStaffApiAccess()
-  if (accessError) return accessError
+// GET /api/containers - list
+export async function GET(request: NextRequest) {
   try {
-    const { data, error } = await (supabaseAdmin as any).from("containers").select("*").order("created_at", { ascending: false })
-    if (error) throw error
-    return NextResponse.json({ success: true, data: data || [] })
+    const containers = await containersApi.getAll()
+    const isStaff = await isStaffApiRequest(request)
+    console.log('API /api/containers: Returning', containers?.length || 0, 'containers')
+    return NextResponse.json({
+      success: true,
+      data: isStaff ? containers : containers.map(toPublicContainer),
+    })
   } catch (error) {
-    console.error("[containers.get]", error)
-    return NextResponse.json({ success: false, error: "Impossible de récupérer les conteneurs" }, { status: 500 })
+    console.error('Error fetching containers:', error)
+    return NextResponse.json({ success: false, error: 'Failed to fetch containers' }, { status: 500 })
   }
 }
 
+// POST /api/containers - create
 export async function POST(request: NextRequest) {
-  const accessError = await requireStaffApiAccess()
-  if (accessError) return accessError
   try {
+    const accessError = await requireStaffApiAccess(request)
+    if (accessError) return accessError
+
     const body = await request.json()
-    if (!String(body.code || "").trim()) return NextResponse.json({ success: false, error: "Le code est requis" }, { status: 400 })
-    const row = Object.fromEntries(fields.filter((field) => body[field] !== undefined).map((field) => [field, body[field]]))
-    const { data, error } = await (supabaseAdmin as any).from("containers").insert({ ...row, code: String(body.code).trim(), status: body.status || "planned" }).select().single()
-    if (error) throw error
-    return NextResponse.json({ success: true, data }, { status: 201 })
+    const code = String(body.code || '').trim()
+    if (!code) {
+      return NextResponse.json({ success: false, error: 'Missing required field: code' }, { status: 400 })
+    }
+    const payload = {
+      code,
+      vessel: body.vessel ? String(body.vessel).trim() : null,
+      departure_port: body.departure_port ? String(body.departure_port).trim() : null,
+      arrival_port: body.arrival_port ? String(body.arrival_port).trim() : null,
+      etd: body.etd ? String(body.etd) : null,
+      eta: body.eta ? String(body.eta) : null,
+      status: body.status || 'planned',
+      client_id: body.client_id || null,
+    }
+    const created = await containersApi.create(payload)
+    await recordBusinessAudit(request, {
+      action: 'create',
+      entityType: 'container',
+      entityId: created.id,
+    })
+    return NextResponse.json({ success: true, data: created }, { status: 201 })
   } catch (error) {
-    console.error("[containers.post]", error)
-    return NextResponse.json({ success: false, error: "Impossible de créer le conteneur" }, { status: 500 })
+    console.error('Error creating container:', error)
+    return NextResponse.json({ success: false, error: 'Failed to create container' }, { status: 500 })
   }
 }
+
+
