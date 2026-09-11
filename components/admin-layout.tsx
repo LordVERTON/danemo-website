@@ -23,16 +23,16 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
 
   const navigation = [
     { href: "/admin/clients", label: "Clients", icon: Users },
-    { href: "/admin/tracking", label: "Suivi", icon: Truck },
-    { href: "/admin/qr", label: "Scanner", icon: QrCode },
     { href: "/admin/containers", label: "Conteneurs", icon: Package },
+    { href: "/admin/qr", label: "Scanner", icon: QrCode },
+    { href: "/admin/tracking", label: "Suivi", icon: Truck },
     { href: "/admin/analytics", label: "Analyses", icon: BarChart3, roles: ["admin"] },
     { href: "/admin/messages", label: "Messages", icon: MessageSquare, roles: ["admin"] },
     { href: "/admin/blogs", label: "Blogs", icon: BookOpen },
     { href: "/admin/employees", label: "Collaborateurs", icon: Users, roles: ["admin"] },
   ]
   const visibleNavigation = navigation.filter((item) => !item.roles || item.roles.includes(role))
-  const primaryHrefs = ["/admin/clients", "/admin/tracking", "/admin/qr", "/admin/containers"]
+  const primaryHrefs = ["/admin/clients", "/admin/containers", "/admin/qr", "/admin/tracking"]
   const primaryNavigation = primaryHrefs.flatMap((href) =>
     visibleNavigation.filter((item) => item.href === href),
   )
