@@ -2,9 +2,11 @@
 -- Foreign keys: customers → containers → orders; optional packages / inventory / tracking.
 
 -- ---------------------------------------------------------------------------
--- Auth + employees (admin / operators) — comptes synthétiques sans mot de passe connu.
--- Les empreintes de mot de passe sont aléatoires à chaque reset. Pour créer un accès
--- local, configurez un mot de passe dans Supabase Studio ; ne le mettez jamais dans Git.
+-- Auth + employees (admin / operators) — comptes synthétiques réservés au développement local.
+-- Les mots de passe ci-dessous sont volontairement connus pour faciliter les tests locaux :
+-- admin@danemo.be / admin123
+-- operator@danemo.be et operator2@danemo.be / operator123
+-- Ne jamais réutiliser ces comptes ni ces mots de passe en production.
 -- ---------------------------------------------------------------------------
 -- pgcrypto est déjà créé dans les migrations ; fonctions typiquement dans le schéma extensions.
 -- Accès local en lecture seule nécessaire à la homepage de développement.
@@ -24,22 +26,27 @@ DECLARE
   v_admin_id   UUID := 'e1111111-1111-4111-8111-111111111101';
   v_op1_id     UUID := 'e2222222-2222-4222-8222-222222222202';
   v_op2_id     UUID := 'e3333333-3333-4333-8333-333333333303';
-  v_pw_admin   TEXT := extensions.crypt(extensions.gen_random_uuid()::text, extensions.gen_salt('bf'));
-  v_pw_oper    TEXT := extensions.crypt(extensions.gen_random_uuid()::text, extensions.gen_salt('bf'));
+  v_pw_admin   TEXT := extensions.crypt('admin123', extensions.gen_salt('bf'));
+  v_pw_oper    TEXT := extensions.crypt('operator123', extensions.gen_salt('bf'));
 BEGIN
   -- Admin
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, recovery_token, email_change_token_new, email_change,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_admin_id,
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'admin@demo.danemo.test',
+    'admin@danemo.be',
     v_pw_admin,
     NOW(),
+    '',
+    '',
+    '',
+    '',
     '{"provider":"email","providers":["email"],"role":"admin"}'::jsonb,
     '{"name":"Administrateur démo","role":"admin"}'::jsonb,
     NOW(),
@@ -51,6 +58,10 @@ BEGIN
     email = EXCLUDED.email,
     encrypted_password = EXCLUDED.encrypted_password,
     email_confirmed_at = EXCLUDED.email_confirmed_at,
+    confirmation_token = EXCLUDED.confirmation_token,
+    recovery_token = EXCLUDED.recovery_token,
+    email_change_token_new = EXCLUDED.email_change_token_new,
+    email_change = EXCLUDED.email_change,
     raw_app_meta_data = EXCLUDED.raw_app_meta_data,
     raw_user_meta_data = EXCLUDED.raw_user_meta_data,
     updated_at = NOW();
@@ -61,7 +72,7 @@ BEGIN
   VALUES (
     v_admin_id,
     v_admin_id,
-    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@demo.danemo.test'),
+    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@danemo.be'),
     'email',
     v_admin_id::text,
     NOW(),
@@ -73,16 +84,21 @@ BEGIN
   -- Opérateur 1
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, recovery_token, email_change_token_new, email_change,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_op1_id,
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'operator@demo.danemo.test',
+    'operator@danemo.be',
     v_pw_oper,
     NOW(),
+    '',
+    '',
+    '',
+    '',
     '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
     '{"name":"Opérateur démo","role":"operator"}'::jsonb,
     NOW(),
@@ -94,6 +110,10 @@ BEGIN
     email = EXCLUDED.email,
     encrypted_password = EXCLUDED.encrypted_password,
     email_confirmed_at = EXCLUDED.email_confirmed_at,
+    confirmation_token = EXCLUDED.confirmation_token,
+    recovery_token = EXCLUDED.recovery_token,
+    email_change_token_new = EXCLUDED.email_change_token_new,
+    email_change = EXCLUDED.email_change,
     raw_app_meta_data = EXCLUDED.raw_app_meta_data,
     raw_user_meta_data = EXCLUDED.raw_user_meta_data,
     updated_at = NOW();
@@ -104,7 +124,7 @@ BEGIN
   VALUES (
     v_op1_id,
     v_op1_id,
-    jsonb_build_object('sub', v_op1_id::text, 'email', 'operator@demo.danemo.test'),
+    jsonb_build_object('sub', v_op1_id::text, 'email', 'operator@danemo.be'),
     'email',
     v_op1_id::text,
     NOW(),
@@ -116,16 +136,21 @@ BEGIN
   -- Opérateur 2
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, recovery_token, email_change_token_new, email_change,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_op2_id,
     '00000000-0000-0000-0000-000000000000',
     'authenticated',
     'authenticated',
-    'operator2@demo.danemo.test',
+    'operator2@danemo.be',
     v_pw_oper,
     NOW(),
+    '',
+    '',
+    '',
+    '',
     '{"provider":"email","providers":["email"],"role":"operator"}'::jsonb,
     '{"name":"Opérateur démo 2","role":"operator"}'::jsonb,
     NOW(),
@@ -137,6 +162,10 @@ BEGIN
     email = EXCLUDED.email,
     encrypted_password = EXCLUDED.encrypted_password,
     email_confirmed_at = EXCLUDED.email_confirmed_at,
+    confirmation_token = EXCLUDED.confirmation_token,
+    recovery_token = EXCLUDED.recovery_token,
+    email_change_token_new = EXCLUDED.email_change_token_new,
+    email_change = EXCLUDED.email_change,
     raw_app_meta_data = EXCLUDED.raw_app_meta_data,
     raw_user_meta_data = EXCLUDED.raw_user_meta_data,
     updated_at = NOW();
@@ -147,7 +176,7 @@ BEGIN
   VALUES (
     v_op2_id,
     v_op2_id,
-    jsonb_build_object('sub', v_op2_id::text, 'email', 'operator2@demo.danemo.test'),
+    jsonb_build_object('sub', v_op2_id::text, 'email', 'operator2@danemo.be'),
     'email',
     v_op2_id::text,
     NOW(),
@@ -159,9 +188,9 @@ END $$;
 
 INSERT INTO public.employees (user_id, name, email, role, salary, position, hire_date, is_active)
 VALUES
-  ('e1111111-1111-4111-8111-111111111101', 'Administrateur démo', 'admin@demo.danemo.test', 'admin', 5000.00, 'Administrateur', DATE '2024-01-15', TRUE),
-  ('e2222222-2222-4222-8222-222222222202', 'Opérateur démo', 'operator@demo.danemo.test', 'operator', 3200.00, 'Opérateur logistique', DATE '2024-01-15', TRUE),
-  ('e3333333-3333-4333-8333-333333333303', 'Opérateur démo 2', 'operator2@demo.danemo.test', 'operator', 3100.00, 'Opérateur logistique', DATE '2024-03-01', TRUE);
+  ('e1111111-1111-4111-8111-111111111101', 'Administrateur démo', 'admin@danemo.be', 'admin', 5000.00, 'Administrateur', DATE '2024-01-15', TRUE),
+  ('e2222222-2222-4222-8222-222222222202', 'Opérateur démo', 'operator@danemo.be', 'operator', 3200.00, 'Opérateur logistique', DATE '2024-01-15', TRUE),
+  ('e3333333-3333-4333-8333-333333333303', 'Opérateur démo 2', 'operator2@danemo.be', 'operator', 3100.00, 'Opérateur logistique', DATE '2024-03-01', TRUE);
 
 /* Legacy logistics demo retired in favour of the deterministic five-customer scenario below.
 INSERT INTO public.customers (
@@ -526,20 +555,20 @@ WITH fixtures (
 ) AS (
   VALUES
     ('DEMO-FR-DLA-001', 'camille.delaunay@danemo.invalid', 'DLA', 'Martine Ndzié', 'martine.ndzie@danemo.invalid', '6123 Summer Close', 'Douala', '00231', 'Salon modulable et table basse', 318.50, 980.00, 3, 'completed', -52, -2),
-    ('DEMO-FR-YDE-001', 'camille.delaunay@danemo.invalid', 'YDE', 'Éric Ndzié', 'eric.ndzie@danemo.invalid', '949 Castle Drive', 'Yaounde', '00237', 'Réfrigérateur familial', 96.00, 640.00, 1, 'in_progress', -18, 20),
-    ('DEMO-FR-BDA-001', 'camille.delaunay@danemo.invalid', 'BDA', 'Sophie Nfor', 'sophie.nfor@danemo.invalid', '7069 Spring Drive', 'Bamenda', '00101', 'Machine à coudre et accessoires', 44.75, 310.00, 2, 'confirmed', -4, 45),
+    ('DEMO-FR-YDE-001', 'camille.delaunay@danemo.invalid', 'YDE', 'Éric Ndzié', 'eric.ndzie@danemo.invalid', '949 Castle Drive', 'Yaounde', '00237', 'Réfrigérateur familial', 96.00, 640.00, 1, 'in_progress', -18, 22),
+    ('DEMO-FR-BDA-001', 'camille.delaunay@danemo.invalid', 'BDA', 'Sophie Nfor', 'sophie.nfor@danemo.invalid', '7069 Spring Drive', 'Bamenda', '00101', 'Machine à coudre et accessoires', 44.75, 310.00, 2, 'confirmed', -4, 49),
     ('DEMO-LU-DLA-001', 'lea.schmit@danemo.invalid', 'DLA', 'Luc Mbarga', 'luc.mbarga@danemo.invalid', '4855 King Drive', 'Douala', '00232', 'Lot de vaisselle et ustensiles', 68.20, 420.00, 4, 'completed', -51, -2),
-    ('DEMO-LU-YDE-001', 'lea.schmit@danemo.invalid', 'YDE', 'Nadine Fokou', 'nadine.fokou@danemo.invalid', '6187 Central Way', 'Yaounde', '00239', 'Bureau démontable et chaise', 82.40, 515.00, 2, 'in_progress', -17, 20),
-    ('DEMO-LU-BDA-001', 'lea.schmit@danemo.invalid', 'BDA', 'Franck Tabe', 'franck.tabe@danemo.invalid', '957 Queen Boulevard', 'Bamenda', '00100', 'Groupe électrogène compact', 117.00, 890.00, 1, 'confirmed', -3, 45),
+    ('DEMO-LU-YDE-001', 'lea.schmit@danemo.invalid', 'YDE', 'Nadine Fokou', 'nadine.fokou@danemo.invalid', '6187 Central Way', 'Yaounde', '00239', 'Bureau démontable et chaise', 82.40, 515.00, 2, 'in_progress', -17, 22),
+    ('DEMO-LU-BDA-001', 'lea.schmit@danemo.invalid', 'BDA', 'Franck Tabe', 'franck.tabe@danemo.invalid', '957 Queen Boulevard', 'Bamenda', '00100', 'Groupe électrogène compact', 117.00, 890.00, 1, 'confirmed', -3, 49),
     ('DEMO-BE-DLA-001', 'noemie.vanacker@danemo.invalid', 'DLA', 'Aline Ndzié', 'aline.ndzie@danemo.invalid', '9352 Cambridge Crescent', 'Douala', '00230', 'Lave-linge 8 kg', 74.00, 570.00, 1, 'completed', -50, -2),
-    ('DEMO-BE-YDE-001', 'noemie.vanacker@danemo.invalid', 'YDE', 'Paul Ndzié', 'paul.ndzie@danemo.invalid', '1231 Rose Drive', 'Yaounde', '00237', 'Vélo adulte et casque', 21.60, 230.00, 2, 'in_progress', -16, 20),
-    ('DEMO-BE-BDA-001', 'noemie.vanacker@danemo.invalid', 'BDA', 'Mireille Fon', 'mireille.fon@danemo.invalid', '4772 York Lane', 'Bamenda', '00101', 'Matelas mousse haute densité', 36.80, 265.00, 1, 'confirmed', -3, 45),
+    ('DEMO-BE-YDE-001', 'noemie.vanacker@danemo.invalid', 'YDE', 'Paul Ndzié', 'paul.ndzie@danemo.invalid', '1231 Rose Drive', 'Yaounde', '00237', 'Vélo adulte et casque', 21.60, 230.00, 2, 'in_progress', -16, 22),
+    ('DEMO-BE-BDA-001', 'noemie.vanacker@danemo.invalid', 'BDA', 'Mireille Fon', 'mireille.fon@danemo.invalid', '4772 York Lane', 'Bamenda', '00101', 'Matelas mousse haute densité', 36.80, 265.00, 1, 'confirmed', -3, 49),
     ('DEMO-NL-DLA-001', 'jeroen.devries@danemo.invalid', 'DLA', 'Hervé Ekotto', 'herve.ekotto@danemo.invalid', '2522 William Avenue', 'Douala', '00232', 'Carreaux de sol, une palette', 462.00, 760.00, 5, 'completed', -49, -2),
-    ('DEMO-NL-YDE-001', 'jeroen.devries@danemo.invalid', 'YDE', 'Clarisse Mvondo', 'clarisse.mvondo@danemo.invalid', '6653 Garden Drive', 'Yaounde', '00239', 'Téléviseur 55 pouces', 28.30, 540.00, 1, 'in_progress', -15, 20),
-    ('DEMO-NL-BDA-001', 'jeroen.devries@danemo.invalid', 'BDA', 'Samuel Ngu', 'samuel.ngu@danemo.invalid', '1217 River Road', 'Bamenda', '00101', 'Cantine métallique 100 cm', 39.50, 185.00, 1, 'confirmed', -2, 45),
+    ('DEMO-NL-YDE-001', 'jeroen.devries@danemo.invalid', 'YDE', 'Clarisse Mvondo', 'clarisse.mvondo@danemo.invalid', '6653 Garden Drive', 'Yaounde', '00239', 'Téléviseur 55 pouces', 28.30, 540.00, 1, 'in_progress', -15, 22),
+    ('DEMO-NL-BDA-001', 'jeroen.devries@danemo.invalid', 'BDA', 'Samuel Ngu', 'samuel.ngu@danemo.invalid', '1217 River Road', 'Bamenda', '00101', 'Cantine métallique 100 cm', 39.50, 185.00, 1, 'confirmed', -2, 49),
     ('DEMO-DE-DLA-001', 'klara.neumann@danemo.invalid', 'DLA', 'Chantal Etoa', 'chantal.etoa@danemo.invalid', '5116 William Street', 'Douala', '00232', 'Congélateur coffre 300 L', 79.00, 690.00, 1, 'completed', -48, -2),
-    ('DEMO-DE-YDE-001', 'klara.neumann@danemo.invalid', 'YDE', 'Thomas Meyo', 'thomas.meyo@danemo.invalid', '1228 Church Street', 'Yaounde', '00237', 'Étagère de rangement en bois', 55.25, 370.00, 3, 'in_progress', -14, 20),
-    ('DEMO-DE-BDA-001', 'klara.neumann@danemo.invalid', 'BDA', 'Roseline Njam', 'roseline.njam@danemo.invalid', '2755 George Road', 'Bamenda', '00101', 'Kit de panneaux solaires', 63.40, 1120.00, 2, 'confirmed', -1, 45)
+    ('DEMO-DE-YDE-001', 'klara.neumann@danemo.invalid', 'YDE', 'Thomas Meyo', 'thomas.meyo@danemo.invalid', '1228 Church Street', 'Yaounde', '00237', 'Étagère de rangement en bois', 55.25, 370.00, 3, 'in_progress', -14, 22),
+    ('DEMO-DE-BDA-001', 'klara.neumann@danemo.invalid', 'BDA', 'Roseline Njam', 'roseline.njam@danemo.invalid', '2755 George Road', 'Bamenda', '00101', 'Kit de panneaux solaires', 63.40, 1120.00, 2, 'confirmed', -1, 49)
 )
 INSERT INTO public.orders (
   order_number, qr_code, client_name, client_email, client_phone, client_address,
@@ -644,30 +673,96 @@ ON CONFLICT (invoice_number) DO UPDATE SET
   payment_date = EXCLUDED.payment_date,
   notes = EXCLUDED.notes;
 
-WITH event_steps (destination_code, status, location, description, day_offset) AS (
+WITH origin_steps (origin_city, event_offset, status, location, description) AS (
   VALUES
-    ('DLA', 'confirmed', 'Anvers, Belgique', 'Commande confirmée.', -52),
-    ('DLA', 'collected', 'Anvers, Belgique', 'Colis réceptionné à l''entrepôt.', -46),
-    ('DLA', 'departed', 'Port d''Anvers, Belgique', 'Conteneur parti d''Anvers.', -40),
-    ('DLA', 'arrived', 'Port de Douala, Cameroun', 'Conteneur arrivé au port de Douala.', -5),
-    ('DLA', 'delivered', 'Douala, Cameroun', 'Livraison finale effectuée.', -2),
-    ('YDE', 'confirmed', 'Anvers, Belgique', 'Commande confirmée.', -18),
-    ('YDE', 'collected', 'Anvers, Belgique', 'Colis réceptionné à l''entrepôt.', -12),
-    ('YDE', 'departed', 'Port d''Anvers, Belgique', 'Conteneur parti d''Anvers.', -10),
-    ('YDE', 'in_transit', 'En mer vers Douala', 'Transport maritime en cours.', -2),
-    ('BDA', 'confirmed', 'Anvers, Belgique', 'Commande confirmée.', -2),
-    ('BDA', 'preparation', 'Entrepôt Anvers', 'Colis préparé pour le prochain départ.', -1)
-)
+    -- Bordeaux → Paris (environ 6 h) → Lille (environ 2 h 30) → Bruxelles → Anvers.
+    ('Bordeaux', INTERVAL '9 hours', 'confirmed', 'Bordeaux, France', 'Commande confirmée et enlèvement planifié à Bordeaux.'),
+    ('Bordeaux', INTERVAL '1 day 8 hours', 'preparation', 'Bordeaux, France', 'Colis pris en charge et préparé pour le transport routier.'),
+    ('Bordeaux', INTERVAL '1 day 17 hours', 'in_progress', 'Paris, France', 'Arrivée à l''agence de transit de Paris après le trajet routier depuis Bordeaux.'),
+    ('Bordeaux', INTERVAL '2 days 9 hours', 'in_progress', 'Lille, France', 'Passage par le hub de Lille avant le départ vers la Belgique.'),
+    ('Bordeaux', INTERVAL '3 days 9 hours', 'preparation', 'Entrepôt Bruxelles, Belgique', 'Colis réceptionné, contrôlé et regroupé à l''entrepôt de Bruxelles.'),
+    ('Bordeaux', INTERVAL '3 days 17 hours', 'arrive_port', 'Port d''Anvers, Belgique', 'Colis transféré de Bruxelles au port d''Anvers pour le chargement maritime.'),
+
+    -- Luxembourg → entrepôt Bruxelles (environ 3 h) → port d'Anvers (environ 1 h).
+    ('Luxembourg', INTERVAL '9 hours', 'confirmed', 'Luxembourg, Luxembourg', 'Commande confirmée et enlèvement planifié au Luxembourg.'),
+    ('Luxembourg', INTERVAL '1 day 8 hours', 'preparation', 'Luxembourg, Luxembourg', 'Colis pris en charge et préparé pour le départ routier.'),
+    ('Luxembourg', INTERVAL '1 day 11 hours', 'in_progress', 'Luxembourg, Luxembourg', 'Transport routier démarré vers l''entrepôt de Bruxelles.'),
+    ('Luxembourg', INTERVAL '1 day 16 hours', 'preparation', 'Entrepôt Bruxelles, Belgique', 'Colis réceptionné et regroupé à l''entrepôt de Bruxelles.'),
+    ('Luxembourg', INTERVAL '2 days 9 hours', 'arrive_port', 'Port d''Anvers, Belgique', 'Colis transféré de Bruxelles au port d''Anvers pour embarquement.'),
+
+    -- Gent et Köln rejoignent Bruxelles ; Utrecht suit l'axe Breda → Anvers, sans détour par Bruxelles.
+    ('Gent', INTERVAL '9 hours', 'confirmed', 'Gent, Belgique', 'Commande confirmée et enlèvement planifié à Gent.'),
+    ('Gent', INTERVAL '1 day 8 hours', 'preparation', 'Gent, Belgique', 'Colis pris en charge et préparé pour le transport.'),
+    ('Gent', INTERVAL '1 day 10 hours', 'in_progress', 'En route vers Bruxelles, Belgique', 'Transport routier en cours vers l''entrepôt de Bruxelles.'),
+    ('Gent', INTERVAL '1 day 13 hours', 'preparation', 'Entrepôt Bruxelles, Belgique', 'Colis réceptionné et regroupé à l''entrepôt de Bruxelles.'),
+    ('Gent', INTERVAL '1 day 17 hours', 'arrive_port', 'Port d''Anvers, Belgique', 'Colis transféré de Bruxelles au port d''Anvers.'),
+    ('Utrecht', INTERVAL '9 hours', 'confirmed', 'Utrecht, Pays-Bas', 'Commande confirmée et enlèvement planifié à Utrecht.'),
+    ('Utrecht', INTERVAL '1 day 8 hours', 'preparation', 'Utrecht, Pays-Bas', 'Colis pris en charge et préparé pour le transport.'),
+    ('Utrecht', INTERVAL '1 day 10 hours', 'in_progress', 'Breda, Pays-Bas', 'Passage par Breda sur l''axe direct entre Utrecht et Anvers.'),
+    ('Utrecht', INTERVAL '1 day 14 hours', 'arrive_port', 'Port d''Anvers, Belgique', 'Colis arrivé directement au port d''Anvers depuis Breda, sans détour par Bruxelles.'),
+    ('Köln', INTERVAL '9 hours', 'confirmed', 'Köln, Allemagne', 'Commande confirmée et enlèvement planifié à Köln.'),
+    ('Köln', INTERVAL '1 day 8 hours', 'preparation', 'Köln, Allemagne', 'Colis pris en charge et préparé pour le transport.'),
+    ('Köln', INTERVAL '1 day 10 hours', 'in_progress', 'Maastricht, Pays-Bas', 'Passage par Maastricht avant l''entrée en Belgique.'),
+    ('Köln', INTERVAL '1 day 15 hours', 'preparation', 'Entrepôt Bruxelles, Belgique', 'Colis réceptionné et regroupé à l''entrepôt de Bruxelles après le passage par Maastricht.'),
+    ('Köln', INTERVAL '2 days 9 hours', 'arrive_port', 'Port d''Anvers, Belgique', 'Colis transféré de Bruxelles au port d''Anvers.')
+  ),
+  container_steps (destination_code, event_offset, status, location, description) AS (
+    VALUES
+      ('DLA', INTERVAL '-41 days 16 hours', 'preparation', 'Port d''Anvers, Belgique', 'Colis chargé dans le conteneur DEMO-DLA-01 après regroupement à Bruxelles.'),
+      ('DLA', INTERVAL '-40 days 8 hours', 'in_progress', 'Port d''Anvers, Belgique', 'Conteneur DEMO-DLA-01 parti d''Anvers à destination de Douala.'),
+      ('DLA', INTERVAL '-22 days', 'in_progress', 'En mer vers Douala', 'Transport maritime en cours vers le Cameroun.'),
+      ('DLA', INTERVAL '-5 days 9 hours', 'arrive_port', 'Port de Douala, Cameroun', 'Conteneur arrivé au port de Douala.'),
+      ('DLA', INTERVAL '-4 days 10 hours', 'dedouane', 'Port de Douala, Cameroun', 'Colis dégroupé et formalités douanières terminées à Douala.'),
+      ('DLA', INTERVAL '-2 days 14 hours', 'completed', 'Douala, Cameroun', 'Livraison finale effectuée à destination.'),
+
+      ('YDE', INTERVAL '-11 days 16 hours', 'preparation', 'Port d''Anvers, Belgique', 'Colis chargé dans le conteneur DEMO-YDE-02 après regroupement à Bruxelles.'),
+      ('YDE', INTERVAL '-10 days 8 hours', 'in_progress', 'Port d''Anvers, Belgique', 'Conteneur DEMO-YDE-02 parti d''Anvers à destination de Douala.'),
+      ('YDE', INTERVAL '-3 days', 'in_progress', 'En mer vers Douala', 'Transport maritime en cours ; arrivée au port de Douala prévue dans 20 jours.'),
+      ('YDE', INTERVAL '20 days 9 hours', 'arrive_port', 'Port de Douala, Cameroun', 'Étape prévue : arrivée du conteneur au port de Douala.'),
+      ('YDE', INTERVAL '21 days 10 hours', 'dedouane', 'Port de Douala, Cameroun', 'Étape prévue : dégroupage et formalités douanières à Douala.'),
+      ('YDE', INTERVAL '22 days 15 hours', 'completed', 'Yaoundé, Cameroun', 'Étape prévue : livraison finale à Yaoundé après transport routier depuis Douala.'),
+
+      ('BDA', INTERVAL '10 days 8 hours', 'in_progress', 'Port d''Anvers, Belgique', 'Étape prévue : départ du conteneur DEMO-BDA-03 depuis Anvers.'),
+      ('BDA', INTERVAL '45 days 9 hours', 'arrive_port', 'Port de Douala, Cameroun', 'Étape prévue : arrivée du conteneur au port de Douala.'),
+      ('BDA', INTERVAL '46 days 10 hours', 'dedouane', 'Port de Douala, Cameroun', 'Étape prévue : dégroupage et formalités douanières à Douala.'),
+      ('BDA', INTERVAL '48 days 10 hours', 'in_progress', 'Bafoussam, Cameroun', 'Étape prévue : transit routier par Bafoussam avant la dernière étape vers Bamenda.'),
+      ('BDA', INTERVAL '49 days 15 hours', 'completed', 'Bamenda, Cameroun', 'Étape prévue : livraison finale à Bamenda.')
+  ),
+  event_steps (order_id, status, location, description, event_date) AS (
+    SELECT
+      o.id,
+      s.status,
+      s.location,
+      s.description,
+      o.created_at + s.event_offset
+    FROM public.orders o
+    JOIN origin_steps s ON s.origin_city = o.client_city
+    WHERE (o.order_number LIKE 'DEMO-%-DLA-%'
+       OR o.order_number LIKE 'DEMO-%-YDE-%'
+       OR o.order_number LIKE 'DEMO-%-BDA-%')
+      -- L'historique local ne contient pas des collectes routières qui ne se sont pas encore produites.
+      AND o.created_at + s.event_offset <= CURRENT_TIMESTAMP
+
+    UNION ALL
+
+    SELECT
+      o.id,
+      s.status,
+      s.location,
+      s.description,
+      CURRENT_DATE + s.event_offset
+    FROM public.orders o
+    JOIN container_steps s ON o.order_number LIKE 'DEMO-%-' || s.destination_code || '-%'
+  )
 INSERT INTO public.tracking_events (order_id, status, location, description, operator, event_date)
 SELECT
-  o.id,
+  e.order_id,
   e.status,
   e.location,
   e.description,
   'Seed Danemo',
-  CURRENT_DATE + e.day_offset
-FROM event_steps e
-JOIN public.orders o ON o.order_number LIKE 'DEMO-%-' || e.destination_code || '-%';
+  e.event_date
+FROM event_steps e;
 
 INSERT INTO public.articles (
   title,

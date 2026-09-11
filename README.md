@@ -64,10 +64,15 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 AUTH_SECRET=replace-with-a-long-random-value
 ```
 
-Ne versionnez jamais ce fichier ni un mot de passe de démonstration. Les comptes
-synthétiques créés par `supabase/seed.sql` n'ont volontairement pas de mot de
-passe connu ; créez un accès local depuis Supabase Studio ou configurez les
-variables de seed uniquement dans votre environnement de développement.
+Ne versionnez jamais ce fichier ni des identifiants non synthétiques. Le seed local
+crée les comptes de démonstration suivants :
+
+- `admin@danemo.be` / `admin123`
+- `operator@danemo.be` / `operator123`
+- `operator2@danemo.be` / `operator123`
+
+Ils sont strictement réservés au développement local et ne doivent jamais être
+déployés ni réutilisés en production.
 La route de seed protégée attend `ADMIN_SEED_KEY`, `DANEMO_DEMO_ADMIN_EMAIL`,
 `DANEMO_DEMO_ADMIN_PASSWORD`, `DANEMO_DEMO_OPERATOR_EMAIL` et
 `DANEMO_DEMO_OPERATOR_PASSWORD` au runtime ; aucune de ces valeurs ne doit être
