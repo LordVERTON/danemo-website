@@ -28,6 +28,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Record<string, number> | null>(null)
   const { data: session, status } = useSession()
   const role = session?.user?.role === "admin" ? "admin" : "operator"
+  const sessionName = session?.user?.name || session?.user?.email?.split("@")[0] || "Utilisateur"
+  const userName = sessionName.charAt(0).toUpperCase() + sessionName.slice(1)
 
   useEffect(() => {
     if (status !== "authenticated") return
@@ -42,7 +44,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout title="Tableau de bord">
-      <p className="mb-8 text-gray-600">Accédez rapidement aux outils de gestion Danemo.</p>
+      <p className="mb-8 text-gray-600">Bonjour {userName}, accédez rapidement aux outils de gestion Danemo.</p>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
