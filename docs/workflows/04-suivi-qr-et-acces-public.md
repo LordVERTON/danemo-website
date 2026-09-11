@@ -30,18 +30,55 @@ Permettre à l'équipe de tracer une commande et à un visiteur de consulter un 
 ## Diagramme principal
 
 ```mermaid
+sequenceDiagram
+  participant V as Visiteur
+  participant P as Page de suivi
+  participant API as API suivi
+  participant DB as Supabase
+  participant E as Équipe interne
+  V->>P: saisir référence, conteneur ou QR
+  P->>API: rechercher la commande
+  API->>DB: lire commande et événements
+  alt commande trouvée
+    DB-->>API: données publiques filtrées
+    API-->>P: suivi réduit
+    P-->>V: afficher le suivi
+  else commande introuvable
+    API-->>P: erreur ou résultat vide
+    P-->>V: informer le visiteur
+  end
+  E->>API: ajouter un événement ou scanner un QR
+  API->>DB: enregistrer tracking_events
+  opt statut fourni
+    API->>DB: mettre à jour orders.status et auditer
+  end
+  API-->>E: suivi mis à jour
+```
+
+## Diagramme simplifié
+
+```mermaid
 flowchart TD
-  P[Visiteur : référence ou QR] --> R[GET recherche / suivi]
-  R --> O{Commande trouvée ?}
-  O -- non --> N[404 ou liste vide]
-  O -- oui --> V[Vue publique réduite et événements]
-  S[Équipe interne] --> T[POST événement de suivi]
-  T --> E[Écrire tracking_events]
-  T --> U{Nouveau statut fourni ?}
-  U -- oui --> C[Mettre à jour orders.status et auditer]
-  U -- non --> H[Conserver le statut]
-  S --> Q[POST scan QR commande]
-  Q --> K[Mettre à jour orders et tracking_events]
+  A[Visiteur] --> B[Saisir une référence, un code conteneur ou un QR]
+  B --> C[Rechercher le suivi]
+  C --> D{Commande trouvée ?}
+  D -- Non --> E[Afficher une réponse vide ou une erreur]
+  D -- Oui --> F[Afficher le suivi public réduit]
+  G[Équipe interne] --> H{Action de suivi ?}
+  H -- Nouvel événement --> I[Ajouter l'événement de suivi]
+  I --> J{Nouveau statut fourni ?}
+  J -- Oui --> K[Mettre à jour le statut et auditer]
+  J -- Non --> L[Conserver le statut]
+  H -- Scan QR --> M[Créer l'événement et mettre à jour la commande]
+
+  classDef actor fill:#dbeafe,stroke:#2563eb,color:#111827;
+  classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
+  classDef action fill:#dcfce7,stroke:#16a34a,color:#111827;
+  classDef result fill:#f3e8ff,stroke:#9333ea,color:#111827;
+  class A,G actor;
+  class D,H,J control;
+  class B,C,I,K,L,M action;
+  class E,F result;
 ```
 
 ## Règles métier et sécurité

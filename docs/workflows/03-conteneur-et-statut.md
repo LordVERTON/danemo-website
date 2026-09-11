@@ -46,6 +46,29 @@ sequenceDiagram
   API-->>S: conteneur mis à jour
 ```
 
+## Diagramme simplifié
+
+```mermaid
+flowchart TD
+  A[Équipe interne] --> B[Créer ou modifier le conteneur]
+  B --> C[Enregistrer la mise à jour et l'audit]
+  C --> D{Statut modifié ?}
+  D -- Non --> E[Retourner le conteneur mis à jour]
+  D -- Oui --> F[Ajouter un événement à chaque commande liée]
+  F --> G[Déclencher les notifications en arrière-plan]
+  G --> H[Envoyer au destinataire ou au client]
+  H --> E
+
+  classDef actor fill:#dbeafe,stroke:#2563eb,color:#111827;
+  classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
+  classDef action fill:#dcfce7,stroke:#16a34a,color:#111827;
+  classDef result fill:#f3e8ff,stroke:#9333ea,color:#111827;
+  class A actor;
+  class D control;
+  class B,C,F,G,H action;
+  class E result;
+```
+
 ## Règles métier et sécurité
 
 - Valeurs de statut stockées : `planned`, `departed`, `in_transit`, `arrived`, `delivered`, `delayed`.

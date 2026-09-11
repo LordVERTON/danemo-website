@@ -33,21 +33,53 @@ Gérer le client, sa commande logistique, ses règlements et les documents opér
 ## Diagramme principal
 
 ```mermaid
-flowchart LR
+sequenceDiagram
+  participant E as Équipe interne
+  participant F as Fiche client
+  participant API as API métier
+  participant DB as Supabase
+  participant PDF as Générateur PDF
+  E->>F: rechercher ou créer un client
+  F->>API: créer ou modifier la commande
+  API->>DB: enregistrer client et commande
+  DB-->>API: numéro de commande et QR
+  API-->>F: commande créée
+  E->>F: ajouter un règlement
+  F->>API: enregistrer le règlement
+  API->>DB: créer payment et calculer la progression
+  E->>F: demander une facture
+  F->>API: créer ou retrouver la facture
+  API->>DB: vérifier la facture existante
+  API->>PDF: générer le document demandé
+  PDF-->>E: télécharger le PDF
+```
+
+## Diagramme simplifié
+
+```mermaid
+flowchart TD
   A[Équipe interne] --> B{Client existant ?}
-  B -- non --> C[Créer la fiche client]
-  B -- oui --> D[Ouvrir la fiche]
+  B -- Non --> C[Créer la fiche client]
+  B -- Oui --> D[Ouvrir la fiche]
   C --> D
   D --> E[Créer ou modifier la commande]
-  E --> F[Numéro de commande et QR attribués]
+  E --> F[Commande, numéro et QR attribués]
   F --> G[Ajouter règlement client]
-  G --> H[Calculer progression]
-  D --> I[Facture PDF pour une commande]
-  I --> J{Facture déjà présente ?}
-  J -- non --> K[Insérer la facture puis générer le PDF]
-  J -- oui --> L[Régénérer le PDF existant]
-  D --> M[Générer la facture récapitulative]
-  M --> N[Une ligne par commande et répartition des règlements]
+  G --> H[Calculer le solde]
+  D --> I{Document demandé ?}
+  I -- Facture commande --> J{Facture déjà présente ?}
+  J -- Non --> K[Créer la facture et générer le PDF]
+  J -- Oui --> L[Régénérer le PDF existant]
+  I -- Récapitulatif --> M[Exporter la facture récapitulative]
+
+  classDef actor fill:#dbeafe,stroke:#2563eb,color:#111827;
+  classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
+  classDef action fill:#dcfce7,stroke:#16a34a,color:#111827;
+  classDef result fill:#f3e8ff,stroke:#9333ea,color:#111827;
+  class A actor;
+  class B,I,J control;
+  class C,D,E,F,G action;
+  class H,K,L,M result;
 ```
 
 ## Règles métier et sécurité

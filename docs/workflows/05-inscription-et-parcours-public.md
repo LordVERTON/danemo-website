@@ -46,6 +46,31 @@ sequenceDiagram
   A-->>F: IDs et numéro de commande
 ```
 
+## Diagramme simplifié
+
+```mermaid
+flowchart TD
+  A[Visiteur] --> B[Remplir le formulaire public]
+  B --> C{Données valides ?}
+  C -- Non --> D[Afficher les erreurs et corriger le formulaire]
+  D --> B
+  C -- Oui --> E[Créer le client actif]
+  E --> F[Créer la commande pending]
+  F --> G{E-mail renseigné ?}
+  G -- Oui --> H[Tenter l'envoi de confirmation]
+  G -- Non --> I[Retourner les identifiants et la référence]
+  H --> I
+
+  classDef actor fill:#dbeafe,stroke:#2563eb,color:#111827;
+  classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
+  classDef action fill:#dcfce7,stroke:#16a34a,color:#111827;
+  classDef result fill:#f3e8ff,stroke:#9333ea,color:#111827;
+  class A actor;
+  class C,D,G control;
+  class B,E,F,H action;
+  class I result;
+```
+
 ## Règles métier et sécurité
 
 - Cinq requêtes par 15 minutes sont autorisées par identifiant client, par instance applicative.

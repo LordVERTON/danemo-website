@@ -31,17 +31,51 @@ Consulter les agrégats de commandes, exporter les données visibles depuis le n
 ## Diagramme principal
 
 ```mermaid
+sequenceDiagram
+  participant A as Administrateur
+  participant UI as Page Analytics
+  participant API as API statistiques
+  participant DB as Supabase
+  participant B as Navigateur
+  participant M as Flux métier
+  participant T as Administrateur technique
+  A->>UI: choisir une période
+  UI->>API: GET statistiques filtrées
+  API->>DB: lire les agrégats et commandes
+  DB-->>UI: données de la période
+  UI-->>A: afficher indicateurs et commandes
+  A->>UI: choisir CSV ou PDF
+  UI->>B: générer l'export local
+  B-->>A: télécharger le fichier
+  M->>DB: enregistrer l'audit au mieux
+  T->>API: appeler seed ou reseed après validation de la cible
+```
+
+## Diagramme simplifié
+
+```mermaid
 flowchart TD
-  A[Administrateur] --> B[GET statistiques filtrées]
-  B --> C[Afficher indicateurs et commandes]
-  C --> D{Format demandé}
-  D -- CSV --> E[Générer et télécharger dans le navigateur]
-  D -- PDF --> F[Capturer graphiques ou PDF simple]
-  G[Flux métier] --> H[recordBusinessAudit]
-  H --> I[(business_audit_log)]
-  J[Administrateur technique] --> K{Environnement et cible validés ?}
-  K -- oui --> L[Route seed ou reseed]
-  K -- non --> M[Ne pas exécuter]
+  A[Administrateur] --> B[Choisir une période]
+  B --> C[Afficher les indicateurs et les commandes]
+  C --> D{Format demandé ?}
+  D -- CSV --> E[Générer le CSV dans le navigateur]
+  D -- PDF --> F[Générer le PDF avec ou sans graphiques]
+  E --> G[Télécharger l'export]
+  F --> G
+  H[Action métier] --> I[Enregistrer l'audit au mieux]
+  I --> J[Journal métier]
+  K[Administrateur technique] --> L{Environnement et cible validés ?}
+  L -- Oui --> M[Exécuter seed ou reseed]
+  L -- Non --> N[Ne pas exécuter]
+
+  classDef actor fill:#dbeafe,stroke:#2563eb,color:#111827;
+  classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
+  classDef action fill:#dcfce7,stroke:#16a34a,color:#111827;
+  classDef result fill:#f3e8ff,stroke:#9333ea,color:#111827;
+  class A,H,K actor;
+  class D,L control;
+  class B,C,E,F,I,M action;
+  class G,J,N result;
 ```
 
 ## Règles métier et sécurité

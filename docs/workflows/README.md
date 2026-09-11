@@ -19,6 +19,7 @@ flowchart LR
   API --> Mail[Service e-mail]
   API --> SMS[Twilio : SMS / WhatsApp]
   DB --> Audit[Journal métier]
+
 ```
 
 ## Rôles

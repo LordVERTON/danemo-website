@@ -31,17 +31,50 @@ Administrer les accès internes, envoyer des campagnes SMS/WhatsApp et gérer le
 ## Diagramme principal
 
 ```mermaid
-flowchart LR
-  A[Administrateur] --> B[Créer compte Auth]
-  B --> C[Créer employees et activité]
-  A --> D[Prévisualiser destinataires]
-  D --> E[Filtrer consentement et dédupliquer]
-  E --> F[Envoyer SMS ou WhatsApp]
-  F --> G[(customer_message_logs)]
-  H[Admin ou opérateur] --> I[Créer ou modifier article]
-  I --> J[Révision avant modification]
-  J --> K[(articles / article_revisions)]
-  L[Admin] --> M[Supprimer article Puck]
+sequenceDiagram
+  participant A as Administrateur
+  participant BO as Back-office
+  participant API as API métier
+  participant DB as Supabase
+  participant T as Twilio
+  participant O as Administrateur ou opérateur
+  A->>BO: créer ou modifier un collaborateur
+  BO->>API: synchroniser compte Auth et fiche employees
+  API->>DB: enregistrer le compte, la fiche et l'activité
+  A->>BO: prévisualiser une campagne
+  BO->>API: sélectionner les destinataires
+  API->>DB: filtrer consentement et dédupliquer
+  A->>BO: confirmer l'envoi
+  BO->>T: envoyer SMS ou WhatsApp
+  T-->>API: résultat par destinataire
+  API->>DB: journaliser sent ou failed
+  O->>API: créer ou modifier un article
+  API->>DB: enregistrer l'article et sa révision
+```
+
+## Diagramme simplifié
+
+```mermaid
+flowchart TD
+  A[Administrateur] --> B{Action demandée ?}
+  B -- Collaborateur --> C[Créer ou modifier le compte et sa fiche]
+  C --> D[Enregistrer l'activité collaborateur]
+  B -- Campagne --> E[Prévisualiser les destinataires]
+  E --> F[Filtrer le consentement et dédupliquer]
+  F --> G[Envoyer SMS ou WhatsApp]
+  G --> H[Journaliser le résultat]
+  I[Administrateur ou opérateur] --> J[Créer ou modifier un article]
+  J --> K[Créer une révision]
+  L[Administrateur] --> M[Supprimer un article Puck]
+
+  classDef actor fill:#dbeafe,stroke:#2563eb,color:#111827;
+  classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
+  classDef action fill:#dcfce7,stroke:#16a34a,color:#111827;
+  classDef result fill:#f3e8ff,stroke:#9333ea,color:#111827;
+  class A,I,L actor;
+  class B control;
+  class C,E,F,G,J,M action;
+  class D,H,K result;
 ```
 
 ## Règles métier et sécurité

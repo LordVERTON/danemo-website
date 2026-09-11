@@ -51,6 +51,33 @@ sequenceDiagram
   end
 ```
 
+## Diagramme simplifié
+
+```mermaid
+flowchart TD
+  A[Collaborateur] --> B[Page de connexion]
+  B --> C{Identifiants valides ?}
+  C -- Non --> D[Afficher l'erreur et permettre une nouvelle tentative]
+  D --> B
+  C -- Oui --> E{Rôle actif et cohérent ?}
+  E -- Administrateur --> F[Accès à l'administration complète]
+  E -- Opérateur --> G[Accès aux fonctionnalités autorisées]
+  E -- Non --> H[Refuser l'accès]
+  F --> I[Effectuer les actions selon les droits]
+  G --> I
+  I --> J[Déconnexion]
+  J --> K[Session terminée]
+
+  classDef actor fill:#dbeafe,stroke:#2563eb,color:#111827;
+  classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
+  classDef action fill:#dcfce7,stroke:#16a34a,color:#111827;
+  classDef result fill:#f3e8ff,stroke:#9333ea,color:#111827;
+  class A actor;
+  class B,F,G,I,J action;
+  class C,D,E,H control;
+  class K result;
+```
+
 ## Règles métier et sécurité
 
 - Limite de connexion : 5 tentatives par identifiant client sur 15 minutes, en mémoire du processus.

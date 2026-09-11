@@ -27,17 +27,49 @@ Gérer les articles physiques (`colis`, `vehicule`, `marchandise`), leur emplace
 ## Diagramme principal
 
 ```mermaid
+sequenceDiagram
+  participant E as Équipe interne
+  participant I as Interface inventaire
+  participant API as API inventaire
+  participant DB as Supabase
+  E->>I: rechercher ou filtrer les articles
+  I->>API: GET inventaire
+  API->>DB: lire articles et code conteneur éventuel
+  DB-->>I: liste enrichie
+  E->>I: créer ou modifier un article
+  I->>API: POST ou PUT inventaire
+  API->>DB: enregistrer les champs autorisés
+  DB-->>I: article enregistré
+  E->>I: supprimer l'article
+  I->>API: DELETE inventaire
+  API->>DB: suppression physique
+  API-->>I: confirmation de suppression
+```
+
+## Diagramme simplifié
+
+```mermaid
 flowchart TD
-  A[Équipe interne] --> B{Nouvel article ?}
-  B -- oui --> C[POST inventaire]
-  B -- non --> D[GET et filtres]
-  D --> E[PUT champs autorisés]
-  C --> F[(inventory)]
+  A[Équipe interne] --> B{Action demandée ?}
+  B -- Créer --> C[Créer l'article d'inventaire]
+  B -- Consulter ou modifier --> D[Lister et filtrer les articles]
+  D --> E[Modifier les champs autorisés]
+  C --> F[Enregistrer l'article]
   E --> F
   F --> G{Conteneur associé ?}
-  G -- oui --> H[Retourner aussi son code]
-  A --> I[DELETE article]
-  I --> J[Suppression physique]
+  G -- Oui --> H[Retourner aussi le code conteneur]
+  G -- Non --> I[Retourner les données d'inventaire]
+  B -- Supprimer --> J[Supprimer physiquement l'article]
+  J --> K[Article supprimé]
+
+  classDef actor fill:#dbeafe,stroke:#2563eb,color:#111827;
+  classDef control fill:#ffedd5,stroke:#ea580c,color:#111827;
+  classDef action fill:#dcfce7,stroke:#16a34a,color:#111827;
+  classDef result fill:#f3e8ff,stroke:#9333ea,color:#111827;
+  class A actor;
+  class B,G control;
+  class C,D,E,F,J action;
+  class H,I,K result;
 ```
 
 ## Règles métier et sécurité
