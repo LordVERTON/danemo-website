@@ -28,6 +28,7 @@ export interface OrderStatusEmailParams {
   orderNumber?: string | null
   trackingUrl?: string | null
   location?: string | null
+  destination?: string | null
 }
 
 export interface ContainerStatusEmailParams {
@@ -84,6 +85,9 @@ function layoutEmail(opts: {
   trackingUrl: string
 }) {
   const link = ensureTrackingUrl(opts.trackingUrl)
+  const contactPhoneRaw = (process.env.DANEMO_CONTACT_PHONE || '+32 488 645 183').trim()
+  const contactPhoneDisplay = escapeHtml(contactPhoneRaw)
+  const contactPhoneHref = escapeHtml(`tel:${contactPhoneRaw.replace(/[^\d+]/g, '') || '+32488645183'}`)
   const blocksHtml = opts.blocks.map((b) => `<p style="margin:0 0 16px;">${b}</p>`).join('')
   return `
 <!DOCTYPE html>
@@ -105,7 +109,11 @@ function layoutEmail(opts: {
                 Suivi en temps réel 👉
                 <a href="${link}" style="color:#ea580c;font-weight:bold;">${link}</a>
               </p>
-              <p style="margin:0 0 8px;">Merci de votre confiance,</p>
+              <p style="margin:0 0 16px;">
+                Une question ? Contactez-nous au
+                <a href="${contactPhoneHref}" style="color:#111827;font-weight:bold;">${contactPhoneDisplay}</a>.
+              </p>
+              <p style="margin:0 0 16px;">Merci de votre confiance,</p>
               <p style="margin:0;">L’équipe <strong>Danemo SRL</strong></p>
             </td></tr>
           </table>
@@ -159,6 +167,8 @@ export function buildOrderStatusEmail(
   const refSafe = escapeHtml(ref)
   const trackingUrl = params.trackingUrl
   const location = params.location?.trim()
+  const destination = params.destination?.trim() || 'sa destination prévue'
+  const destinationSafe = escapeHtml(destination)
 
   const variants: Record<
     NotificationOrderStatus,
@@ -174,11 +184,13 @@ export function buildOrderStatusEmail(
       ],
     },
     confirmed: {
-      subject: `Commande ${ref} — confirmée`,
-      preview: 'Votre commande est confirmée et en préparation.',
+      subject: `Commande ${ref} - confirmée`,
+      preview: 'Votre envoi est pris en charge : retrouvez son numéro de suivi.',
       blocks: [
-        `Bonne nouvelle : votre commande <strong>${refSafe}</strong> est <strong>confirmée</strong>.`,
-        'Nous préparons votre envoi selon les modalités convenues.',
+        'Nous vous informons que votre envoi a bien été <strong>pris en charge</strong> par nos services.',
+        `📦 <strong>Numéro de colis :</strong> <strong>${refSafe}</strong>`,
+        `Votre colis est actuellement en attente d’acheminement vers <strong>${destinationSafe}</strong>, conformément aux informations fournies lors de votre commande.`,
+        'Pour suivre son évolution, rendez-vous sur la page de suivi ci-dessous, saisissez votre numéro de colis, puis consultez les informations relatives à votre envoi.',
       ],
     },
     in_progress: {
@@ -405,8 +417,8 @@ export function buildSelfRegisterClientConfirmationEmail(opts: {
                 <p style="margin:0 0 8px;">
                   Nous vous remercions de votre confiance et restons à votre entière disposition pour toute information complémentaire.
                 </p>
-                <p style="margin:20px 0 0;">Cordialement,</p>
-                <p style="margin:4px 0 0;"><strong>Équipe DANEMO</strong></p>
+                <p style="margin:20px 0 16px;">Merci de votre confiance,</p>
+                <p style="margin:0;">L’équipe <strong>Danemo SRL</strong></p>
               </td>
             </tr>
           </table>
