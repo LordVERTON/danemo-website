@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useSyncExternalStore } from "react"
 
 export interface TrackingEvent {
   id: string
@@ -26,12 +26,29 @@ export interface PackageTracking {
   lastUpdate: string
 }
 
+const EMPTY_TRACKING_DATA: PackageTracking[] = []
+let cachedStorageValue: string | null | undefined
+let cachedTrackingData: PackageTracking[] | undefined
+
 export const getTrackingData = (): PackageTracking[] => {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return EMPTY_TRACKING_DATA
 
   const stored = localStorage.getItem("danemo-tracking-data")
+  if (stored === cachedStorageValue && cachedTrackingData) {
+    return cachedTrackingData
+  }
+
   if (stored) {
-    return JSON.parse(stored)
+    try {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed)) {
+        cachedStorageValue = stored
+        cachedTrackingData = parsed
+        return parsed
+      }
+    } catch {
+      // Une valeur locale corrompue ne doit pas empêcher l'affichage du suivi.
+    }
   }
 
   // Default data
@@ -218,13 +235,17 @@ export const getTrackingData = (): PackageTracking[] => {
     },
   ]
 
-  localStorage.setItem("danemo-tracking-data", JSON.stringify(defaultData))
+  cachedStorageValue = stored
+  cachedTrackingData = defaultData
   return defaultData
 }
 
 export const saveTrackingData = (data: PackageTracking[]) => {
   if (typeof window !== "undefined") {
-    localStorage.setItem("danemo-tracking-data", JSON.stringify(data))
+    const serializedData = JSON.stringify(data)
+    cachedStorageValue = serializedData
+    cachedTrackingData = data
+    localStorage.setItem("danemo-tracking-data", serializedData)
 
     // Déclencher l'événement personnalisé immédiatement
     const customEvent = new CustomEvent("danemo-tracking-update", {
@@ -244,7 +265,7 @@ export const saveTrackingData = (data: PackageTracking[]) => {
     window.dispatchEvent(
       new StorageEvent("storage", {
         key: "danemo-tracking-data",
-        newValue: JSON.stringify(data),
+        newValue: serializedData,
       }),
     )
 
@@ -253,38 +274,24 @@ export const saveTrackingData = (data: PackageTracking[]) => {
 }
 
 export const useTrackingData = (): PackageTracking[] => {
-  const [data, setData] = useState<PackageTracking[]>([])
-
-  useEffect(() => {
-    // Initial load
-    const initialData = getTrackingData()
-    setData(initialData)
-    console.log("Données initiales chargées:", initialData.length, "colis")
-
-    const handleCustomUpdate = (e: CustomEvent) => {
-      console.log("Événement de mise à jour reçu:", e.detail.data.length, "colis")
-      setData([...e.detail.data]) // Force une nouvelle référence pour déclencher le re-render
-    }
-
-    // Listen for storage changes (between tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "danemo-tracking-data" && e.newValue) {
-        console.log("Changement de storage détecté")
-        const newData = JSON.parse(e.newValue)
-        setData([...newData])
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const handleCustomUpdate = () => onStoreChange()
+      const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === "danemo-tracking-data") onStoreChange()
       }
-    }
 
-    window.addEventListener("danemo-tracking-update", handleCustomUpdate as EventListener)
-    window.addEventListener("storage", handleStorageChange)
+      window.addEventListener("danemo-tracking-update", handleCustomUpdate)
+      window.addEventListener("storage", handleStorageChange)
 
-    return () => {
-      window.removeEventListener("danemo-tracking-update", handleCustomUpdate as EventListener)
-      window.removeEventListener("storage", handleStorageChange)
-    }
-  }, [])
-
-  return data
+      return () => {
+        window.removeEventListener("danemo-tracking-update", handleCustomUpdate)
+        window.removeEventListener("storage", handleStorageChange)
+      }
+    },
+    getTrackingData,
+    () => EMPTY_TRACKING_DATA,
+  )
 }
 
 export const findPackageByTrackingNumber = (trackingNumber: string): PackageTracking | null => {

@@ -68,8 +68,7 @@ export default function OrdersPage() {
     origin: "",
     destination: "",
     weight: "",
-    value: "",
-    estimated_delivery: ""
+    value: ""
   })
 
   useEffect(() => {
@@ -100,8 +99,7 @@ export default function OrdersPage() {
       const orderData = {
         ...newOrder,
         weight: newOrder.weight ? parseFloat(newOrder.weight) : null,
-        value: newOrder.value ? parseFloat(newOrder.value) : null,
-        estimated_delivery: newOrder.estimated_delivery || null
+        value: newOrder.value ? parseFloat(newOrder.value) : null
       }
 
       const response = await fetch('/api/orders', {
@@ -123,8 +121,7 @@ export default function OrdersPage() {
           origin: "",
           destination: "",
           weight: "",
-          value: "",
-          estimated_delivery: ""
+          value: ""
         })
         setIsCreateDialogOpen(false)
         fetchOrders()
@@ -322,15 +319,6 @@ export default function OrdersPage() {
                       onChange={(e) => setNewOrder({...newOrder, value: e.target.value})}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="estimated_delivery">Livraison estimée</Label>
-                    <Input
-                      id="estimated_delivery"
-                      type="date"
-                      value={newOrder.estimated_delivery}
-                      onChange={(e) => setNewOrder({...newOrder, estimated_delivery: e.target.value})}
-                    />
-                  </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -508,7 +496,7 @@ export default function OrdersPage() {
                     <p>{selectedOrder.value ? `€${selectedOrder.value.toLocaleString()}` : '-'}</p>
                   </div>
                   <div>
-                    <Label>Livraison estimée</Label>
+                    <Label>Arrivée prévue (ETA conteneur)</Label>
                     <p>{selectedOrder.estimated_delivery ? new Date(selectedOrder.estimated_delivery).toLocaleDateString('fr-FR') : '-'}</p>
                   </div>
                 </div>

@@ -19,16 +19,16 @@ export default function EnvoiColisAfriquePage() {
         <article className="prose prose-lg max-w-none">
           <header className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-extrabold text-[#14171a] mb-4 leading-tight">
-              Comment bien préparer un envoi de colis vers l'Afrique ? Les conseils de Danemo
+              Comment bien préparer un envoi de colis vers l&apos;Afrique ? Les conseils de Danemo
             </h1>
             <p className="text-gray-600 text-sm">24/07/2025</p>
           </header>
 
           <div className="mb-8">
             <p className="text-lg text-gray-700 leading-relaxed">
-              Envoyer un colis vers l'Afrique, que ce soit à des proches pour des raisons professionnelles, demande un
-              minimum d'organisation. Entre le choix de l'emballage, la déclaration douanière et les délais de
-              livraison, il est important de savoir ce qu'il faut éviter et les meilleures pratiques pour un envoi
+              Envoyer un colis vers l&apos;Afrique, que ce soit à des proches pour des raisons professionnelles, demande un
+              minimum d&apos;organisation. Entre le choix de l&apos;emballage, la déclaration douanière et les délais de
+              livraison, il est important de savoir ce qu’il faut éviter et les meilleures pratiques pour un envoi
               réussi. <strong>Danemo SRL</strong>, votre partenaire de confiance, vous guide pour un envoi réussi.
             </p>
           </div>
@@ -46,13 +46,13 @@ export default function EnvoiColisAfriquePage() {
           <section className="mb-8">
             <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">Pourquoi anticiper son envoi de colis ?</h2>
             <p className="text-gray-700 mb-4">
-              Beaucoup de gens s'imaginent qu'envoyer un colis à l'étranger à la dernière minute est aussi simple de
-              l'envoyer en France. En réalité :
+              Beaucoup de gens s&apos;imaginent qu&apos;envoyer un colis à l&apos;étranger à la dernière minute est aussi simple de
+              l&apos;envoyer en France. En réalité :
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>
                 Vous <strong>choisissez</strong> la <strong>meilleure date de départ</strong> (sans départs pour
-                l'étranger samedi ?)
+                l&apos;étranger samedi ?)
               </li>
               <li>
                 Vous <strong>évitez</strong> les <strong>risques de blocage administratif</strong>
@@ -65,7 +65,7 @@ export default function EnvoiColisAfriquePage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">1. Choisissez un emballage solide et sécurisé</h2>
-            <p className="text-gray-700 mb-4">Un bon emballage, c'est la base. Utilisez :</p>
+            <p className="text-gray-700 mb-4">Un bon emballage, c&apos;est la base. Utilisez :</p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>
                 Des <strong>cartons renforcés</strong>
@@ -84,7 +84,7 @@ export default function EnvoiColisAfriquePage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">2. Étiquetez correctement votre colis</h2>
-            <p className="text-gray-700 mb-4">Assurez l'étiquetage :</p>
+            <p className="text-gray-700 mb-4">Assurez l&apos;étiquetage :</p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
               <li>
                 Le <strong>nom complet</strong> du destinataire
@@ -112,22 +112,22 @@ export default function EnvoiColisAfriquePage() {
                 De <strong>faciliter</strong> le passage en douane
               </li>
               <li>
-                D'<strong>assurer</strong> vos objets interdits
+                D&apos;<strong>assurer</strong> vos objets interdits
               </li>
               <li>
-                D'<strong>estimer votre colis à sa juste</strong> valeur
+                D’<strong>estimer votre colis à sa juste</strong> valeur
               </li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">4. Vérifiez les objets autorisés à l'envoi</h2>
+            <h2 className="text-2xl font-extrabold text-[#14171a] mb-4">4. Vérifiez les objets autorisés à l&apos;envoi</h2>
             <p className="text-gray-700 mb-4">
               Chaque pays a ses restrictions. Par exemple : certains produits électroniques, médicaments ou cosmétiques
-              peuvent être interdits ou soumis à des conditions d'entrée.
+              peuvent être interdits ou soumis à des conditions d&apos;entrée.
             </p>
             <p className="text-gray-700">
-              <strong>Assurez</strong>-vous d'envoyer des produits autorisés ou de grande valeur sans protection
+              <strong>Assurez</strong>-vous d&apos;envoyer des produits autorisés ou de grande valeur sans protection
               particulière.
             </p>
           </section>
@@ -142,7 +142,7 @@ export default function EnvoiColisAfriquePage() {
                 Vos colis sont <strong>chargés en toute sécurité</strong>
               </li>
               <li>
-                Vous bénéficiez d'un <strong>suivi personnalisé</strong>
+                Vous bénéficiez d&apos;un <strong>suivi personnalisé</strong>
               </li>
               <li>
                 Vous êtes informé des <strong>délais de départ et des délais estimés de livraison</strong>

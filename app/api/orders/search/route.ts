@@ -6,37 +6,31 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const tracking = searchParams.get('tracking')
-    const email = searchParams.get('email')
 
-    if (!tracking && !email) {
+    if (!tracking) {
       return NextResponse.json(
-        { success: false, error: 'Numéro de suivi ou email requis' },
+        { success: false, error: 'Numéro de suivi requis' },
         { status: 400 }
       )
     }
 
-    const matchingOrder = tracking ? await ordersApi.getByOrderNumber(tracking) : null
-    const orders = matchingOrder
-      ? [matchingOrder]
-      : email
-        ? await ordersApi.search(email)
-        : []
+    let orders: any[] = []
+    const trimmed = String(tracking).trim()
+    let order = await ordersApi.getByOrderNumber(trimmed)
+    if (!order) order = await ordersApi.getFirstByContainerCode(trimmed)
+    orders = order ? [order] : []
 
-    // Retourner seulement les informations publiques (sans données sensibles)
-    const publicOrders = orders.map(order => ({
-      id: order.id,
+    // Le suivi public ne divulgue ni coordonnées ni informations financières.
+    const publicOrders = orders.map((order) => ({
       order_number: order.order_number,
-      client_name: order.client_name,
-      client_email: order.client_email,
       service_type: order.service_type,
       origin: order.origin,
       destination: order.destination,
-      weight: order.weight,
-      value: order.value,
       status: order.status,
       estimated_delivery: order.estimated_delivery,
-      created_at: order.created_at,
-      updated_at: order.updated_at
+      updated_at: order.updated_at,
+      container_code: order.container_code ?? null,
+      container_status: order.container_status ?? null,
     }))
 
     return NextResponse.json({ success: true, data: publicOrders })
