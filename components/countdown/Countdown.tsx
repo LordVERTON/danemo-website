@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from "react";
 
 // Date de départ fixe (fuseau horaire explicite : Europe/Brussels = UTC+2 en été)
-const DEPARTURE_DATE = "2026-08-29T15:00:00+02:00";
+const DEPARTURE_DATE = "2026-09-05T15:00:00+02:00";
 
 interface TimeUnitProps {
   value: number;
