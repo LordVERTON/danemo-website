@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
     
     const stats = await utils.getStats(startDate || undefined)
     
-    return NextResponse.json({ success: true, data: stats })
+    return NextResponse.json(
+      { success: true, data: stats },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
   } catch (error) {
     console.error('Error fetching stats:', error)
     return NextResponse.json(

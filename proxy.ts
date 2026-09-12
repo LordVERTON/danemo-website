@@ -152,7 +152,7 @@ export async function proxy(request: NextRequest) {
       )
     }
 
-    const isAdminOnlyApi = ["/api/stats", "/api/employees", "/api/admin", "/api/health", "/api/test-connection"].some(
+    const isAdminOnlyApi = ["/api/employees", "/api/admin", "/api/health", "/api/test-connection"].some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
     )
     const isOperatorAllowedAdminApi = ["/api/admin/articles", "/api/admin/article-revisions", "/api/admin/media"].some(

@@ -34,7 +34,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (status !== "authenticated") return
 
-    fetch("/api/stats")
+    fetch("/api/stats", { cache: "no-store" })
       .then((response) => response.json())
       .then((result) => {
         if (result.success) setStats(result.data)
