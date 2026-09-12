@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 import { recordBusinessAudit } from '@/lib/business-audit'
+import { isAllowedOrderStatusTransition, isOrderStatus } from '@/lib/order-status'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -31,7 +32,7 @@ export async function GET(
       order = await ordersApi.getById(id)
     } else {
       // Try to get by QR code
-      order = await ordersApi.getByQr(id)
+      order = await ordersApi.getByQr(id) || await ordersApi.getByOrderNumber(id)
     }
     
     if (!order) {
@@ -108,6 +109,15 @@ export async function PUT(
         { success: false, error: 'Order not found' },
         { status: 404 }
       )
+    }
+
+    if ('status' in orderData && orderData.status !== oldOrder.status) {
+      if (!isOrderStatus(orderData.status) || !isAllowedOrderStatusTransition(oldOrder.status, orderData.status)) {
+        return NextResponse.json(
+          { success: false, error: 'Ce changement de statut n’est pas autorisé pour cette commande.' },
+          { status: 400 },
+        )
+      }
     }
     
     const sanitizeRecipient = () => {

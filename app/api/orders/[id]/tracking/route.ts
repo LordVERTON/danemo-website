@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { trackingApi, ordersApi } from '@/lib/database'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 import { recordBusinessAudit } from '@/lib/business-audit'
+import { getDisplayTrackingDescription } from '@/lib/tracking-messages'
+import { isAllowedOrderStatusTransition, isOrderStatus } from '@/lib/order-status'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -39,8 +41,12 @@ export async function GET(
     }
     
     const events = await trackingApi.getByOrderId(orderId)
+    const displayEvents = events.map((event) => ({
+      ...event,
+      description: getDisplayTrackingDescription(event.status, event.description),
+    }))
     
-    return NextResponse.json({ success: true, data: events })
+    return NextResponse.json({ success: true, data: displayEvents })
   } catch (error) {
     console.error('Error fetching tracking events:', error)
     return NextResponse.json(
@@ -86,12 +92,21 @@ export async function POST(
       )
     }
 
+    if (body.status && body.status !== order.status) {
+      if (!isOrderStatus(body.status) || !isAllowedOrderStatusTransition(order.status, body.status)) {
+        return NextResponse.json(
+          { success: false, error: 'Ce changement de statut n’est pas autorisé pour cette commande.' },
+          { status: 400 },
+        )
+      }
+    }
+
     // Ajouter l'événement
     const event = await trackingApi.addEvent({
       order_id: orderId,
       status: body.status || order.status,
       location: body.location || null,
-      description: body.description || (isId ? null : `Scan QR: ${id}`),
+      description: getDisplayTrackingDescription(body.status || order.status, body.description),
       operator: body.operator || null,
       event_date: body.event_date || new Date().toISOString(),
     })
