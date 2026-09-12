@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase"
 import { requireStaffApiAccess } from "@/lib/staff-api-auth"
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ qr: string }> }) {
-  const accessError = await requireStaffApiAccess()
+export async function GET(request: NextRequest, context: { params: Promise<{ qr: string }> }) {
+  const accessError = await requireStaffApiAccess(request)
   if (accessError) return accessError
   try {
     const { qr } = await context.params
