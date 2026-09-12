@@ -299,7 +299,10 @@ export const utils = {
 
     // On récupère le plus grand numéro existant pour l'année courante,
     // plutôt que de se baser sur un simple COUNT (qui peut être faux si des lignes sont supprimées)
-    const { data, error } = await supabase
+    // Cette opération s'exécute uniquement côté serveur (via les Route Handlers)
+    // et doit pouvoir lire les commandes malgré les règles RLS appliquées au
+    // client anon. L'accès applicatif est vérifié par les handlers appelants.
+    const { data, error } = await (supabaseAdmin as typeof supabase)
       .from('orders')
       .select('order_number')
       .like('order_number', `DN${year}%`)
