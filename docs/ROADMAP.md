@@ -32,6 +32,10 @@
 
 ### À finaliser
 
+- [ ] **Réception Bruxelles.** Formaliser dans l’application le parcours terrain : accueil du client, déchargement, formulaire, conditionnement, informations d’envoi, prix négocié, enregistrement, étiquettes et explication du suivi. Associer chaque étape à un opérateur, un horodatage et un état « à faire / fait / bloqué ».
+- [ ] **Contrôle avant prise en charge.** Avant de confirmer une commande, imposer une checklist : expéditeur et destinataire complets, contenu/quantité/poids, destination, prix convenu et mode de règlement, conditions de conditionnement, étiquette imprimée et canal de notification choisi.
+- [ ] **Tarification et négociation.** Enregistrer le tarif initial, la remise éventuelle, le prix final validé, le motif et l’opérateur ; préserver l’historique et empêcher une modification silencieuse après confirmation.
+- [ ] **Conditionnement et réception.** Ajouter le nombre de colis, dimensions, poids constaté, type de protection, photos facultatives avant/après filmage, anomalies et accord client. Les photos doivent rester internes et soumises à une durée de conservation définie.
 - [ ] Décider si l’unité suivie par QR est la commande/colis (comportement actuel), le client regroupant ses colis actifs, ou les deux ; documenter la compatibilité des QR existants.
 - [ ] Définir les statuts officiels de commande et de conteneur, leurs transitions autorisées et les notifications associées.
 - [ ] Créer les actions terrain « Réception Douala », « Réception Yaoundé » et « Retrait/livraison » avec lieu, horodatage, opérateur et preuve de remise validée.
@@ -56,10 +60,11 @@
 ### Parcours à rendre rapides et sûrs
 
 - [ ] **Accueil opérateur.** Afficher une file « À traiter » (suivis anciens, paiements incomplets, départs/arrivées proches, erreurs) et les actions Rechercher, Scanner, Créer une commande.
+- [ ] **Assistant de réception Bruxelles.** Proposer un écran en huit étapes, utilisable sur mobile/tablette, qui conserve le brouillon : accueil, formulaire client, conditionnement, informations d’envoi, tarif, création/étiquettes, suivi client, clôture. Une étape « problème » doit permettre de signaler l’incident au responsable et de suivre sa résolution.
 - [ ] **Recherche globale.** Rechercher référence, QR, client ou conteneur depuis l’en-tête/accueil, conserver filtres et requête dans l’URL et fournir un état vide utile.
-- [ ] **Fiche commande.** Réunir client, trajet, statut, conteneur, paiement, QR, documents et historique dans une même fiche orientée action.
+- [ ] **Fiche commande.** Réunir client, trajet, statut, conteneur, paiement, QR, documents et historique dans une même fiche orientée action, avec un bloc « réception Bruxelles » (conditionnement, nombre de colis, étiquettes, tarif final, incident éventuel).
 - [ ] **Suivi guidé.** Distinguer ajout de note et changement de statut ; préremplir date/opérateur, afficher l’historique et confirmer le changement.
-- [ ] **Scan en deux temps.** Identifier d’abord la commande, puis proposer uniquement les actions/états valides et la prochaine action après succès.
+- [x] **Scan en deux temps.** Identifier d’abord la commande, afficher ses informations, puis proposer uniquement les actions/états valides et la prochaine action après succès.
 - [ ] **Statut conteneur.** Avant confirmation, afficher ancien/nouveau statut, ETD/ETA, commandes, destinataires et conséquence de notification ; séparer résultat métier et résultat d’envoi.
 - [ ] **Recherche et filtres mobiles.** Empiler les contrôles sous `sm`, conserver les valeurs après retour/erreur et éviter toute largeur incompatible avec 320 px.
 - [ ] **Cibles tactiles et clavier.** Atteindre 44 px minimum (48 px pour actions critiques), garantir focus, ordre de tabulation, fermeture explicite et bouton d’action accessible avec le clavier mobile.
@@ -82,6 +87,8 @@
 
 ### Notifications et communication
 
+- [ ] **Notification de prise en charge.** À la confirmation, envoyer au client le numéro de colis, la destination, le lien de suivi prérempli, les trois étapes d’utilisation du tracking et un moyen de contact vérifié. Enregistrer le canal, la langue, la date, le destinataire et le résultat d’envoi sans bloquer la confirmation métier.
+- [ ] **Explication des statuts.** Afficher dans le suivi et partager à l’accueil une définition client simple de chaque statut, ainsi que la prochaine action attendue ; maintenir ces libellés dans les modèles de messages.
 - [ ] Créer un centre de messagerie avec modèles versionnés, variables documentées, aperçu, envoi de test, préférence de langue/canal et historique de délivrabilité.
 - [ ] Rendre les destinataires, canaux et modèles configurables sans permettre une diffusion non consentie.
 - [ ] Ajouter une aide contextuelle dans les formulaires pour les termes métier et valeurs attendues.
@@ -121,6 +128,7 @@
 - [ ] Pour chaque vidéo mobile, valider d’abord le scénario à 360 px, 390 px et sur iPhone ou Android réel ; employer uniquement des données fictives.
 - [ ] Choisir le modèle QR : commande/colis, client, ou les deux.
 - [ ] Valider les étapes Douala, Yaoundé, retrait/livraison et la preuve de remise.
+- [ ] Valider le parcours Bruxelles avec l’équipe entrepôt : responsable de chaque étape, temps cible, matériel requis (eau, film, balance, imprimante), règles de négociation, traitement des incidents et critère exact de « prise en charge ».
 - [ ] Définir les canaux obligatoires par événement (e-mail, SMS, WhatsApp, portail), les destinataires et le consentement applicable aux messages transactionnels.
 - [ ] Décider si le portail client doit être authentifié.
 - [ ] Choisir les fournisseurs/API de paiement, transporteurs et douanes avant toute intégration.

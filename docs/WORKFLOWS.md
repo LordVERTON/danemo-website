@@ -35,10 +35,10 @@
 
 **Acteurs :** opérateur, administrateur.
 
-1. L’équipe recherche ou crée le client, puis renseigne expéditeur, destinataire, service, trajet et informations de commande.
-2. La commande reçoit un numéro, un statut initial et un QR ; le fret maritime peut être associé à un conteneur.
-3. Les règlements sont enregistrés au niveau client et la progression est calculée à partir des commandes et paiements.
-4. La fiche client permet d’émettre une facture PDF, une facture récapitulative et une étiquette QR.
+1. À Bruxelles, l’équipe accueille le client, aide au déchargement et renseigne le formulaire ; elle conditionne les colis et confirme les informations d’envoi.
+2. Elle calcule puis valide le tarif, crée ou retrouve le client, enregistre la commande et imprime l’étiquette QR. La commande reçoit un numéro, un statut initial et peut être associée à un conteneur pour le fret maritime.
+3. Elle explique le suivi, transmet le numéro de colis et clôture la réception. Un problème est signalé au responsable et reste suivi jusqu’à résolution.
+4. Les règlements sont enregistrés au niveau client et la progression est calculée à partir des commandes et paiements ; la fiche client permet d’émettre une facture PDF et une facture récapitulative.
 
 **Résultat attendu :** commande rattachée à son client, son conteneur éventuel et ses documents.  
 **Détail :** [02 — Client, commande et règlement](workflows/02-client-commande-reglement.md).

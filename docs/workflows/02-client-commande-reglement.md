@@ -30,6 +30,27 @@ Gérer le client, sa commande logistique, ses règlements et les documents opér
 9. La fiche permet la suppression définitive d'un client sans commande uniquement. L'opérateur saisit exactement son nom pour confirmer ; l'API vérifie elle aussi cette confirmation avant de supprimer et d'auditer l'action.
 10. Le menu « Plus d’actions » de chaque commande permet également sa suppression après confirmation explicite, puis la fiche est rechargée.
 
+## Parcours opérationnel — Entrepôt de Bruxelles
+
+Ce parcours décrit la procédure métier cible communiquée par l’équipe Bruxelles. Les champs et l’assistant dédiés restent à implémenter ; les éléments déjà disponibles sont la création client/commande, le QR, l’étiquette et le suivi.
+
+| Étape | Action équipe | Résultat à conserver dans l’application |
+| --- | --- | --- |
+| 1. Accueil | Accueillir le client, proposer une bouteille d’eau, comprendre sa demande et aider au déchargement. | Heure d’arrivée, opérateur et éventuel besoin d’assistance. |
+| 2. Formulaire | Remettre ou renseigner le formulaire des informations client. | Identité, téléphone, e-mail si disponible et adresse vérifiés. |
+| 3. Conditionnement | Filmer/protéger le colis, répondre aux questions et expliquer les mesures de sécurité. | Nombre de colis, poids/dimensions constatés, conditionnement, photos et anomalies éventuelles. |
+| 4. Informations d’envoi | Confirmer expéditeur, destinataire, contenu, trajet et destination. | Coordonnées expéditeur/destinataire, contenu, quantité, origine et destination. |
+| 5. Prix | Calculer le prix ; si nécessaire, négocier puis faire valider le montant final. | Tarif initial, remise/motif éventuel, prix final, opérateur et statut du règlement. |
+| 6. Enregistrement | Créer/reprendre le client et la commande ; imprimer puis apposer l’étiquette. | Référence, QR, statut initial, étiquette imprimée et lien éventuel au conteneur. |
+| 7. Tracking | Transmettre le numéro de colis et expliquer les statuts ainsi que l’accès au suivi. | Canal utilisé, langue, date de notification et résultat d’envoi. |
+| 8. Clôture | Remercier le client et confirmer le prochain point de contact. | Réception clôturée ou signalement d’un problème. |
+
+En cas de problème, l’opérateur consigne le motif, les informations nécessaires et l’action prise, puis le signale au responsable. Le responsable accuse réception, consigne sa décision et clôture ou relance l’incident. La création de commande ne doit pas être bloquée par une notification en échec, mais le client doit pouvoir être recontacté par un canal alternatif.
+
+### Message de prise en charge
+
+Lorsqu’une commande est confirmée après la réception, l’e-mail client doit indiquer la prise en charge, le numéro de colis, la destination, un lien de suivi prérempli et le moyen de contact. Le modèle actuellement envoyé pour le statut `confirmed` est aligné sur cette formulation ; l’adresse de destination provient de la commande.
+
 ## Diagramme principal
 
 ```mermaid
@@ -84,7 +105,7 @@ flowchart TD
 
 ## Règles métier et sécurité
 
-- Statuts client : `active`, `inactive`, `archived`; statuts commande : `pending`, `confirmed`, `in_progress`, `completed`, `cancelled`.
+- Statuts client : `active`, `inactive`, `archived`; statuts commande : `pending`, `confirmed`, `in_progress`, `completed`, `cancelled`. Les transitions de commande sont uniquement : `pending` → `confirmed` ou `cancelled`, `confirmed` → `in_progress` ou `cancelled`, puis `in_progress` → `completed`. Les statuts `completed` et `cancelled` sont définitifs.
 - Services autorisés à la création manuelle : fret maritime/aérien, déménagement, dédouanement, négoce, colis.
 - Une association de conteneur est admise uniquement pour `fret_maritime`. L’API vérifie que l’identifiant sélectionné existe et la base maintient elle-même `container_code` depuis `container_id`.
 - Le règlement est strictement positif, en EUR, daté au format `YYYY-MM-DD`, avec l'un des modes `bank_transfer`, `cash`, `card`, `mobile`, `other`.
