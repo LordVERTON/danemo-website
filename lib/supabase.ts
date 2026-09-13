@@ -343,6 +343,120 @@ export interface Database {
           updated_at?: string
         }
       }
+      reception_workflows: {
+        Row: {
+          id: string
+          customer_id: string | null
+          order_id: string | null
+          status: 'in_progress' | 'blocked' | 'completed'
+          current_step: number
+          draft: Record<string, unknown>
+          created_by: string | null
+          created_by_email: string | null
+          started_at: string
+          completed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          customer_id?: string | null
+          order_id?: string | null
+          status?: 'in_progress' | 'blocked' | 'completed'
+          current_step?: number
+          draft?: Record<string, unknown>
+          created_by?: string | null
+          created_by_email?: string | null
+          started_at?: string
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          customer_id?: string | null
+          order_id?: string | null
+          status?: 'in_progress' | 'blocked' | 'completed'
+          current_step?: number
+          draft?: Record<string, unknown>
+          created_by?: string | null
+          created_by_email?: string | null
+          started_at?: string
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reception_step_events: {
+        Row: {
+          id: string
+          workflow_id: string
+          step: number
+          state: 'todo' | 'done' | 'blocked'
+          operator_id: string | null
+          operator_email: string | null
+          note: string | null
+          occurred_at: string
+        }
+        Insert: {
+          id?: string
+          workflow_id: string
+          step: number
+          state: 'todo' | 'done' | 'blocked'
+          operator_id?: string | null
+          operator_email?: string | null
+          note?: string | null
+          occurred_at?: string
+        }
+        Update: {
+          id?: string
+          workflow_id?: string
+          step?: number
+          state?: 'todo' | 'done' | 'blocked'
+          operator_id?: string | null
+          operator_email?: string | null
+          note?: string | null
+          occurred_at?: string
+        }
+        Relationships: []
+      }
+      reception_incidents: {
+        Row: {
+          id: string
+          workflow_id: string
+          status: 'reported' | 'acknowledged' | 'resolved'
+          description: string
+          reported_by: string | null
+          reported_at: string
+          resolution: string | null
+          resolved_by: string | null
+          resolved_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workflow_id: string
+          status?: 'reported' | 'acknowledged' | 'resolved'
+          description: string
+          reported_by?: string | null
+          reported_at?: string
+          resolution?: string | null
+          resolved_by?: string | null
+          resolved_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workflow_id?: string
+          status?: 'reported' | 'acknowledged' | 'resolved'
+          description?: string
+          reported_by?: string | null
+          reported_at?: string
+          resolution?: string | null
+          resolved_by?: string | null
+          resolved_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       // NEW: invoices table
       invoices: {
         Row: {

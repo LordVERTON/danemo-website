@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import type React from "react"
 
 import { signOut, useSession } from "next-auth/react"
 import { usePathname } from "next/navigation"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { BarChart3, BookOpen, LogOut, Menu, MessageSquare, Package, QrCode, Truck, Users, X } from "lucide-react"
+import { BarChart3, BookOpen, ClipboardCheck, LogOut, Menu, MessageSquare, Package, QrCode, Truck, Users, X } from "lucide-react"
 import Link from "next/link"
+import AdminGlobalSearch from "@/components/admin-global-search"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -26,6 +27,7 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
     { href: "/admin/containers", label: "Conteneurs", icon: Package },
     { href: "/admin/qr", label: "Scanner", icon: QrCode },
     { href: "/admin/tracking", label: "Suivi", icon: Truck },
+    { href: "/admin/reception", label: "Réception", icon: ClipboardCheck },
     { href: "/admin/analytics", label: "Analyses", icon: BarChart3, roles: ["admin"] },
     { href: "/admin/messages", label: "Messages", icon: MessageSquare, roles: ["admin"] },
     { href: "/admin/blogs", label: "Blogs", icon: BookOpen },
@@ -122,6 +124,9 @@ export default function AdminLayout({ children, title, allowedRoles }: AdminLayo
                 </DropdownMenu>
               </nav>
             </div>
+            <Suspense fallback={<span className="size-11" aria-hidden="true" />}>
+              <AdminGlobalSearch />
+            </Suspense>
           </div>
         </div>
       </header>
