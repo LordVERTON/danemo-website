@@ -149,7 +149,7 @@ export async function PUT(
           typeof orderData.recipient_phone === 'string'
             ? orderData.recipient_phone.trim()
             : orderData.recipient_phone || null
-        updated.recipient_phone = trimmed || orderData.client_phone || oldOrder.client_phone || null
+        updated.recipient_phone = trimmed || null
       }
       if ('recipient_address' in orderData) {
         const trimmed =
@@ -227,10 +227,8 @@ export async function PUT(
       client_postal_code: orderData.client_postal_code ?? oldOrder.client_postal_code,
       client_country: orderData.client_country ?? oldOrder.client_country,
       recipient_name: sanitizedOrderData.recipient_name ?? oldOrder.recipient_name,
-      recipient_phone: sanitizedOrderData.recipient_phone ?? oldOrder.recipient_phone,
       recipient_address: sanitizedOrderData.recipient_address ?? oldOrder.recipient_address,
       recipient_city: sanitizedOrderData.recipient_city ?? oldOrder.recipient_city,
-      recipient_postal_code: sanitizedOrderData.recipient_postal_code ?? oldOrder.recipient_postal_code,
       recipient_country: sanitizedOrderData.recipient_country ?? oldOrder.recipient_country,
     }
     const missingRequired = Object.entries(requiredValues)

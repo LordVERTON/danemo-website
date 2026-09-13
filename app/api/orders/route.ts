@@ -78,20 +78,28 @@ export async function POST(request: NextRequest) {
       'client_postal_code',
       'client_country',
       'recipient_name',
-      'recipient_phone',
       'recipient_address',
       'recipient_city',
-      'recipient_postal_code',
       'recipient_country',
       'service_type',
       'origin',
       'destination',
+      'description',
+      'value',
     ]
     const missingFields = requiredFields.filter(field => !String(body[field] ?? '').trim())
     
     if (missingFields.length > 0) {
       return NextResponse.json(
         { success: false, error: `Missing required fields: ${missingFields.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    const normalizedValue = Number(String(body.value).trim())
+    if (!Number.isFinite(normalizedValue) || normalizedValue < 0) {
+      return NextResponse.json(
+        { success: false, error: 'Order value must be a non-negative number' },
         { status: 400 }
       )
     }
@@ -205,17 +213,21 @@ export async function POST(request: NextRequest) {
       client_country: sanitizedClientCountry,
       recipient_name: sanitizedRecipientName || null,
       recipient_email: sanitizedRecipientEmail || null,
-      recipient_phone: body.recipient_phone.trim().substring(0, 20),
+      recipient_phone: typeof body.recipient_phone === 'string'
+        ? body.recipient_phone.trim().substring(0, 20) || null
+        : null,
       recipient_address: body.recipient_address.trim().substring(0, 200),
       recipient_city: body.recipient_city.trim().substring(0, 100),
-      recipient_postal_code: body.recipient_postal_code.trim().substring(0, 20),
+      recipient_postal_code: typeof body.recipient_postal_code === 'string'
+        ? body.recipient_postal_code.trim().substring(0, 20) || null
+        : null,
       recipient_country: body.recipient_country.trim().substring(0, 100),
       service_type: body.service_type,
       description: body.description?.trim().substring(0, 500) || null,
       origin: body.origin?.trim().substring(0, 100),
       destination: body.destination?.trim().substring(0, 100),
       weight: body.weight ? (typeof body.weight === 'string' ? body.weight.trim().substring(0, 20) : String(body.weight).substring(0, 20)) : null,
-      value: body.value ? (typeof body.value === 'string' ? body.value.trim().substring(0, 20) : String(body.value).substring(0, 20)) : null,
+      value: normalizedValue,
       // L'ETA appartient au conteneur associé ; une commande ne porte jamais de date autonome.
       estimated_delivery: null,
       container_id: containerId,
