@@ -38,7 +38,6 @@ const resources = {
   publicCustomerId: null,
   containerId: null,
   orderId: null,
-  publicOrderId: null,
   inventoryId: null,
   articleId: null,
   employeeId: null,
@@ -231,7 +230,6 @@ async function cleanup() {
     [admin, resources.employeeId && `/api/employees/${resources.employeeId}`],
     [operator, resources.inventoryId && `/api/inventory/${resources.inventoryId}`],
     [operator, resources.orderId && `/api/orders/${resources.orderId}`],
-    [admin, resources.publicOrderId && `/api/orders/${resources.publicOrderId}`],
     [operator, resources.containerId && `/api/containers/${resources.containerId}`],
     [operator, resources.customerId && `/api/customers/${resources.customerId}`],
     [admin, resources.publicCustomerId && `/api/customers/${resources.publicCustomerId}`],
@@ -272,32 +270,13 @@ async function main() {
     await expectDenied(visitor, '/api/employees', 'GET', undefined, 401)
   })
 
-  await run('l’inscription publique crée client et commande', 'visiteur', async () => {
+  await run('l’inscription publique crée une fiche client', 'visiteur', async () => {
     const payload = await expectSuccess(visitor, '/api/public/self-register', 'POST', {
       company_website: '',
       customer: { ...customerPayload(`${marker} Public`, ''), email: '' },
-      articles: [{ source: 'custom', description: 'Colis de test', quantity: 1 }],
-      shipment: {
-        service_type: 'fret_maritime',
-        origin: 'Belgique',
-        destination: "Côte d'Ivoire",
-        parcels_count: 1,
-      },
-      recipient: {
-        name: `${marker} Destinataire public`,
-        email: '',
-        phone: '+2250700000000',
-        address: '1 avenue de test',
-        city: 'Abidjan',
-        postal_code: '01 BP 1',
-        country: "Côte d'Ivoire",
-      },
     }, 201)
     resources.publicCustomerId = payload.data?.customerId
-    resources.publicOrderId = payload.data?.orderId
-    assert(resources.publicCustomerId && resources.publicOrderId && payload.data?.orderNumber, 'Inscription publique incomplète.')
-    const tracking = await expectSuccess(visitor, `/api/orders/search?tracking=${encodeURIComponent(payload.data.orderNumber)}`)
-    assert(Array.isArray(tracking.data) && tracking.data[0]?.order_number === payload.data.orderNumber, 'Commande publique introuvable.')
+    assert(resources.publicCustomerId, 'Inscription publique incomplète.')
   })
 
   await run('les sessions admin et opérateur sont valides', 'authentification', async () => {
