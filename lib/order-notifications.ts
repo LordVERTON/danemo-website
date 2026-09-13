@@ -27,17 +27,20 @@ export async function notifyOrderStatusChange(
       return null
     }
 
-    const targetEmail = order.recipient_email || order.client_email
-    const targetName = order.recipient_name || order.client_name
+    // Les mises à jour de commande sont destinées au client, jamais au
+    // destinataire du colis.
+    const targetEmail = order.client_email
 
     if (!targetEmail) {
-      console.warn('[notifications] Missing recipient email', orderId)
+      console.warn('[notifications] Missing client email', orderId)
       return null
     }
 
     const normalized = normalizeOrderStatus(status) || 'in_progress'
     const { subject, html } = buildOrderStatusEmail(normalized, {
-      recipientName: targetName,
+      // La notification peut être livrée au destinataire, mais elle s'adresse
+      // toujours au client qui a passé la commande.
+      recipientName: order.client_name,
       orderNumber: order.order_number,
       trackingUrl: buildTrackingUrl({
         orderNumber: order.order_number,

@@ -56,7 +56,7 @@ export async function notifyContainerStatusChange(
     const orderRows = (orders ?? []) as ContainerOrderRow[]
     const filteredOrders = orderRows.filter(
       (order: ContainerOrderRow) =>
-        !!(order.recipient_email || order.client_email),
+        !!order.client_email,
     )
 
     if (filteredOrders.length === 0) {
@@ -74,12 +74,13 @@ export async function notifyContainerStatusChange(
     await Promise.all(
       filteredOrders.map(async (order) => {
         try {
-          const recipientName = order.recipient_name || order.client_name
-          const recipientEmail = order.recipient_email || order.client_email
-          if (!recipientEmail) return
+          const clientEmail = order.client_email
+          if (!clientEmail) return
 
           const { subject, html } = buildContainerStatusEmail(normalized, {
-            recipientName,
+            // L'adresse de livraison peut être celle du destinataire, mais la
+            // salutation doit toujours reprendre le prénom du client.
+            recipientName: order.client_name,
             shipmentReference: order.order_number || container.code,
             orderNumber: order.order_number || null,
             containerCode: container.code || null,
@@ -90,7 +91,7 @@ export async function notifyContainerStatusChange(
             }),
             customMessage: options.customMessage,
           })
-          await sendEmail(recipientEmail as string, subject, html)
+          await sendEmail(clientEmail, subject, html)
           emailsSent += 1
         } catch (error) {
           console.error('[notifications] Failed to send email for order', order.id, error)
