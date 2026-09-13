@@ -13,7 +13,7 @@
 - [x] Contrôler les autorisations côté serveur pour toutes les routes sensibles.
 - [x] Appliquer le moindre privilège aux tables Supabase (RLS et droits directs).
 - [x] Corriger la numérotation des factures détectée par le lint SQL.
-- [ ] Valider côté client et côté serveur les champs e-mail et téléphone avant écriture en base : e-mail au format adresse valide et téléphone au format international E.164 avec indicatif pays ; normaliser les valeurs et refuser les données non conformes afin de garantir la structure des tables.
+- [x] Valider côté client et côté serveur les champs e-mail et téléphone avant écriture en base : e-mail au format adresse valide et téléphone au format international E.164 avec indicatif pays ; normaliser les valeurs et refuser les données non conformes afin de garantir la structure des tables.
 - [ ] Finaliser l’audit des secrets : rotation/révocation des anciens identifiants, traitement de la clé PEM locale et purge de l’historique Git après validation.
 - [ ] Compléter le rate limit en mémoire par une protection WAF/CDN ou un stockage partagé entre instances.
 - [ ] Formaliser mots de passe, récupération, révocation immédiate, revue périodique des rôles et MFA administrateur.

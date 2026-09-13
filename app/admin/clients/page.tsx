@@ -650,11 +650,14 @@ export default function ClientsPage() {
                     <Input
                       id="customer_phone"
                       type="tel"
+                      inputMode="tel"
                       autoComplete="tel"
+                      placeholder="+32 470 12 34 56"
                       value={newCustomer.phone}
                       onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                       required
                     />
+                    <p className="mt-1 text-xs text-muted-foreground">Indicatif pays obligatoire.</p>
                   </div>
                   <div>
                     <Label htmlFor="customer_company">Entreprise</Label>
@@ -1002,11 +1005,14 @@ export default function ClientsPage() {
                   <Input
                     id="edit_phone"
                     type="tel"
+                    inputMode="tel"
                     autoComplete="tel"
+                    placeholder="+32 470 12 34 56"
                     value={editCustomer.phone}
                     onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })}
                     required
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">Indicatif pays obligatoire.</p>
                 </div>
                 <div>
                   <Label htmlFor="edit_company">Entreprise</Label>

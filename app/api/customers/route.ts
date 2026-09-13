@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { customersApi } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
-import { normalizePhoneE164 } from '@/lib/messaging'
+import { normalizeEmail, normalizeInternationalPhoneE164 } from '@/lib/contact-validation'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 import { recordBusinessAudit } from '@/lib/business-audit'
 
@@ -84,21 +84,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validation de l'email si fourni
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const emailValue = body.email?.trim()
-    if (emailValue && !emailRegex.test(emailValue)) {
+    const rawEmail = typeof body.email === 'string' ? body.email.trim() : ''
+    const emailValue = normalizeEmail(rawEmail)
+    if (rawEmail && !emailValue) {
       return NextResponse.json(
         { success: false, error: 'Format d\'email invalide' },
         { status: 400 }
       )
     }
 
+    const phoneE164 = normalizeInternationalPhoneE164(body.phone)
+    if (!phoneE164) {
+      return NextResponse.json(
+        { success: false, error: 'Le téléphone doit inclure un indicatif pays, par exemple +32 470 12 34 56.' },
+        { status: 400 },
+      )
+    }
+
     const customer = await customersApi.create({
       name: body.name.trim(),
-      email: emailValue ? emailValue.toLowerCase() : null,
-      phone: body.phone?.trim() || null,
-      phone_e164: normalizePhoneE164(body.phone),
+      email: emailValue,
+      phone: phoneE164,
+      phone_e164: phoneE164,
       address: body.address?.trim() || null,
       city: body.city?.trim() || null,
       postal_code: body.postal_code?.trim() || null,

@@ -288,7 +288,7 @@ export interface Database {
         Update: {
           id?: string
           name?: string
-          email?: string
+          email?: string | null
           phone?: string | null
           phone_e164?: string | null
           opted_in_sms?: boolean

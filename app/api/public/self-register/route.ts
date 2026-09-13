@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { customersApi } from '@/lib/database'
+import { normalizeEmail, normalizeInternationalPhoneE164 } from '@/lib/contact-validation'
 
 const bodySchema = z.object({
   /** Anti-spam : doit rester vide */
   company_website: z.string().max(200).optional(),
   customer: z.object({
     name: z.string().trim().min(2).max(200),
-    email: z.string().trim().email().max(200).optional().or(z.literal('')),
+    email: z.string().trim().max(200).optional().or(z.literal('')),
     phone: z.string().trim().min(2).max(50),
     address: z.string().trim().min(2).max(500),
     city: z.string().trim().min(2).max(100),
@@ -37,12 +38,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Requête refusée' }, { status: 400 })
     }
 
+    const email = customer.email?.trim() ? normalizeEmail(customer.email) : null
+    if (customer.email?.trim() && !email) {
+      return NextResponse.json({ success: false, error: 'Format d’e-mail invalide.' }, { status: 400 })
+    }
+
+    const phoneE164 = normalizeInternationalPhoneE164(customer.phone)
+    if (!phoneE164) {
+      return NextResponse.json(
+        { success: false, error: 'Saisissez un téléphone international avec indicatif pays, par exemple +32 470 12 34 56.' },
+        { status: 400 },
+      )
+    }
+
     let createdCustomer
     try {
       createdCustomer = await customersApi.create({
         name: customer.name.trim(),
-        email: customer.email?.trim() ? customer.email.trim().toLowerCase() : null,
-        phone: customer.phone?.trim() || null,
+        email,
+        phone: phoneE164,
+        phone_e164: phoneE164,
         address: customer.address?.trim() || null,
         city: customer.city?.trim() || null,
         postal_code: customer.postal_code?.trim() || null,

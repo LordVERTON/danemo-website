@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { containersApi, ordersApi, utils } from '@/lib/database'
 import { supabaseAdmin } from '@/lib/supabase'
+import { normalizeEmail, normalizeInternationalPhoneE164 } from '@/lib/contact-validation'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 import { recordBusinessAudit } from '@/lib/business-audit'
 
@@ -104,20 +105,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validation des emails facultatifs
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (body.client_email && !emailRegex.test(body.client_email)) {
+    const rawClientEmail = typeof body.client_email === 'string' ? body.client_email.trim() : ''
+    const clientEmail = rawClientEmail ? normalizeEmail(rawClientEmail) : null
+    if (rawClientEmail && !clientEmail) {
       return NextResponse.json(
         { success: false, error: 'Invalid email format' },
         { status: 400 }
       )
     }
 
-    // Valider les emails facultatifs
-    if (body.recipient_email && !emailRegex.test(body.recipient_email)) {
+    const rawRecipientEmail = typeof body.recipient_email === 'string' ? body.recipient_email.trim() : ''
+    const recipientEmail = rawRecipientEmail ? normalizeEmail(rawRecipientEmail) : null
+    if (rawRecipientEmail && !recipientEmail) {
       return NextResponse.json(
         { success: false, error: 'Invalid recipient email format' },
         { status: 400 }
+      )
+    }
+
+    const clientPhone = normalizeInternationalPhoneE164(body.client_phone)
+    if (!clientPhone) {
+      return NextResponse.json(
+        { success: false, error: 'Client phone must include an international country code, for example +32 470 12 34 56' },
+        { status: 400 },
+      )
+    }
+
+    const rawRecipientPhone = typeof body.recipient_phone === 'string' ? body.recipient_phone.trim() : ''
+    const recipientPhone = rawRecipientPhone ? normalizeInternationalPhoneE164(rawRecipientPhone) : null
+    if (rawRecipientPhone && !recipientPhone) {
+      return NextResponse.json(
+        { success: false, error: 'Recipient phone must include an international country code, for example +237 6 12 34 56 78' },
+        { status: 400 },
       )
     }
 
@@ -155,11 +174,9 @@ export async function POST(request: NextRequest) {
 
     // Sanitisation des données
     const sanitizedClientName = body.client_name?.trim().substring(0, 100) || ''
-    const sanitizedClientEmail = body.client_email?.trim().toLowerCase() || ''
+    const sanitizedClientEmail = clientEmail || ''
     const sanitizedRecipientName = body.recipient_name.trim().substring(0, 100)
-    const sanitizedRecipientEmail = body.recipient_email
-      ? body.recipient_email.trim().toLowerCase()
-      : ''
+    const sanitizedRecipientEmail = recipientEmail || ''
 
     const sanitizedClientAddress = body.client_address?.trim().substring(0, 200) || null
     const sanitizedClientCity = body.client_city?.trim().substring(0, 100) || null
@@ -185,7 +202,8 @@ export async function POST(request: NextRequest) {
           .insert({
             name: sanitizedClientName || sanitizedClientEmail,
             email: sanitizedClientEmail || null,
-            phone: body.client_phone?.trim().substring(0, 20) || null,
+            phone: clientPhone,
+            phone_e164: clientPhone,
             address: sanitizedClientAddress,
             city: sanitizedClientCity,
             postal_code: sanitizedClientPostalCode,
@@ -206,16 +224,14 @@ export async function POST(request: NextRequest) {
     const sanitizedData = {
       client_name: sanitizedClientName,
       client_email: sanitizedClientEmail,
-      client_phone: body.client_phone?.trim().substring(0, 20),
+      client_phone: clientPhone,
       client_address: sanitizedClientAddress,
       client_city: sanitizedClientCity,
       client_postal_code: sanitizedClientPostalCode,
       client_country: sanitizedClientCountry,
       recipient_name: sanitizedRecipientName || null,
       recipient_email: sanitizedRecipientEmail || null,
-      recipient_phone: typeof body.recipient_phone === 'string'
-        ? body.recipient_phone.trim().substring(0, 20) || null
-        : null,
+      recipient_phone: recipientPhone,
       recipient_address: body.recipient_address.trim().substring(0, 200),
       recipient_city: body.recipient_city.trim().substring(0, 100),
       recipient_postal_code: typeof body.recipient_postal_code === 'string'

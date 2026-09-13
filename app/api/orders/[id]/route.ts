@@ -5,6 +5,7 @@ import type { Database } from '@/lib/supabase'
 import { requireStaffApiAccess } from '@/lib/staff-api-auth'
 import { recordBusinessAudit } from '@/lib/business-audit'
 import { isAllowedOrderStatusTransition, isOrderStatus } from '@/lib/order-status'
+import { normalizeEmail, normalizeInternationalPhoneE164 } from '@/lib/contact-validation'
 
 // Helper function to check if a string is a UUID
 function isUUID(str: string): boolean {
@@ -120,8 +121,50 @@ export async function PUT(
       }
     }
     
+    const rawClientEmail = typeof orderData.client_email === 'string' ? orderData.client_email.trim() : ''
+    const clientEmail = rawClientEmail ? normalizeEmail(rawClientEmail) : null
+    if ('client_email' in orderData && rawClientEmail && !clientEmail) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid client email format' },
+        { status: 400 },
+      )
+    }
+
+    const rawClientPhone = typeof orderData.client_phone === 'string' ? orderData.client_phone.trim() : ''
+    const clientPhone = rawClientPhone ? normalizeInternationalPhoneE164(rawClientPhone) : null
+    if ('client_phone' in orderData && !clientPhone) {
+      return NextResponse.json(
+        { success: false, error: 'Client phone must include an international country code, for example +32 470 12 34 56' },
+        { status: 400 },
+      )
+    }
+
+    const rawRecipientEmail = typeof orderData.recipient_email === 'string' ? orderData.recipient_email.trim() : ''
+    const recipientEmail = rawRecipientEmail ? normalizeEmail(rawRecipientEmail) : null
+    if ('recipient_email' in orderData && rawRecipientEmail && !recipientEmail) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid recipient email format' },
+        { status: 400 },
+      )
+    }
+
+    const rawRecipientPhone = typeof orderData.recipient_phone === 'string' ? orderData.recipient_phone.trim() : ''
+    const recipientPhone = rawRecipientPhone ? normalizeInternationalPhoneE164(rawRecipientPhone) : null
+    if ('recipient_phone' in orderData && rawRecipientPhone && !recipientPhone) {
+      return NextResponse.json(
+        { success: false, error: 'Recipient phone must include an international country code, for example +237 6 12 34 56 78' },
+        { status: 400 },
+      )
+    }
+
     const sanitizeRecipient = () => {
       const updated: typeof orderData = { ...orderData }
+      if ('client_email' in orderData) {
+        updated.client_email = clientEmail || null
+      }
+      if ('client_phone' in orderData) {
+        updated.client_phone = clientPhone
+      }
       if ('recipient_name' in orderData) {
         const trimmed =
           typeof orderData.recipient_name === 'string'
@@ -134,10 +177,7 @@ export async function PUT(
           null
       }
       if ('recipient_email' in orderData) {
-        const trimmed =
-          typeof orderData.recipient_email === 'string'
-            ? orderData.recipient_email.trim().toLowerCase()
-            : orderData.recipient_email || null
+        const trimmed = recipientEmail
         updated.recipient_email =
           trimmed ||
           (typeof orderData.client_email === 'string' && orderData.client_email.trim().toLowerCase()) ||
@@ -145,10 +185,7 @@ export async function PUT(
           null
       }
       if ('recipient_phone' in orderData) {
-        const trimmed =
-          typeof orderData.recipient_phone === 'string'
-            ? orderData.recipient_phone.trim()
-            : orderData.recipient_phone || null
+        const trimmed = recipientPhone
         updated.recipient_phone = trimmed || null
       }
       if ('recipient_address' in orderData) {

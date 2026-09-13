@@ -112,7 +112,8 @@ export default function NewClientFormPage() {
                   </div>
                   <div>
                     <Label htmlFor="phone" className="mb-2 block">Téléphone *</Label>
-                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleChange} disabled={disabled} required />
+                    <Input id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+32 470 12 34 56" value={formData.phone} onChange={handleChange} disabled={disabled} required aria-describedby="phone-format" />
+                    <p id="phone-format" className="mt-1 text-xs text-gray-500">Indiquez l’indicatif pays : +32, +237, +33…</p>
                   </div>
                   <div className="sm:col-span-2">
                     <Label htmlFor="address" className="mb-2 block">Adresse *</Label>
