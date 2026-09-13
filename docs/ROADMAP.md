@@ -13,6 +13,7 @@
 - [x] Contrôler les autorisations côté serveur pour toutes les routes sensibles.
 - [x] Appliquer le moindre privilège aux tables Supabase (RLS et droits directs).
 - [x] Corriger la numérotation des factures détectée par le lint SQL.
+- [ ] Valider côté client et côté serveur les champs e-mail et téléphone avant écriture en base : e-mail au format adresse valide et téléphone au format international E.164 avec indicatif pays ; normaliser les valeurs et refuser les données non conformes afin de garantir la structure des tables.
 - [ ] Finaliser l’audit des secrets : rotation/révocation des anciens identifiants, traitement de la clé PEM locale et purge de l’historique Git après validation.
 - [ ] Compléter le rate limit en mémoire par une protection WAF/CDN ou un stockage partagé entre instances.
 - [ ] Formaliser mots de passe, récupération, révocation immédiate, revue périodique des rôles et MFA administrateur.
@@ -59,9 +60,9 @@
 
 ### Parcours à rendre rapides et sûrs
 
-- [ ] **Accueil opérateur.** Afficher une file « À traiter » (suivis anciens, paiements incomplets, départs/arrivées proches, erreurs) et les actions Rechercher, Scanner, Créer une commande.
-- [ ] **Assistant de réception Bruxelles.** Proposer un écran en huit étapes, utilisable sur mobile/tablette, qui conserve le brouillon : accueil, formulaire client, conditionnement, informations d’envoi, tarif, création/étiquettes, suivi client, clôture. Une étape « problème » doit permettre de signaler l’incident au responsable et de suivre sa résolution.
-- [ ] **Recherche globale.** Rechercher référence, QR, client ou conteneur depuis l’en-tête/accueil, conserver filtres et requête dans l’URL et fournir un état vide utile.
+- [x] **Accueil opérateur.** Afficher une file « À traiter » (suivis anciens, paiements incomplets, départs/arrivées proches, erreurs) et les actions Rechercher, Scanner, Créer une commande.
+- [x] **Assistant de réception Bruxelles.** Proposer un écran en huit étapes, utilisable sur mobile/tablette, qui conserve le brouillon : accueil, formulaire client, conditionnement, informations d’envoi, tarif, création/étiquettes, suivi client, clôture. Une étape « problème » doit permettre de signaler l’incident au responsable et de suivre sa résolution.
+- [x] **Recherche globale.** Rechercher référence, QR, client ou conteneur depuis l’en-tête/accueil, conserver filtres et requête dans l’URL et fournir un état vide utile.
 - [ ] **Fiche commande.** Réunir client, trajet, statut, conteneur, paiement, QR, documents et historique dans une même fiche orientée action, avec un bloc « réception Bruxelles » (conditionnement, nombre de colis, étiquettes, tarif final, incident éventuel).
 - [ ] **Suivi guidé.** Distinguer ajout de note et changement de statut ; préremplir date/opérateur, afficher l’historique et confirmer le changement.
 - [x] **Scan en deux temps.** Identifier d’abord la commande, afficher ses informations, puis proposer uniquement les actions/états valides et la prochaine action après succès.
