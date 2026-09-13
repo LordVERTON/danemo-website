@@ -152,7 +152,7 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
   pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2])
   pdf.setFontSize(8)
   pdf.setFont('helvetica', 'normal')
-  pdf.text('www.danemo.be | info@danemo.be | 0488 64 51 83', pageWidth / 2, footerY + 8, { align: 'center' })
+  pdf.text('www.danemo.be | info@danemo.be | +32 488 64 51 83', pageWidth / 2, footerY + 8, { align: 'center' })
 
   // Impression ou téléchargement
   if (typeof window !== 'undefined') {
