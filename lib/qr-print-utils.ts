@@ -6,12 +6,7 @@ export interface QRPrintData {
   orderNumber: string
   clientName: string
   recipientName?: string | null
-  recipientPhone?: string | null
-  senderName?: string | null
-  parcelsCount?: number | null
-  serviceType?: string
-  origin?: string
-  destination?: string
+  destinationCity?: string | null
 }
 
 // Convertir WEBP en PNG dataURL pour jsPDF
@@ -35,20 +30,9 @@ function fitRect(imgW: number, imgH: number, maxW: number, maxH: number): { w: n
   return { w: imgW * ratio, h: imgH * ratio }
 }
 
-// Extraire Nom et Prénom d'un nom complet (format "Prénom Nom" ou "Nom Prénom")
-function splitName(fullName: string): { nom: string; prenom: string } {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return { nom: fullName || '—', prenom: '—' }
-  if (parts.length === 1) return { nom: parts[0], prenom: '—' }
-  // Convention française : dernier mot = nom, reste = prénom
-  const nom = parts[parts.length - 1] ?? '—'
-  const prenom = parts.slice(0, -1).join(' ') || '—'
-  return { nom, prenom }
-}
-
 /**
  * Génère un PDF imprimable avec le QR code du colis
- * Structure : Logo + Slogan | Nom | Prénom | Coordonnées | QR CODE DU COLIS | Numéro de colis
+ * Structure : en-tête avec logo | destinataire | ville de destination | QR code | pied de page
  */
 export const generateQRPrintPDF = async (data: QRPrintData) => {
   const pdf = new jsPDF('p', 'mm', 'a4')
@@ -61,8 +45,8 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
   const blackColor = [0, 0, 0] as [number, number, number]
   const grayColor = [180, 180, 180] as [number, number, number]
 
-  const displayName = data.recipientName || data.clientName
-  const { nom, prenom } = splitName(displayName)
+  const displayName = data.recipientName?.trim() || data.clientName
+  const destinationCity = data.destinationCity?.trim() || '—'
   const slogan = 'IMPORT & EXPORT GROUPAGE ET TRANSPORT MARITIME'
 
   let yPos = margin
@@ -105,33 +89,30 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
   pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2])
   pdf.rect(margin, boxTop, contentWidth, boxBottom - boxTop)
 
-  yPos += 18
+  yPos += 24
 
-  // Nom (police assez grande)
+  // Destinataire
   pdf.setFontSize(20)
   pdf.setFont('helvetica', 'bold')
-  pdf.text(nom.toUpperCase(), pageWidth / 2, yPos, { align: 'center' })
-  yPos += 12
+  const nameLines = pdf.splitTextToSize(displayName, contentWidth - 20)
+  pdf.text(nameLines, pageWidth / 2, yPos, { align: 'center' })
+  yPos += nameLines.length * 9 + 14
 
-  // Prénom (police assez grande)
-  pdf.setFontSize(20)
-  pdf.text(prenom, pageWidth / 2, yPos, { align: 'center' })
-  yPos += 8
-
-  // Informations opérationnelles utiles sur le colis.
-  pdf.setFontSize(9)
+  // Ville de destination, volontairement sans adresse, code postal ou téléphone.
+  pdf.setFontSize(11)
   pdf.setFont('helvetica', 'normal')
-  pdf.text(`Téléphone : ${data.recipientPhone || '—'}`, pageWidth / 2, yPos, { align: 'center' })
-  yPos += 6
-  pdf.text(`Destination : ${data.destination || '—'}`, pageWidth / 2, yPos, { align: 'center' })
-  yPos += 6
-  pdf.text(`Expéditeur : ${data.senderName || data.clientName || '—'}`, pageWidth / 2, yPos, { align: 'center' })
+  pdf.text('DESTINATION', pageWidth / 2, yPos, { align: 'center' })
   yPos += 11
+  pdf.setFontSize(24)
+  pdf.setFont('helvetica', 'bold')
+  const cityLines = pdf.splitTextToSize(destinationCity.toUpperCase(), contentWidth - 20)
+  pdf.text(cityLines, pageWidth / 2, yPos, { align: 'center' })
+  yPos += cityLines.length * 10 + 12
 
   // Ligne séparatrice
   pdf.setDrawColor(blackColor[0], blackColor[1], blackColor[2])
   pdf.line(margin + 20, yPos, pageWidth - margin - 20, yPos)
-  yPos += 15
+  yPos += 14
 
   // "QR CODE DU COLIS"
   pdf.setFontSize(14)
@@ -152,7 +133,7 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
     const qrSize = 50
     const qrX = (pageWidth - qrSize) / 2
     pdf.addImage(qrCodeDataURL, 'PNG', qrX, yPos, qrSize, qrSize)
-    yPos += qrSize + 12
+    yPos += qrSize + 10
   } catch (error) {
     console.error('Erreur génération QR:', error)
     pdf.setFontSize(10)
@@ -164,18 +145,6 @@ export const generateQRPrintPDF = async (data: QRPrintData) => {
   // Ligne séparatrice
   pdf.setDrawColor(blackColor[0], blackColor[1], blackColor[2])
   pdf.line(margin + 20, yPos, pageWidth - margin - 20, yPos)
-  yPos += 14
-
-  // Numéro de colis (numéro de la commande)
-  pdf.setFontSize(12)
-  pdf.setFont('helvetica', 'bold')
-  pdf.text(`Numéro de colis : ${data.orderNumber}`, pageWidth / 2, yPos, { align: 'center' })
-  yPos += 12
-
-  // Ligne séparatrice
-  pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2])
-  pdf.line(margin + 20, yPos, pageWidth - margin - 20, yPos)
-
   // ========== FOOTER ==========
   const footerY = pageHeight - 18
   pdf.setDrawColor(grayColor[0], grayColor[1], grayColor[2])

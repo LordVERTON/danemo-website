@@ -338,12 +338,8 @@ export default function ClientDetailsPage() {
         qrCode: order.qr_code || order.order_number,
         orderNumber: order.order_number,
         clientName: customer.name,
-        senderName: customer.company || customer.name,
         recipientName: order.recipient_name,
-        recipientPhone: order.recipient_phone,
-        serviceType: order.service_type,
-        origin: order.origin,
-        destination: order.destination,
+        destinationCity: order.recipient_city || order.destination,
       })
     } catch (cause: any) {
       setError(cause?.message || "Impossible d’imprimer l’étiquette QR")
