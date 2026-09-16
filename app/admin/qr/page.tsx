@@ -76,8 +76,8 @@ function QrAdminContent() {
     setError("")
   }
 
-  async function findOrder() {
-    const lookupCode = code.trim()
+  async function findOrder(codeToLookup = code) {
+    const lookupCode = codeToLookup.trim()
     if (!lookupCode) {
       setError("Saisissez ou scannez un code QR avant de rechercher la commande.")
       return
@@ -144,6 +144,7 @@ function QrAdminContent() {
                       setStatus("")
                       setResult(null)
                       setError("")
+                      void findOrder(scannedCode)
                     }}
                     trigger={<Button type="button" variant="outline" aria-label="Ouvrir la caméra"><Camera className="size-4" /></Button>}
                   />
