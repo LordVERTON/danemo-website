@@ -34,6 +34,16 @@ type ScannedOrder = {
   parcels_count?: number | null
 }
 
+function extractOrderCode(scannedValue: string) {
+  const value = scannedValue.trim()
+
+  try {
+    return new URL(value).searchParams.get("code")?.trim() || value
+  } catch {
+    return value
+  }
+}
+
 function QrAdminContent() {
   const searchParams = useSearchParams()
   const [code, setCode] = useState(searchParams.get("code") || "")
@@ -77,12 +87,13 @@ function QrAdminContent() {
   }
 
   async function findOrder(codeToLookup = code) {
-    const lookupCode = codeToLookup.trim()
+    const lookupCode = extractOrderCode(codeToLookup)
     if (!lookupCode) {
       setError("Saisissez ou scannez un code QR avant de rechercher la commande.")
       return
     }
 
+    setCode(lookupCode)
     setLookingUp(true)
     setError("")
     setResult(null)
@@ -139,12 +150,13 @@ function QrAdminContent() {
                     title="Scanner une commande"
                     description="Cadrez le QR code de la commande avec votre caméra."
                     onScan={(scannedCode) => {
-                      setCode(scannedCode)
+                      const orderCode = extractOrderCode(scannedCode)
+                      setCode(orderCode)
                       setScannedOrder(null)
                       setStatus("")
                       setResult(null)
                       setError("")
-                      void findOrder(scannedCode)
+                      void findOrder(orderCode)
                     }}
                     trigger={<Button type="button" variant="outline" aria-label="Ouvrir la caméra"><Camera className="size-4" /></Button>}
                   />
