@@ -96,10 +96,10 @@ export default function Header() {
 
             <div className="hidden lg:block">
               <Link
-                href="/contactez-nous"
+                href="/simulation-devis"
                 className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors shadow-sm shadow-orange-600/20"
               >
-                Demander un devis
+                Simuler un devis
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -141,7 +141,7 @@ export default function Header() {
             )
           })}
           <Link
-            href="/contactez-nous"
+            href="/simulation-devis"
             className="mt-4 inline-flex items-center justify-center gap-2 bg-orange-600 text-white text-base font-semibold px-5 py-3.5 rounded-xl"
           >
             Demander un devis
