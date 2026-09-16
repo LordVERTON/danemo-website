@@ -35,3 +35,8 @@ supabase/.temp/
 
 # Sensitive local certificates
 certificates/
+
+# Personal developer billing (outside the product scope)
+/output/
+/billing-local/
+/.invoice-generator.local.*
