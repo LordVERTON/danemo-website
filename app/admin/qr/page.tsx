@@ -1,9 +1,10 @@
 "use client"
 
-import { Suspense, useEffect, useRef, useState } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Camera, Loader2, MapPin, QrCode, ScanLine } from "lucide-react"
 import AdminLayout from "@/components/admin-layout"
+import QRScanner from "@/components/qr-scanner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,17 +34,23 @@ type ScannedOrder = {
   parcels_count?: number | null
 }
 
+function extractOrderCode(scannedValue: string) {
+  const value = scannedValue.trim()
+
+  try {
+    return new URL(value).searchParams.get("code")?.trim() || value
+  } catch {
+    return value
+  }
+}
+
 function QrAdminContent() {
   const searchParams = useSearchParams()
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const frameRef = useRef<number | null>(null)
   const [code, setCode] = useState(searchParams.get("code") || "")
   const [scannedOrder, setScannedOrder] = useState<ScannedOrder | null>(null)
   const [status, setStatus] = useState<OrderStatus | "">("")
   const [location, setLocation] = useState("")
   const [description, setDescription] = useState("")
-  const [cameraOpen, setCameraOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [lookingUp, setLookingUp] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
@@ -67,38 +74,6 @@ function QrAdminContent() {
     }
   }
 
-  function closeCamera() {
-    if (frameRef.current) cancelAnimationFrame(frameRef.current)
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
-    setCameraOpen(false)
-  }
-
-  async function openCamera() {
-    setError("")
-    if (!("mediaDevices" in navigator)) { setError("La caméra n’est pas disponible dans ce navigateur."); return }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      streamRef.current = stream
-      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play() }
-      setCameraOpen(true)
-      const Detector = (window as any).BarcodeDetector
-      if (!Detector) { setError("La détection automatique n’est pas prise en charge ici. Saisissez le code manuellement."); return }
-      const detector = new Detector({ formats: ["qr_code"] })
-      const detect = async () => {
-        if (!videoRef.current || !streamRef.current) return
-        try {
-          const codes = await detector.detect(videoRef.current)
-          if (codes[0]?.rawValue) { setCode(codes[0].rawValue); closeCamera(); return }
-        } catch { /* la caméra peut ne pas être prête sur la première image */ }
-        frameRef.current = requestAnimationFrame(detect)
-      }
-      frameRef.current = requestAnimationFrame(detect)
-    } catch { setError("Impossible d’accéder à la caméra. Vérifiez l’autorisation du navigateur.") }
-  }
-
-  useEffect(() => () => closeCamera(), [])
-
   const nextStatuses = scannedOrder ? getAllowedNextOrderStatuses(scannedOrder.status) : []
 
   function resetScan() {
@@ -111,13 +86,14 @@ function QrAdminContent() {
     setError("")
   }
 
-  async function findOrder() {
-    const lookupCode = code.trim()
+  async function findOrder(codeToLookup = code) {
+    const lookupCode = extractOrderCode(codeToLookup)
     if (!lookupCode) {
       setError("Saisissez ou scannez un code QR avant de rechercher la commande.")
       return
     }
 
+    setCode(lookupCode)
     setLookingUp(true)
     setError("")
     setResult(null)
@@ -170,10 +146,23 @@ function QrAdminContent() {
                 <Label>1. Code QR ou numéro de commande</Label>
                 <div className="flex gap-2">
                   <Input required value={code} onChange={(event) => { setCode(event.target.value); setScannedOrder(null); setStatus(""); setResult(null) }} placeholder="ORD-…" />
-                  <Button type="button" variant="outline" onClick={cameraOpen ? closeCamera : openCamera} aria-label={cameraOpen ? "Fermer la caméra" : "Ouvrir la caméra"}><Camera className="size-4" /></Button>
+                  <QRScanner
+                    title="Scanner une commande"
+                    description="Cadrez le QR code de la commande avec votre caméra."
+                    onScan={(scannedCode) => {
+                      const orderCode = extractOrderCode(scannedCode)
+                      setCode(orderCode)
+                      setScannedOrder(null)
+                      setStatus("")
+                      setResult(null)
+                      setError("")
+                      void findOrder(orderCode)
+                    }}
+                    trigger={<Button type="button" variant="outline" aria-label="Ouvrir la caméra"><Camera className="size-4" /></Button>}
+                  />
                 </div>
               </div>
-              <Button type="button" className="w-full" variant="outline" onClick={findOrder} disabled={lookingUp || !code.trim()}>
+              <Button type="button" className="w-full" variant="outline" onClick={() => void findOrder()} disabled={lookingUp || !code.trim()}>
                 {lookingUp ? <Loader2 className="mr-2 size-4 animate-spin" /> : <QrCode className="mr-2 size-4" />}
                 Identifier la commande
               </Button>
@@ -218,9 +207,8 @@ function QrAdminContent() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Détails de la commande</CardTitle><CardDescription>La lecture caméra utilise les capacités natives du navigateur.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Détails de la commande</CardTitle><CardDescription>Le scanner est compatible avec les navigateurs qui ne proposent pas la détection QR native.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
-            {cameraOpen && <video ref={videoRef} className="aspect-video w-full rounded-lg bg-slate-950 object-cover" muted playsInline />}
             {error && <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
             {result && <div className="rounded-lg border border-green-200 bg-green-50 p-4"><Badge>Suivi mis à jour</Badge><p className="mt-3 font-medium">{result.item.order_number}</p><p className="text-sm text-muted-foreground">Nouveau statut : {ORDER_STATUS_LABELS[result.item.status as OrderStatus]}</p></div>}
             {scannedOrder && <div className="space-y-3 rounded-lg border bg-slate-50 p-4 text-sm">
@@ -230,7 +218,7 @@ function QrAdminContent() {
               {nextStatuses.length > 0 && <p className="border-t pt-3 text-muted-foreground">Prochaine action : <span className="font-medium text-foreground">{getOrderStatusActionLabel(nextStatuses[0])}</span></p>}
             </div>}
             {result && <Button type="button" variant="outline" className="w-full" onClick={resetScan}>Scanner une autre commande</Button>}
-            {!cameraOpen && !scannedOrder && !result && <div className="flex min-h-48 flex-col items-center justify-center rounded-lg border border-dashed text-center text-muted-foreground"><QrCode className="mb-3 size-8" /><p>Scannez un code, puis identifiez la commande avant de choisir l’action suivante.</p></div>}
+            {!scannedOrder && !result && <div className="flex min-h-48 flex-col items-center justify-center rounded-lg border border-dashed text-center text-muted-foreground"><QrCode className="mb-3 size-8" /><p>Scannez un code, puis identifiez la commande avant de choisir l’action suivante.</p></div>}
           </CardContent>
         </Card>
       </div>
