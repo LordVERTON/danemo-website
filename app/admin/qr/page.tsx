@@ -150,7 +150,7 @@ function QrAdminContent() {
                   />
                 </div>
               </div>
-              <Button type="button" className="w-full" variant="outline" onClick={findOrder} disabled={lookingUp || !code.trim()}>
+              <Button type="button" className="w-full" variant="outline" onClick={() => void findOrder()} disabled={lookingUp || !code.trim()}>
                 {lookingUp ? <Loader2 className="mr-2 size-4 animate-spin" /> : <QrCode className="mr-2 size-4" />}
                 Identifier la commande
               </Button>
