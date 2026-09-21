@@ -6,7 +6,7 @@ import { jsPDF } from "jspdf";
 const ROOT = resolve(".");
 const DATA_DIR = resolve("billing", "devis");
 const PROFILE_PATH = resolve("billing", "profile.local.json");
-const OUTPUT_DIR = resolve("output");
+const OUTPUT_DIR = resolve("billing", "output");
 const LOGO_PATH = resolve("scripts", "invoice-template-logo.png");
 const MONTH_NAMES = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
