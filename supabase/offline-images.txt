@@ -1,0 +1,12 @@
+# Docker images required by the pinned Supabase CLI for this project.
+# This manifest was captured after a successful `supabase start` with CLI 2.117.0.
+public.ecr.aws/supabase/studio:2026.08.24-sha-8ec45b2
+public.ecr.aws/supabase/postgres-meta:v0.99.0
+public.ecr.aws/supabase/edge-runtime:v1.74.3
+public.ecr.aws/supabase/storage-api:v1.54.0
+public.ecr.aws/supabase/postgrest:v13.0.4
+public.ecr.aws/supabase/realtime:v2.130.0
+public.ecr.aws/supabase/mailpit:v1.30.2
+public.ecr.aws/supabase/gotrue:v2.189.0
+public.ecr.aws/supabase/kong:2.8.1
+public.ecr.aws/supabase/postgres:17.4.1.074
