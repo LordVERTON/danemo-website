@@ -55,7 +55,7 @@ npm run billing:quote -- --month 2026-09
 ```
 
 Cela crée ou utilise [`billing/devis/2026-09.json`](billing/devis/2026-09.json)
-et produit `output/Devis-DANEMO-Septembre-2026.pdf`. Les exécutions suivantes
+et produit `billing/output/Devis-DANEMO-Septembre-2026.pdf`. Les exécutions suivantes
 du même mois relisent le JSON et conservent vos ajustements manuels.
 
 Pour repartir des commits du mois et recréer les objets automatiquement, utilisez
@@ -95,7 +95,7 @@ npm run billing:invoice -- --month 2026-09
 ```
 
 Elle utilise les mêmes objets, montants et coordonnées, et est enregistrée dans
-`output/Facture-DANEMO-Septembre-2026.pdf`. L’outil refuse de créer une facture
+`billing/output/Facture-DANEMO-Septembre-2026.pdf`. L’outil refuse de créer une facture
 tant que le devis est encore au statut `draft`.
 
 Pour afficher la syntaxe complète :
