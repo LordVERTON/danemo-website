@@ -402,6 +402,7 @@ async function main() {
 
   await run('les règlements, la facture et l’inventaire fonctionnent', 'gestion opérationnelle', async () => {
     const payment = await expectSuccess(operator, `/api/customers/${resources.customerId}/payments`, 'POST', {
+      order_id: resources.orderId,
       amount: 25,
       currency: 'EUR',
       paid_at: '2026-01-15',
@@ -409,6 +410,7 @@ async function main() {
       reference: `${marker}-PAY`,
     }, 201)
     assert(payment.data?.customer_id === resources.customerId, 'Règlement non rattaché au client.')
+    assert(payment.data?.order_id === resources.orderId, 'Règlement non rattaché à la commande.')
 
     const invoice = await expectSuccess(operator, `/api/customers/${resources.customerId}/invoices`, 'POST', {
       order_id: resources.orderId,
@@ -416,6 +418,20 @@ async function main() {
       due_date: '2026-02-15',
     }, 201)
     assert(invoice.data?.status === 'draft', 'Facture non créée en brouillon.')
+
+    const finalPayment = await expectSuccess(operator, `/api/customers/${resources.customerId}/payments`, 'POST', {
+      order_id: resources.orderId,
+      amount: 275,
+      currency: 'EUR',
+      paid_at: '2026-01-20',
+      payment_method: 'bank_transfer',
+      reference: `${marker}-PAY-FINAL`,
+    }, 201)
+    assert(finalPayment.data?.order_id === resources.orderId, 'Règlement final non rattaché à la commande.')
+
+    const customerAfterPayment = await expectSuccess(operator, `/api/customers/${resources.customerId}`)
+    const refreshedInvoice = customerAfterPayment.data?.invoices?.find((item) => item.id === invoice.data?.id)
+    assert(refreshedInvoice?.status === 'paid', 'La facture ne passe pas à paid après le règlement complet.')
 
     const inventory = await expectSuccess(operator, '/api/inventory', 'POST', {
       type: 'colis',

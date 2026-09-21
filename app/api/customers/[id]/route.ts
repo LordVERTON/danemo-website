@@ -33,7 +33,7 @@ export async function GET(
 
     const { data: payments, error: paymentsError } = await (supabaseAdmin as any)
       .from('customer_payments')
-      .select('id, customer_id, amount, currency, paid_at, payment_method, reference, notes, created_at, updated_at')
+      .select('id, customer_id, order_id, amount, currency, paid_at, payment_method, reference, notes, created_at, updated_at')
       .eq('customer_id', id)
       .order('paid_at', { ascending: false })
       .order('created_at', { ascending: false })

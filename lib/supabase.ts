@@ -309,6 +309,7 @@ export interface Database {
         Row: {
           id: string
           customer_id: string
+          order_id: string | null
           amount: number
           currency: string
           paid_at: string
@@ -321,6 +322,7 @@ export interface Database {
         Insert: {
           id?: string
           customer_id: string
+          order_id?: string | null
           amount: number
           currency?: string
           paid_at?: string
@@ -333,6 +335,7 @@ export interface Database {
         Update: {
           id?: string
           customer_id?: string
+          order_id?: string | null
           amount?: number
           currency?: string
           paid_at?: string

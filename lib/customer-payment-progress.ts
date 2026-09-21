@@ -3,6 +3,7 @@ export type PaymentStatus = 'unpaid' | 'partial' | 'paid'
 export interface CustomerPaymentRecord {
   id: string
   customer_id?: string
+  order_id?: string | null
   amount: number | string
   currency?: string | null
   paid_at: string
@@ -55,9 +56,9 @@ function resolvePaymentStatus(totalAmount: number, paidAmount: number): PaymentS
 }
 
 /**
- * Les règlements sont enregistrés au niveau du client, sans commande obligatoire.
- * L'affectation par ancienneté des commandes sert uniquement à rendre l'avancement
- * lisible dans l'interface et sur la facture ; elle ne crée pas d'imputation comptable.
+ * Chaque règlement est imputé à la commande choisie. Les anciens règlements sans
+ * `order_id` restent visibles, mais ne sont pas répartis artificiellement entre
+ * les commandes.
  */
 export function calculateCustomerPaymentProgress(
   orders: PaymentProgressOrder[],
@@ -74,16 +75,18 @@ export function calculateCustomerPaymentProgress(
   })
 
   const totalAmount = toMoney(sortedOrders.reduce((sum, order) => sum + toPositiveMoney(order.value), 0))
-  const receivedAmount = toMoney(payments.reduce((sum, payment) => sum + toPositiveMoney(payment.amount), 0))
-  const paidAmount = Math.min(receivedAmount, totalAmount)
-  const remainingAmount = toMoney(Math.max(totalAmount - paidAmount, 0))
-  const creditAmount = toMoney(Math.max(receivedAmount - totalAmount, 0))
   const orderProgress: Record<string, OrderPaymentProgress> = {}
-  let amountToAllocate = paidAmount
+  let paidAmount = 0
+  let creditAmount = 0
 
   for (const order of sortedOrders) {
     const orderTotal = toPositiveMoney(order.value)
-    const orderPaidAmount = toMoney(Math.min(orderTotal, amountToAllocate))
+    const receivedForOrder = toMoney(
+      payments
+        .filter((payment) => payment.order_id === order.id)
+        .reduce((sum, payment) => sum + toPositiveMoney(payment.amount), 0),
+    )
+    const orderPaidAmount = toMoney(Math.min(orderTotal, receivedForOrder))
     const orderRemainingAmount = toMoney(Math.max(orderTotal - orderPaidAmount, 0))
 
     orderProgress[order.id] = {
@@ -93,8 +96,11 @@ export function calculateCustomerPaymentProgress(
       paymentStatus: resolvePaymentStatus(orderTotal, orderPaidAmount),
     }
 
-    amountToAllocate = toMoney(Math.max(amountToAllocate - orderPaidAmount, 0))
+    paidAmount = toMoney(paidAmount + orderPaidAmount)
+    creditAmount = toMoney(creditAmount + Math.max(receivedForOrder - orderPaidAmount, 0))
   }
+
+  const remainingAmount = toMoney(Math.max(totalAmount - paidAmount, 0))
 
   return {
     totalAmount,

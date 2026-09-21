@@ -7,6 +7,7 @@ import { recordBusinessAudit } from '@/lib/business-audit'
 const PAYMENT_METHODS = ['bank_transfer', 'cash', 'card', 'mobile', 'other'] as const
 
 const paymentSchema = z.object({
+  order_id: z.string().uuid(),
   amount: z.coerce.number().positive().max(1_000_000_000),
   currency: z.literal('EUR').optional().default('EUR'),
   paid_at: z
@@ -32,7 +33,19 @@ async function customerExists(id: string): Promise<boolean> {
   return Boolean(data)
 }
 
-// GET /api/customers/[id]/payments - Historique des règlements d'un client
+async function orderBelongsToCustomer(orderId: string, customerId: string): Promise<boolean> {
+  const { data, error } = await (supabaseAdmin as any)
+    .from('orders')
+    .select('id')
+    .eq('id', orderId)
+    .eq('customer_id', customerId)
+    .maybeSingle()
+
+  if (error) throw error
+  return Boolean(data)
+}
+
+// GET /api/customers/[id]/payments - Historique des règlements du client, par commande
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -52,7 +65,7 @@ export async function GET(
 
     const { data, error } = await (supabaseAdmin as any)
       .from('customer_payments')
-      .select('id, customer_id, amount, currency, paid_at, payment_method, reference, notes, created_at, updated_at')
+      .select('id, customer_id, order_id, amount, currency, paid_at, payment_method, reference, notes, created_at, updated_at')
       .eq('customer_id', id)
       .order('paid_at', { ascending: false })
       .order('created_at', { ascending: false })
@@ -69,7 +82,7 @@ export async function GET(
   }
 }
 
-// POST /api/customers/[id]/payments - Enregistrer un règlement client non affecté à une commande
+// POST /api/customers/[id]/payments - Enregistrer un règlement pour une commande du client
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -98,6 +111,9 @@ export async function POST(
     if (!(await customerExists(id))) {
       return NextResponse.json({ success: false, error: 'Client introuvable' }, { status: 404 })
     }
+    if (!(await orderBelongsToCustomer(parsed.data.order_id, id))) {
+      return NextResponse.json({ success: false, error: 'Commande introuvable pour ce client' }, { status: 404 })
+    }
 
     const { data, error } = await (supabaseAdmin as any)
       .from('customer_payments')
@@ -105,7 +121,7 @@ export async function POST(
         customer_id: id,
         ...parsed.data,
       })
-      .select('id, customer_id, amount, currency, paid_at, payment_method, reference, notes, created_at, updated_at')
+      .select('id, customer_id, order_id, amount, currency, paid_at, payment_method, reference, notes, created_at, updated_at')
       .single()
 
     if (error) throw error
