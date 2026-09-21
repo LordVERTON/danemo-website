@@ -37,6 +37,4 @@ supabase/.temp/
 certificates/
 
 # Documents de facturation et coordonnées bancaires locales
-/output/
-/billing/devis/*.json
-/billing/profile.local.json
+/billing/
