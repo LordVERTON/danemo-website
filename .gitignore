@@ -35,3 +35,8 @@ supabase/.temp/
 
 # Sensitive local certificates
 certificates/
+
+# Documents de facturation et coordonnées bancaires locales
+/output/
+/billing/devis/*.json
+/billing/profile.local.json
