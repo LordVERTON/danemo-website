@@ -1,0 +1,21 @@
+{
+  "issuer": {
+    "name": "Votre nom ou société",
+    "subtitle": "Votre activité"
+  },
+  "recipient": {
+    "name": "Nom du client par défaut",
+    "deliveryAddress": [
+      "Adresse ligne 1",
+      "Code postal Ville",
+      "Pays"
+    ]
+  },
+  "payment": {
+    "method": "Sur validation du devis",
+    "accountHolder": "À renseigner",
+    "bank": "À renseigner",
+    "iban": "À renseigner",
+    "bic": "À renseigner"
+  }
+}
