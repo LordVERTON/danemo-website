@@ -113,7 +113,7 @@ export default function ClientDetailsPage() {
     setEditingOrder(orderToEdit || null)
     setOrder({
       service_type: orderToEdit?.service_type || "fret_maritime", container_id: orderToEdit?.container_id || "", description: orderToEdit?.description || "", origin: orderToEdit?.origin || "Bruxelles", destination: orderToEdit?.destination || "", weight: orderToEdit?.weight ? String(orderToEdit.weight) : "", value: orderToEdit?.value ? String(orderToEdit.value) : "",
-      recipient_name: orderToEdit?.recipient_name || customer.name, recipient_email: orderToEdit?.recipient_email || customer.email || "", recipient_phone: orderToEdit?.recipient_phone || customer.phone || "", recipient_address: orderToEdit?.recipient_address || customer.address || "", recipient_city: orderToEdit?.recipient_city || customer.city || "", recipient_postal_code: orderToEdit?.recipient_postal_code || customer.postal_code || "", recipient_country: orderToEdit?.recipient_country || customer.country || "",
+      recipient_name: orderToEdit?.recipient_name || "", recipient_email: orderToEdit?.recipient_email || "", recipient_phone: orderToEdit?.recipient_phone || "", recipient_address: orderToEdit?.recipient_address || "", recipient_city: orderToEdit?.recipient_city || "", recipient_postal_code: orderToEdit?.recipient_postal_code || "", recipient_country: orderToEdit?.recipient_country || "",
     })
     void loadContainers()
     setOrderOpen(true)
