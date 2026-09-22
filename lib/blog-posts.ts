@@ -69,7 +69,15 @@ export interface BlogPost {
 const BLOG_POSTS_FILE = path.join(process.cwd(), "data", "blog-posts.json")
 
 export async function readBlogPosts(): Promise<BlogPost[]> {
-  const content = await fs.readFile(BLOG_POSTS_FILE, "utf8")
+  let content: string
+  try {
+    content = await fs.readFile(BLOG_POSTS_FILE, "utf8")
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
+      return []
+    }
+    throw error
+  }
   const parsed = JSON.parse(content) as any[]
   if (!Array.isArray(parsed)) return []
 
@@ -97,5 +105,6 @@ export async function readBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function writeBlogPosts(posts: BlogPost[]): Promise<void> {
+  await fs.mkdir(path.dirname(BLOG_POSTS_FILE), { recursive: true })
   await fs.writeFile(BLOG_POSTS_FILE, JSON.stringify(posts, null, 2), "utf8")
 }

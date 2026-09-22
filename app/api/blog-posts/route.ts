@@ -1,6 +1,8 @@
-import { randomUUID } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
-import { readBlogPosts, writeBlogPosts, type BlogPost, type BlogSection } from "@/lib/blog-posts"
+import { createArticle, deleteArticle, getArticleById, getArticles, updateArticle } from "@/lib/articles"
+import { articleToBlogPost } from "@/lib/public-blog-posts"
+import type { ArticleInput } from "@/lib/article-types"
+import type { BlogPost, BlogSection } from "@/lib/blog-posts"
 import { authenticateRequest } from "@/lib/auth-middleware"
 import { recordBusinessAudit } from '@/lib/business-audit'
 
@@ -58,11 +60,53 @@ function validatePayload(payload: Omit<BlogPost, "id">): string | null {
   return null
 }
 
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+function getArticleSlug(payload: Omit<BlogPost, "id">) {
+  const slugFromHref = payload.href
+    .trim()
+    .replace(/^\/?blog\//, "")
+    .replace(/^\/+|\/+$/g, "")
+
+  return slugify(slugFromHref) || slugify(payload.title)
+}
+
+function getPublishedAt(value: string): string | null {
+  const frenchDate = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (frenchDate) {
+    const [, day, month, year] = frenchDate
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString()
+  }
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+function articleInputFromBlogPost(payload: Omit<BlogPost, "id">): ArticleInput {
+  return {
+    title: payload.title,
+    slug: getArticleSlug(payload),
+    excerpt: payload.excerpt,
+    status: payload.isActive ? "published" : "draft",
+    cover_image_url: payload.mediaUrl || null,
+    legacy_content: payload,
+    published_at: payload.isActive ? getPublishedAt(payload.date) : null,
+  }
+}
+
 export async function GET() {
   try {
-    const posts = await readBlogPosts()
+    const posts = (await getArticles()).map(articleToBlogPost)
     return NextResponse.json({ success: true, data: posts })
   } catch (error) {
+    console.error("[blog-posts.list] error", error)
     return NextResponse.json({ success: false, error: "Failed to load blog posts" }, { status: 500 })
   }
 }
@@ -84,28 +128,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: validationError }, { status: 400 })
     }
 
-    const posts = await readBlogPosts()
-    const now = new Date().toISOString()
-    const newPost: BlogPost = {
-      id: `post-${randomUUID()}`,
-      ...payload,
-      createdAt: now,
-      createdByName: user.name || user.email || "Utilisateur",
-      createdByEmail: user.email || "",
-      updatedAt: now,
-      updatedByName: user.name || user.email || "Utilisateur",
-      updatedByEmail: user.email || "",
-    }
-
-    posts.unshift(newPost)
-    await writeBlogPosts(posts)
+    const article = await createArticle({
+      ...articleInputFromBlogPost(payload),
+      created_by: user.name || user.email || "Utilisateur",
+      updated_by: user.name || user.email || "Utilisateur",
+    })
     await recordBusinessAudit(request, {
       action: 'create',
       entityType: 'content',
-      entityId: newPost.id,
+      entityId: article.id,
     })
-    return NextResponse.json({ success: true, data: newPost }, { status: 201 })
+    return NextResponse.json({ success: true, data: articleToBlogPost(article) }, { status: 201 })
   } catch (error) {
+    console.error("[blog-posts.create] error", error)
     return NextResponse.json({ success: false, error: "Failed to create blog post" }, { status: 500 })
   }
 }
@@ -132,33 +167,25 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: validationError }, { status: 400 })
     }
 
-    const posts = await readBlogPosts()
-    const index = posts.findIndex((post) => post.id === id)
-    if (index < 0) {
+    try {
+      await getArticleById(id)
+    } catch {
       return NextResponse.json({ success: false, error: "Article introuvable" }, { status: 404 })
     }
 
-    const existingPost = posts[index]
-    const updatedPost: BlogPost = {
-      id,
-      ...payload,
-      createdAt: existingPost.createdAt,
-      createdByName: existingPost.createdByName,
-      createdByEmail: existingPost.createdByEmail,
-      updatedAt: new Date().toISOString(),
-      updatedByName: user.name || user.email || "Utilisateur",
-      updatedByEmail: user.email || "",
-    }
-    posts[index] = updatedPost
-    await writeBlogPosts(posts)
+    const article = await updateArticle(id, {
+      ...articleInputFromBlogPost(payload),
+      updated_by: user.name || user.email || "Utilisateur",
+    })
     await recordBusinessAudit(request, {
       action: 'update',
       entityType: 'content',
       entityId: id,
       changedFields: Object.keys(payload),
     })
-    return NextResponse.json({ success: true, data: updatedPost })
+    return NextResponse.json({ success: true, data: articleToBlogPost(article) })
   } catch (error) {
+    console.error("[blog-posts.update] error", error)
     return NextResponse.json({ success: false, error: "Failed to update blog post" }, { status: 500 })
   }
 }
@@ -179,13 +206,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: "L'identifiant est requis" }, { status: 400 })
     }
 
-    const posts = await readBlogPosts()
-    const filteredPosts = posts.filter((post) => post.id !== id)
-    if (filteredPosts.length === posts.length) {
+    try {
+      await getArticleById(id)
+    } catch {
       return NextResponse.json({ success: false, error: "Article introuvable" }, { status: 404 })
     }
 
-    await writeBlogPosts(filteredPosts)
+    await deleteArticle(id)
     await recordBusinessAudit(request, {
       action: 'delete',
       entityType: 'content',
@@ -193,6 +220,7 @@ export async function DELETE(request: NextRequest) {
     })
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error("[blog-posts.delete] error", error)
     return NextResponse.json({ success: false, error: "Failed to delete blog post" }, { status: 500 })
   }
 }
